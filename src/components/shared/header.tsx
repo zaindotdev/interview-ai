@@ -1,81 +1,91 @@
 'use client'
-import { useScroll, useTransform, motion } from 'framer-motion'
-import Link from 'next/link';
-import React from 'react'
-import { Button } from '../ui/button';
-import { cn } from '@/lib/utils';
+import React,{useState} from 'react';
+import {motion} from "framer-motion"
+import Link from "next/link";
+import {Menu,X} from "lucide-react";
+import {Button} from "@/components/ui/button";
 
+const Header:React.FC = ()=>{
+    const [isActive,setIsActive] = useState("Home");
+    const [isMenuOpen,setIsMenuOpen] = useState(false);
+    const navLinks = [{
+        name:"Home",
+        href:"/",
+    },{
+        name:"How It Works",
+        href:"#how-it-works",
 
-const Header = () => {
-    const { scrollY } = useScroll();
-    const backgroundColor = useTransform(
-        scrollY,
-        [0, 200],
-        ['transparent', 'var(--color-orange-100)'],
-        { clamp: false }
-    );
-    const shadows = useTransform(
-        scrollY,
-        [0, 200],
-        ['0px 0px 0px 0px', '0px 0px 10px 0px rgba(0, 0, 0, 0.5)'],
-        { clamp: false }
-    );
+    },{
+        name:"Features",
+        href:"#features",
+    },{
+        name:"Pricing",
+        href:"#pricing",
+    }]
 
-    const navLinks = [
-        {
-            name: "Home",
-            href: "/"
-        },
-        {
-            name: "How it works",
-            href: "#how-it-works"
-        }, {
-            name: "Features",
-            href: "#features"
-        }, {
-            name: "Pricing",
-            href: "#pricing"
-        },
-        {
-            name: "Contact",
-            href: "/contact"
-        }
-    ]
-
-    return (
-        <motion.header
-            className='w-full p-4 fixed z-10'
-            transition={{ duration: 1.5, ease: [0.4, 0, 0.2, 1], delay: 0.1 }}
-            initial={{ opacity: 0, y: -40 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ backgroundColor: backgroundColor, boxShadow: shadows }}
-        >
-            <nav className='flex items-center justify-between'>
-                <div>
-                    <h1 className='text-xl font-bold italic'>Interview <span className='text-orange-500'>AI.</span></h1>
-                </div>
-                <div className='flex items-center gap-8'>
-                    {navLinks.map((links, index) => (
-                        <Link key={index} href={links.href}>
-                            <p>{links.name}</p>
-                        </Link>
+    const handleClick = (element)=>{
+        setIsActive(element);
+    }
+        return <motion.header initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} transition={{duration:0.8, ease:"easeIn"}} className={"relative p-4 fixed w-full top-0 left-0 z-[2]"}>
+            <nav className={"flex items-center justify-between md:justify-around mx-auto container"}>
+                <h1 className={"text-lg md:text-xl font-medium italic text-pretty"}>
+                    Interview <span className={"text-orange-500"}>
+                    AI.
+                </span>
+                </h1>
+                <ul className={"hidden md:flex items-center gap-8"}>
+                    {navLinks.map((link, index) => (
+                        <li onClick={()=>handleClick(link.name)} key={`nav-links-${index}`}>
+                            <Link href={link.href}>
+                                <p className={`${isActive === link.name ?"text-orange-500 italic":""} font-medium text-base/8`}>{link.name}</p>
+                            </Link>
+                        </li>
                     ))}
-                </div>
-                <div className='flex items-center gap-6'>
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, ease: "easeInOut" }}>
-                        <Button variant={"primary"}>
-                            Sign Up
-                        </Button>
-                    </motion.div>
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, ease: "easeInOut" }}>
-                        <Button variant={"secondary"}>
+                </ul>
+                <div className={"hidden md:flex items-center gap-2"}>
+                   <Link href={"/sign-up"}>
+                           <Button className={"cursor-pointer"} variant={"link"}>
+                               Sign Up
+                           </Button>
+
+                   </Link>
+                    <Link href={"/sign-in"}>
+                        <Button className={"cursor-pointer"} variant={"primary"}>
                             Sign In
                         </Button>
-                    </motion.div>
+                    </Link>
                 </div>
+
+                <div className={"md:hidden block"}>
+                    <Button onClick={()=>setIsMenuOpen(!isMenuOpen)} variant={"link"} size={"icon"}>
+                        {isMenuOpen ? <X/> : <Menu/>}
+                    </Button>
+                </div>
+
+                {isMenuOpen && <motion.ul initial={{x:100,opacity:0}} animate={{x:0,opacity:1}} transition={{duration:0.8, ease:"backInOut"}} className={"absolute top-16 right-0 p-4 w-full h-[calc(100vh-64px)] bg-orange-400"}>
+                    {navLinks.map((link, index) => (
+                        <motion.li  key={`nav-links-${index}`}>
+                            <Link href={link.href}>
+                                <p className={`font-medium text-base/8 text-white`}>{link.name}</p>
+                            </Link>
+                        </motion.li>
+                    ))}
+                    <li className={""}>
+                        <Link href={"/sign-up"}>
+                            <Button className={"cursor-pointer text-white"} variant={"link"}>
+                                Sign Up
+                            </Button>
+
+                        </Link>
+                        <Link href={"/sign-in"}>
+                            <Button className={"cursor-pointer "} variant={"primary"}>
+                                Sign In
+                            </Button>
+                        </Link>
+                    </li>
+                </motion.ul>}
             </nav>
         </motion.header>
-    )
 }
 
-export default Header
+export default Header;
