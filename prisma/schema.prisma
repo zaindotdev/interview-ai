@@ -17,37 +17,41 @@ enum Role {
 }
 
 model User {
-  id          String             @id @default(uuid())
-  username    String             @unique
-  fullName    String
-  email       String             @unique
-  password    String
-  role        Role               @default(CANDIDATE)
-  resumes     Resume[]
-  jobPosts    JobListing[]       @relation("RecruiterJobs")
-  sessions    InterviewSession[] @relation("CandidateSessions")
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id        String             @id @default(uuid())
+  username  String?            @unique
+  name      String?
+  email     String             @unique
+  emailVerified DateTime?
+  image     String?
+  password  String?
+  role      Role               @default(CANDIDATE)
+  resumes   Resume[]
+  jobPosts  JobListing[]       @relation("RecruiterJobs")
+  sessions  InterviewSession[] @relation("CandidateSessions")
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  Account   Account[]
+  Session   Session[]
 }
 
 model Resume {
-  id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  fileUrl   String
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  fileUrl    String
   parsedJson Json
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 }
 
 model JobListing {
-  id           String             @id @default(uuid())
-  title        String
-  description  String
-  skills       String[]
-  recruiter    User               @relation("RecruiterJobs", fields: [recruiterId], references: [id])
-  recruiterId  String
-  sessions     InterviewSession[]
-  createdAt    DateTime           @default(now())
+  id          String             @id @default(uuid())
+  title       String
+  description String
+  skills      String[]
+  recruiter   User               @relation("RecruiterJobs", fields: [recruiterId], references: [id])
+  recruiterId String
+  sessions    InterviewSession[]
+  createdAt   DateTime           @default(now())
 }
 
 model InterviewSession {
@@ -60,5 +64,40 @@ model InterviewSession {
   score        Int?
   feedback     String?
   recordingUrl String? // Optional: store interview video/audio
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime   @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@index([token], map: "verification_token_token_idx")
 }
