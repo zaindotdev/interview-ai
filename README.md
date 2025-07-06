@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 Interview AI – Ace Your Next Interview with Confidence
 
-## Getting Started
+## 📌 Overview
 
-First, run the development server:
+**Interview AI** is an intelligent platform designed to help candidates prepare for job interviews using AI. While this idea isn’t completely unique and was inspired by a project featured in [Hitesh Choudhary](https://x.com/hiteshdotcom)’s cohort, this version is built entirely by me from scratch as a learning experience and personal challenge.
+
+---
+
+## 🛠 Tech Stack
+
+* **Frontend:** Next.js
+* **Backend:** Prisma ORM, PostgreSQL
+* **Storage:** Supabase Storage
+* **AI Engine:** Gemini 2.5 Flash (Google Generative AI)
+
+---
+
+## ✨ Features
+
+* 📄 Resume Upload & AI-Powered Analysis
+* 🧠 Role-Specific Interview Questions
+* 🎤 AI Mock Interviews (via WebRTC)
+* 📝 Detailed Feedback & Analysis Reports
+* 📹 Interview Video Recording & Playback
+* 📈 Candidate Progress Tracking
+* 📧 Email Support
+
+---
+
+## 🗺 Roadmap (Upcoming Features)
+
+* 📌 ATS & LMS Integrations
+* 🔐 Role-Based Access Control
+* 📡 Public API Access
+* ⏱ 24/7 Priority Support
+
+---
+
+## 🧪 Getting Started
+
+### 🔁 Clone the Repository
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/zaindotdev/interview-ai.git
+cd interview-ai
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### ⚙️ Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a `.env` file and configure the following variables:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+DATABASE_URL=
 
-## Learn More
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=
 
-To learn more about Next.js, take a look at the following resources:
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=http://localhost:3000 # Change for production
 
-## Deploy on Vercel
+GEMINI_API_KEY=
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+After setting up the environment variables:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npx prisma generate
+npx prisma db push
+npm run dev
+```
+
+---
+
+## 🚀 Deployment
+
+Deploy to **[Vercel](https://vercel.com/)** – it's optimized for serverless Next.js applications and provides seamless GitHub integration.
+
+---
+
+Let me know if you'd like a badge section (e.g. Vercel, license, built-with) or contribution guidelines added too!
