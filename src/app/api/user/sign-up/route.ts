@@ -55,11 +55,11 @@ export async function POST(req: NextRequest) {
 
     console.log("ERRRR",user)
 
-    const mailSent = await sendMail({
+    const mailSent = await sendMail(
       email,
       name,
-      callbackUrl: `${process.env.NEXTAUTH_URL}/verify?email=${email}`,
-    });
+        `${process.env.NEXTAUTH_URL}/verify?email=${email}`,
+    );
 
     console.log("ERRRR",mailSent)
 
