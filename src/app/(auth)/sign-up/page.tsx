@@ -99,7 +99,7 @@ const SignUpPage = () => {
                 <CardHeader>
                     <CardTitle>
                         <h1 className={"text-lg md:text-xl font-medium italic text-pretty text-center"}>
-                            Interview <span className={"text-orange-500"}>
+                            Interview <span className={"text-primary"}>
                                 AI.
                             </span>
                         </h1>

@@ -30,14 +30,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning={true}>
-      <body
+    <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Providers>
-          {children}
-          <Toaster position="top-right"/>
-        </Providers>
-      </body>
+    >
+    <Providers>
+      {children}
+      <Toaster position="top-right"/>
+    </Providers>
+    <script src="https://apis.google.com/js/api.js"></script>
+    </body>
     </html>
   );
 }

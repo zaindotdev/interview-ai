@@ -1,5 +1,4 @@
-"use client"
-
+'use client'
 import React from "react";
 import { motion } from "framer-motion"
 import Link from "next/link";
@@ -11,6 +10,7 @@ import Container from "@/components/shared/container";
 import HeadingContainer from "@/components/shared/heading-container"
 import { HowItWorks, KeyFeaturesData, PricingPlans } from "@/lib/types";
 import PricingCard from "@/components/shared/pricing-card";
+import {useSession} from "next-auth/react"
 
 const howItWorksData: HowItWorks[] = [
   {
@@ -119,6 +119,8 @@ const pricingPlans: PricingPlans[] = [
 ]
 
 const Landing = () => {
+  const { status } = useSession();
+
   return <Container>
     {/* Hero Section */}
     <section id={"home"} className={"w-full min-h-screen flex items-center justify-center"}>
@@ -127,7 +129,7 @@ const Landing = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "linear" }}
-          className="text-3xl md:text-6xl font-bold text-center bg-gradient-to-r from-orange-500 to-orange-700 bg-clip-text text-transparent"
+          className="text-3xl md:text-6xl font-bold text-center bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent"
         >
           Ace your next interview with AI powered precision.
         </motion.h1>
@@ -135,16 +137,18 @@ const Landing = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2, ease: "linear" }}
-          className="mt-6 text-base md:text-xl/8 text-center text-gray-600"
+          className="mt-6 text-base md:text-xl/8 text-center text=gray-600"
         >
           Get personalized interview preparation with real-time feedback, custom practice sessions, and expert guidance
           powered by advanced AI technology.
         </motion.p>
         <div className={"mt-10 md:flex items-center justify-center gap-4 mx-auto w-fit"}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4, ease: "linear" }} className={""}>
-            <Link href={"/sign-in"}><Button variant={"primary"} className={"text-base md:text-lg cursor-pointer"}>
+            {status === "authenticated" ? <Link href={"/dashboard"}><Button variant={"primary"} className={"text-base md:text-lg cursor-pointer"}>
+              Dashboard
+            </Button></Link> : <Link href={"/sign-in"}><Button variant={"primary"} className={"text-base md:text-lg cursor-pointer"}>
               Get Started
-            </Button></Link>
+            </Button></Link>}
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6, ease: "linear" }} className={"mt-4 md:mt-0"}>
             <Link href={'#demo'}>
@@ -159,7 +163,7 @@ const Landing = () => {
     {/*  How It Works Section */}
     <section id={'how-it-works'} className={"w-full py-24"}>
       <HeadingContainer>
-        <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, ease: "linear" }} className={"text-center text-orange-600 font-medium text-base/8 md:text-lg/8"}>
+        <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, ease: "linear" }} className={"text-center text-primary font-medium text-base/8 md:text-lg/8"}>
           How it works
         </motion.h2>
         <motion.h1 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2, ease: "linear" }} className={"text-2xl/8 md:text-5xl text-center font-semibold mt-4"}>
@@ -177,13 +181,13 @@ const Landing = () => {
             <motion.div key={`how-it-works-${index}`} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: index * 0.5, ease: "linear" }} className={"w-full"}>
               <Card className={"max-w-xl bg-inherit"}>
                 <CardHeader className={"flex items-center justify-center gap-4"}>
-                  <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2, ease: "linear" }} className={'size-24 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center'}>
+                  <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2, ease: "linear" }} className={'size-24 shrink-0 rounded-full bg-gradient-to-br from-primary to-orange-700 flex items-center justify-center'}>
                     <h1 className={"text-white text-2xl/8 font-bold"}>
                       {data.index}
                     </h1>
                   </motion.div>
                   <CardTitle>
-                    <motion.h1 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2, ease: "easeInOut" }} className={"text-xl md:text-2xl/8 font-bold text-orange-500"}>
+                    <motion.h1 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2, ease: "easeInOut" }} className={"text-xl md:text-2xl/8 font-bold text-primary"}>
                       {data.title}
                     </motion.h1>
                   </CardTitle>
@@ -237,13 +241,13 @@ const Landing = () => {
         <ul className={"grid grid-cols-1 md:grid-cols-2 gap-8"}>
           {keyFeaturesData.map((data, index) => (
             <motion.li key={`key-features-${index}`} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: index * 0.2, ease: "linear" }} className={"flex items-center gap-4 md:border-b-0 border-b-2 p-2"}>
-              <div className={"size-16 rounded-full bg-orange-500 flex items-center justify-center"}>
+              <div className={"size-16 rounded-full bg-primary flex items-center justify-center"}>
                 <h1 className={"text-white text-2xl/8 font-bold"}>
                   {data.index}
                 </h1>
               </div>
               <div className={"flex-1"}>
-                <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.4, ease: "linear" }} className={"text-orange-500 font-bold text-xl/8 text-pretty"}>
+                <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.4, ease: "linear" }} className={"text-primary font-bold text-xl/8 text-pretty"}>
                   {data.title}
                 </motion.h2>
                 <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.6, ease: "linear" }} className={"mt-1 text-gray-600 text-base"}>

@@ -4,8 +4,10 @@ import { motion, useScroll, useTransform } from "framer-motion"
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSession } from 'next-auth/react';
 
 const Header: React.FC = () => {
+    const { status } = useSession();
     const [isActive, setIsActive] = useState("Home");
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { scrollYProgress } = useScroll();
@@ -31,7 +33,7 @@ const Header: React.FC = () => {
     return <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeIn" }} className={"p-4 fixed w-full top-0 left-0 z-[2]"} style={{ backgroundColor: backgroundColor }}>
         <nav className={"flex items-center justify-between md:justify-around mx-auto container"}>
             <h1 className={"text-lg md:text-xl font-medium italic text-pretty"}>
-                Interview <span className={"text-orange-500"}>
+                Interview <span className={"text-primary"}>
                     AI.
                 </span>
             </h1>
@@ -39,23 +41,33 @@ const Header: React.FC = () => {
                 {navLinks.map((link, index) => (
                     <li onClick={() => handleClick(link.name)} key={`nav-links-${index}`}>
                         <Link href={link.href}>
-                            <p className={`${isActive === link.name ? "text-orange-500 font-semibold" : ""} font-medium text-base/8 duration-200 ease-linear hover:text-orange-500`}>{link.name}</p>
+                            <p className={`${isActive === link.name ? "text-primary font-semibold" : ""} font-medium text-base/8 duration-200 ease-linear hover:text-primary`}>{link.name}</p>
                         </Link>
                     </li>
                 ))}
             </ul>
             <div className={"hidden md:flex items-center gap-2"}>
-                <Link href={"/sign-up"}>
-                    <Button className={"cursor-pointer"} variant={"link"}>
-                        Sign Up
-                    </Button>
+                {status === "unauthenticated" ? (
+                    <>
+                        <Link href={"/sign-up"}>
+                            <Button className={"cursor-pointer text-white"} variant={"link"}>
+                                Sign Up
+                            </Button>
 
-                </Link>
-                <Link href={"/sign-in"}>
-                    <Button className={"cursor-pointer"} variant={"primary"}>
-                        Sign In
-                    </Button>
-                </Link>
+                        </Link>
+                        <Link href={"/sign-in"}>
+                            <Button className={"cursor-pointer "} variant={"primary"}>
+                                Sign In
+                            </Button>
+                        </Link>
+                    </>
+                ) : (
+                    <Link href={"/dashboard"}>
+                        <Button>
+                            Dashboard
+                        </Button>
+                    </Link>
+                )}
             </div>
 
             <div className={"md:hidden block"}>
@@ -73,17 +85,26 @@ const Header: React.FC = () => {
                     </motion.li>
                 ))}
                 <li className={""}>
-                    <Link href={"/sign-up"}>
-                        <Button className={"cursor-pointer text-white"} variant={"link"}>
-                            Sign Up
-                        </Button>
+                    {status === "authenticated" ? (
+                        <>
+                            <Link href={"/sign-up"}>
+                                <Button className={"cursor-pointer text-white"} variant={"link"}>
+                                    Sign Up
+                                </Button>
 
-                    </Link>
-                    <Link href={"/sign-in"}>
-                        <Button className={"cursor-pointer "} variant={"primary"}>
-                            Sign In
-                        </Button>
-                    </Link>
+                            </Link>
+                            <Link href={"/sign-in"}>
+                                <Button className={"cursor-pointer "} variant={"primary"}>
+                                    Sign In
+                                </Button>
+                            </Link></>
+                    ) : (
+                        <Link href={"/dashboard"}>
+                            <Button>
+                                Dashboard
+                            </Button>
+                        </Link>
+                    )}
                 </li>
             </motion.ul>}
         </nav>

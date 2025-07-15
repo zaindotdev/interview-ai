@@ -29,8 +29,8 @@ const RootLayout = ({ children }: Props) => {
 
   return (
     <main className="container mx-auto w-full min-h-screen overflow-hidden">
-      <Meteors number={10} />
-      <div className="flex min-h-screen w-full items-center justify-center">
+      <Meteors number={20} />
+      <div className="min-h-screen w-full">
         {children}
       </div>
     </main>

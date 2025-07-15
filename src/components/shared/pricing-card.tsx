@@ -39,18 +39,18 @@ const PricingCard: React.FC<PricingCardProps> = ({ title, description, price, or
             case 'pro':
                 return {
                     container: 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 hover:border-orange-300 ring-2 ring-orange-100',
-                    header: 'text-orange-900',
-                    price: 'text-orange-900',
-                    description: 'text-orange-700',
-                    feature: 'text-orange-800',
-                    icon: 'text-orange-500',
-                    button: 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg',
-                    gradient: 'bg-gradient-to-r from-orange-500/10 to-red-500/10'
+                    header: 'text-primary',
+                    price: 'text-primary',
+                    description: 'text-primary',
+                    feature: 'text-primary',
+                    icon: 'text-primary',
+                    button: 'bg-gradient-to-r from-primary to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg',
+                    gradient: 'bg-gradient-to-r from-primary/10 to-red-500/10'
                 }
-            case 'enterprise':
+            case 'enterprise':                                                                                                                                                                                                                                                                                                                                          
                 return {
                     container: 'bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 hover:border-purple-300 ring-2 ring-purple-100',
-                    header: 'text-purple-900',
+                    header: 'text-purple-900',                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
                     price: 'text-purple-900',
                     description: 'text-purple-700',
                     feature: 'text-purple-800',
@@ -103,7 +103,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ title, description, price, or
             {/* Popular Badge */}
             {popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-1 rounded-full text-sm font-semibold shadow-lg">
+                    <div className="bg-gradient-to-r from-primary to-red-500 text-white px-4 py-1 rounded-full text-sm font-semibold shadow-lg">
                         Most Popular
                     </div>
                 </div>
@@ -185,7 +185,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ title, description, price, or
             {/* Decorative Elements */}
             {tier === 'pro' && (
                 <div className="absolute top-4 right-4 opacity-10">
-                    <Zap className="w-8 h-8 text-orange-500" />
+                    <Zap className="w-8 h-8 text-primary-500" />
                 </div>
             )}
 
