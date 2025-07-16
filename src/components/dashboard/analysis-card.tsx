@@ -1,54 +1,139 @@
+'use client'
 import React, { useState } from 'react'
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Legend, Tooltip, Radar, RadarChart, RadarProps, PolarAngleAxis, PolarGrid, PolarRadiusAxis, ResponsiveContainer } from "recharts";
-import { UploadCloud, Badge, CheckCircle } from 'lucide-react';
+import { Tooltip, Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import { UploadCloud, Badge, CheckCircle, Loader, Loader2 } from 'lucide-react';
+import { Badge as BadgeComp } from '../ui/badge';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Label } from '../ui/label';
+import { ResumeScore } from '@/lib/types';
+import { toast } from 'sonner';
+import axios from 'axios';
+import {ChartData} from "@/lib/types"
+import { Button } from '../ui/button';
+import Link from 'next/link';
 
-type ResumeScore = {
-    score: number;
-    matchLevel: string;
-    strengths: string[];
-};
+interface AnalysisCardProps {
+    handleResumeScore: React.Dispatch<React.SetStateAction<ResumeScore | null>>
+}
 
-const chartData = [
-  {
-    session: "Session 1",
-    Technical: 65,
-    Behavioral: 70,
-    Communication: 100,
-  },
-  {
-    session: "Session 2",
-    Technical: 72,
-    Behavioral: 75,
-    Communication: 68,
-  },
-  {
-    session: "Session 3",
-    Technical: 78,
-    Behavioral: 80,
-    Communication: 0,
-  },
-  {
-    session: "Session 4",
-    Technical: 83,
-    Behavioral: 10,
-    Communication: 81,
-  },
-  {
-    session: "Session 5",
-    Technical: 88,
-    Behavioral: 90,
-    Communication: 85,
-  },
+type MockJobs = {
+    jobTitle: string;
+    jobDescription: string;
+}
+
+const mockJobs: MockJobs[] = [
+    {
+        jobTitle: "Frontend Developer",
+        jobDescription:
+            "Design and implement user interfaces using modern JavaScript frameworks like React or Vue. Ensure responsive design, cross-browser compatibility, and accessibility across all devices."
+    },
+    {
+        jobTitle: "Backend Developer",
+        jobDescription:
+            "Build and maintain robust server-side logic, APIs, and database interactions using Node.js, Express, and PostgreSQL or MongoDB. Ensure high performance and responsiveness to requests from the frontend."
+    },
+    {
+        jobTitle: "Full Stack Developer",
+        jobDescription:
+            "Work across the entire technology stack to build scalable web applications. Integrate frontend and backend components, manage databases, and deploy applications using cloud platforms like Vercel or AWS."
+    },
+    {
+        jobTitle: "DevOps Engineer",
+        jobDescription:
+            "Automate and manage infrastructure, CI/CD pipelines, and deployment workflows. Monitor system performance, optimize resource usage, and ensure application availability using tools like Docker, Kubernetes, and Jenkins."
+    },
+    {
+        jobTitle: "Mobile App Developer",
+        jobDescription:
+            "Create cross-platform mobile applications using React Native or Flutter. Integrate APIs, optimize performance, and ensure a smooth user experience across Android and iOS platforms."
+    },
+    {
+        jobTitle: "UI/UX Designer",
+        jobDescription:
+            "Design intuitive, user-centric interfaces using tools like Figma or Adobe XD. Conduct user research, create wireframes and prototypes, and ensure design consistency throughout the product lifecycle."
+    },
+    {
+        jobTitle: "Data Analyst",
+        jobDescription:
+            "Interpret complex datasets to provide actionable insights using SQL, Python, and visualization tools like Tableau or Power BI. Collaborate with teams to support decision-making and improve business performance."
+    },
+    {
+        jobTitle: "Machine Learning Engineer",
+        jobDescription:
+            "Design and deploy machine learning models to solve real-world problems. Work with large datasets, preprocess data, and use frameworks like TensorFlow or PyTorch to train and evaluate models."
+    },
+    {
+        jobTitle: "QA Engineer",
+        jobDescription:
+            "Develop and execute test plans, identify bugs, and ensure the delivery of high-quality software. Use automated and manual testing strategies to verify functionality, performance, and security."
+    },
+    {
+        jobTitle: "Cloud Solutions Architect",
+        jobDescription:
+            "Design scalable and secure cloud infrastructures tailored to business needs using platforms like AWS, Azure, or Google Cloud. Lead architectural reviews, optimize cloud resources, and ensure compliance with best practices."
+    }
 ];
-const AnalysisCard = () => {
-    const [resumeScore, setResumeScore] = useState<ResumeScore | null>({
-        matchLevel: "High",
-        score: 99.99,
-        strengths: ["Strength 1", "Strength 2", "Strength 3", "Strength 4"],
-    });
+
+
+const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
+    const [selectedJob, setSelectedJob] = useState<string>('');
+    const [resumeScore, setResumeScore] = useState<ResumeScore | null>(null);
+    const [loading, setLoading] = useState<boolean>(false)
+    const [percentageProgress, setPercentageProgress] = useState(0);
+    const [file, setFile] = useState<File | null>(null)
+    const [chartData,setChartData] = useState<ChartData[] | null>(null)
+
+    const handleResumeAnalysis = async (e: any) => {
+        setLoading(true)
+        try {
+
+            if (!selectedJob) {
+                toast.error("Please select a job description")
+                return
+            }
+            const formData = new FormData();
+            const f = e.target.files[0];
+            setFile(f)
+
+            formData.append("resume", f);
+            formData.append("jobDescription", selectedJob);
+            const response = await axios.post("/api/resume/analysis", formData, {
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent && progressEvent.loaded && progressEvent.total) {
+                        const percentCompleted = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+                        setPercentageProgress(percentCompleted)
+                    }
+                }
+            });
+            const data = await response.data;
+
+            if (data.status !== 200) {
+                toast.error("Something went wrong", {
+                    description: "Something went wrong while analyzing your resume"
+                })
+            }
+            setResumeScore(data.data)
+            handleResumeScore(data.data)
+        } catch (error) {
+            console.error(error);
+            toast.error("Something went wrong", {
+                description: "Something went wrong while analyzing your resume"
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+
     return (
         <section className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 p-4 relative">
             <Card className="w-full p-4 shadow-md rounded-2xl bg-white">
@@ -56,27 +141,51 @@ const AnalysisCard = () => {
                     <h2 className="text-lg md:text-xl font-semibold text-primary">
                         Resume Analysis
                     </h2>
-                    <p className="text-gray-500">
+                    <p className="text-gray-500 text-sm md:text-base">
                         An overview of your resume's performance and highlights key
                         strengths.
                     </p>
+                    <div className='mt-4 w-full'>
+                        <Label className='mb-2 text-gray-400'>
+                            Choose a Job Role
+                        </Label>
+                        <Select value={selectedJob} onValueChange={setSelectedJob}>
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select Job" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {mockJobs.map((job, idx) => (
+                                    <SelectItem key={`job-${idx}`} value={job.jobDescription}>
+                                        {job.jobTitle}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
                 {!resumeScore ? (
                     <div className="min-h-[250px] flex flex-col items-center justify-center p-4">
-                        <p className="text-gray-500 mb-2">No Resume Uploaded</p>
-                        <div className="border-2 border-dashed border-primary  w-full h-[200px] rounded-xl relative">
-                            <div className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-col">
-                                <UploadCloud size={54} className="text-primary" />
-                                <p className="text-xl font-medium text-gray-500">
-                                    Upload Resume
-                                </p>
+                        {loading ? (<div className='w-full flex items-center justify-center flex-col'>
+                            <Loader2 className="animate-spin text-primary" />
+                            <p className='text-sm font-semibold mt-2 text-gray-400'>{percentageProgress}%</p>
+                        </div>) : (<div className='w-full'>
+                            <p className="text-gray-500 text-sm md:text-base mb-2">{!file ? "Upload your resume to get started" : file.name}</p>
+                            <div className="border-2 border-dashed border-primary  w-full h-[200px] rounded-xl relative">
+                                <div className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-col">
+                                    <UploadCloud size={54} className="text-primary" />
+                                    <p className="text-xl font-medium text-gray-500">
+                                        Upload Resume
+                                    </p>
+                                </div>
+                                <Input
+                                    value={file?.name || ""}
+                                    onChange={handleResumeAnalysis}
+                                    accept="application/pdf"
+                                    type="file"
+                                    className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 opacity-0 cursor-pointer"
+                                />
                             </div>
-                            <Input
-                                accept="application/pdf"
-                                type="file"
-                                className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 opacity-0"
-                            />
-                        </div>
+                        </div>)}
                     </div>
                 ) : (
                     <div>
@@ -85,19 +194,19 @@ const AnalysisCard = () => {
                                 <div className="flex items-center gap-2 justify-between">
                                     <div className="flex items-center gap-2">
                                         <Badge size={24} className="text-primary mb-2" />
-                                        <p className="text-gray-500">{resumeScore?.score}%</p>
+                                        <p className="text-gray-500 text-sm md:text-base">{resumeScore?.score}%</p>
                                     </div>
-                                    <p>{resumeScore?.matchLevel}</p>
+                                    <BadgeComp variant={"outline"}>{resumeScore?.matchLevel}</BadgeComp>
                                 </div>
                                 <Progress value={resumeScore?.score} />
                             </div>
                             <div className="strengths">
-                                <p className="text-gray-500">Strengths:</p>
-                                <ul className="grid grid-cols-2 gap-2">
+                                <p className="text-gray-500 text-sm md:text-base">Strengths:</p>
+                                <ul className="max-h-[200px] overflow-y-auto scroll-smooth ">
                                     {resumeScore?.strengths.map((strength, index) => (
-                                        <li className="flex items-center gap-2" key={index}>
+                                        <li className="flex items-center gap-2 mt-2" key={index}>
                                             <CheckCircle size={20} className="text-primary" />
-                                            {strength}
+                                            <p className='text-sm md:tex-base text-gray-500'>{strength}</p>
                                         </li>
                                     ))}
                                 </ul>
@@ -111,23 +220,34 @@ const AnalysisCard = () => {
                     <h2 className="text-lg md:text-xl font-semibold text-primary">
                         Interview Analysis
                     </h2>
-                    <p className="text-gray-500">
+                    <p className="text-gray-500 text-sm md:text-base">
                         An overview of your interview's performance and highlights key
                         strengths.
                     </p>
                 </div>
                 <div className="min-h-[250px] flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
+                    {chartData ? (
+                        <ResponsiveContainer width="100%" height="100%">
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
                             <PolarGrid />
                             <PolarAngleAxis dataKey="session" />
                             <PolarRadiusAxis />
                             <Radar name="Behavioral" dataKey="Behavioral" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.6} />
-                            <Radar name='Technical' dataKey='Technical' stroke='var(--chart-2)' fill='var(--chart-2)' fillOpacity={0.6}/>
+                            <Radar name='Technical' dataKey='Technical' stroke='var(--chart-2)' fill='var(--chart-2)' fillOpacity={0.6} />
                             <Radar name='Communication' dataKey="Communication" stroke="var(--chart-3)" fill="var(--chart-3)" fillOpacity={0.6} />
-                            <Tooltip/>
+                            <Tooltip />
                         </RadarChart>
                     </ResponsiveContainer>
+                    ):(
+                        <div className='w-full flex items-center justify-center flex-col'>
+                            <p className='text-sm font-semibold my-2 text-gray-400'>
+                                No interviews Yet
+                            </p>
+                            <Button variant={"outline"}>
+                                <Link href="/dashboard#interview">View Interviews</Link>
+                            </Button>
+                        </div>
+                    )}
 
                 </div>
             </Card>
