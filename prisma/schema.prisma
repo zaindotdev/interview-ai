@@ -79,6 +79,7 @@ model InterviewSession {
   communicationScore Int?
   feedback           String?
   recordingUrl       String?
+  time               DateTime?
   createdAt          DateTime   @default(now())
 }
 
