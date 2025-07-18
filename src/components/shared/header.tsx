@@ -11,7 +11,7 @@ const Header: React.FC = () => {
     const [isActive, setIsActive] = useState("Home");
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { scrollYProgress } = useScroll();
-    const backgroundColor = useTransform(scrollYProgress, [0, 1], ["transparent", "#fff"]);
+    const backgroundColor = useTransform(scrollYProgress, [0, 1], ["transparent", "#ffffff"]);
     const navLinks = [{
         name: "Home",
         href: "/",
@@ -50,13 +50,13 @@ const Header: React.FC = () => {
                 {status === "unauthenticated" ? (
                     <>
                         <Link href={"/sign-up"}>
-                            <Button className={"cursor-pointer text-white"} variant={"link"}>
+                            <Button className={"cursor-pointer"} variant={"link"}>
                                 Sign Up
                             </Button>
 
                         </Link>
                         <Link href={"/sign-in"}>
-                            <Button className={"cursor-pointer "} variant={"primary"}>
+                            <Button className={"cursor-pointer "} size="sm">
                                 Sign In
                             </Button>
                         </Link>
@@ -88,13 +88,13 @@ const Header: React.FC = () => {
                     {status === "authenticated" ? (
                         <>
                             <Link href={"/sign-up"}>
-                                <Button className={"cursor-pointer text-white"} variant={"link"}>
+                                <Button className={"cursor-pointer text-primary"} variant={"link"}>
                                     Sign Up
                                 </Button>
 
                             </Link>
                             <Link href={"/sign-in"}>
-                                <Button className={"cursor-pointer "} variant={"primary"}>
+                                <Button className={"cursor-pointer"} variant={"default"}>
                                     Sign In
                                 </Button>
                             </Link></>

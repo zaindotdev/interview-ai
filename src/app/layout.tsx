@@ -37,7 +37,6 @@ export default function RootLayout({
       {children}
       <Toaster position="top-right"/>
     </Providers>
-    <script src="https://apis.google.com/js/api.js"></script>
     </body>
     </html>
   );

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { Label } from '../ui/label';
 import { ResumeScore } from '@/lib/types';
 import { toast } from 'sonner';
 import axios from 'axios';
-import {ChartData} from "@/lib/types"
+import { ChartData } from "@/lib/types"
 import { Button } from '../ui/button';
 import Link from 'next/link';
 
@@ -90,7 +90,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
     const [loading, setLoading] = useState<boolean>(false)
     const [percentageProgress, setPercentageProgress] = useState(0);
     const [file, setFile] = useState<File | null>(null)
-    const [chartData,setChartData] = useState<ChartData[] | null>(null)
+    const [chartData, setChartData] = useState<ChartData[] | null>(null)
 
     const handleResumeAnalysis = async (e: any) => {
         setLoading(true)
@@ -133,6 +133,39 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
         }
     }
 
+    const fetchResumeScore = useCallback(async () => {
+        setLoading(true)
+        try {
+            const response = await axios.get('/api/resume/report', {
+                onDownloadProgress: (progressEvent) => {
+                    if (progressEvent && progressEvent.loaded && progressEvent.total) {
+                        const percentCompleted = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+                        setPercentageProgress(percentCompleted)
+                    }
+                }
+            });
+            if (response.status !== 200) {
+                toast.error("Something went wrong", {
+                    description: "Something went wrong while fetching your resume score"
+                })
+            }
+            setResumeScore(response.data.data.parsedJson)
+            handleResumeScore(response.data.data.parsedJson)
+        } catch (error) {
+            console.error(error);
+            toast.error("Something went wrong", {
+                description: "Something went wrong while fetching your resume score"
+            })
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        fetchResumeScore()
+    }, [fetchResumeScore])
+
+
 
     return (
         <section className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 p-4 relative">
@@ -145,22 +178,32 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
                         An overview of your resume's performance and highlights key
                         strengths.
                     </p>
-                    <div className='mt-4 w-full'>
-                        <Label className='mb-2 text-gray-400'>
-                            Choose a Job Role
-                        </Label>
-                        <Select value={selectedJob} onValueChange={setSelectedJob}>
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select Job" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {mockJobs.map((job, idx) => (
-                                    <SelectItem key={`job-${idx}`} value={job.jobDescription}>
-                                        {job.jobTitle}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className='mt-4 w-full flex items-center gap-2'>
+                        {resumeScore && (
+                            <div className='ml-auto w-full'>
+                                <Label className='mb-2 text-gray-400'>
+                                    Upload New Resume
+                                </Label>
+                                <Input type='file' onChange={handleResumeAnalysis} />
+                            </div>
+                        )}
+                        <div className='w-full'>
+                            <Label className='mb-2 text-gray-400'>
+                                Choose a Job Role
+                            </Label>
+                            <Select value={selectedJob} onValueChange={setSelectedJob}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select Job" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {mockJobs.map((job, idx) => (
+                                        <SelectItem key={`job-${idx}`} value={job.jobDescription}>
+                                            {job.jobTitle}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                 </div>
                 {!resumeScore ? (
@@ -203,7 +246,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
                             <div className="strengths">
                                 <p className="text-gray-500 text-sm md:text-base">Strengths:</p>
                                 <ul className="max-h-[200px] overflow-y-auto scroll-smooth ">
-                                    {resumeScore?.strengths.map((strength, index) => (
+                                    {resumeScore && resumeScore.strengths && resumeScore?.strengths.map((strength, index) => (
                                         <li className="flex items-center gap-2 mt-2" key={index}>
                                             <CheckCircle size={20} className="text-primary" />
                                             <p className='text-sm md:tex-base text-gray-500'>{strength}</p>
@@ -228,17 +271,17 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
                 <div className="min-h-[250px] flex items-center justify-center">
                     {chartData ? (
                         <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
-                            <PolarGrid />
-                            <PolarAngleAxis dataKey="session" />
-                            <PolarRadiusAxis />
-                            <Radar name="Behavioral" dataKey="Behavioral" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.6} />
-                            <Radar name='Technical' dataKey='Technical' stroke='var(--chart-2)' fill='var(--chart-2)' fillOpacity={0.6} />
-                            <Radar name='Communication' dataKey="Communication" stroke="var(--chart-3)" fill="var(--chart-3)" fillOpacity={0.6} />
-                            <Tooltip />
-                        </RadarChart>
-                    </ResponsiveContainer>
-                    ):(
+                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
+                                <PolarGrid />
+                                <PolarAngleAxis dataKey="session" />
+                                <PolarRadiusAxis />
+                                <Radar name="Behavioral" dataKey="Behavioral" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.6} />
+                                <Radar name='Technical' dataKey='Technical' stroke='var(--chart-2)' fill='var(--chart-2)' fillOpacity={0.6} />
+                                <Radar name='Communication' dataKey="Communication" stroke="var(--chart-3)" fill="var(--chart-3)" fillOpacity={0.6} />
+                                <Tooltip />
+                            </RadarChart>
+                        </ResponsiveContainer>
+                    ) : (
                         <div className='w-full flex items-center justify-center flex-col'>
                             <p className='text-sm font-semibold my-2 text-gray-400'>
                                 No interviews Yet

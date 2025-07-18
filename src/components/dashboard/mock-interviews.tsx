@@ -3,7 +3,7 @@ import { Card } from "../ui/card";
 import { X } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-
+import { useRouter } from "next/navigation";
 interface MockInterviewsProps {
     weaknessess?: string[];
 }
@@ -27,6 +27,8 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({ weaknessess }) => {
             difficulty: "easy",
         }
     );
+
+    const router = useRouter();
     return (
         <section className="p-4 md:grid grid-cols-3 gap-4">
             <Card className="p-4 bg-white shadow-md">
@@ -40,8 +42,8 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({ weaknessess }) => {
                         your expertise in the field.
                     </p>
                 </div>
-                <ul className="border-t border-gray-200">
-                    {weaknessess?.map((weakness, idx) => (
+                <ul className="border-t border-gray-200 h-full">
+                    {weaknessess ? weaknessess?.map((weakness, idx) => (
                         <li
                             key={`weakness-${idx}`}
                             className="flex items-center gap-2 mt-2"
@@ -49,7 +51,9 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({ weaknessess }) => {
                             <X size={24} className="text-red-500" />
                             <p className="text-gray-500 text-sm md:text-base">{weakness}</p>
                         </li>
-                    ))}
+                    )) : <li className="flex items-center justify-center h-full w-full">
+                        <p className="text-gray-500 text-sm">Upload your resume</p>
+                    </li>}
                 </ul>
             </Card>
             <Card id="interview" className="col-span-2 p-4 bg-white shadow-md mt-4 scroll-smooth">
@@ -91,7 +95,7 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({ weaknessess }) => {
                             <p className="text-gray-500 text-sm md:text-base font-sm">
                                 {practiceInterview.estimated_time.toLocaleString()}
                             </p>
-                            <Button className="mt-4 cursor-pointer">
+                            <Button onClick={() => router.push(`/session/interview/?id=${practiceInterview.topic}`)} className="mt-4 cursor-pointer">
                                 Start Interview
                             </Button>
                         </div>
