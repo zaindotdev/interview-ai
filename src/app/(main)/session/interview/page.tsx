@@ -1,27 +1,11 @@
 "use client";
+import ActionButtons from "@/components/session/action-buttons";
 import AI from "@/components/session/ai";
+import Transcript from "@/components/session/transcript";
 import Container from "@/components/shared/container";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Bot,
-  Mic,
-  MicOff,
-  MonitorUp,
-  MonitorX,
-  PhoneOff,
-  Send,
-  User,
-  Video,
-  VideoOff,
-} from "lucide-react";
+import { useSocket } from "@/context/socket-provider";
+import { Bot, MonitorUp, User } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
@@ -46,36 +30,37 @@ interface MediaState {
 }
 
 const InterviewSessionPage = () => {
-  const [transcripts, setTranscripts] = useState<Transcript[]>([
-    {
-      id: "1",
-      message:
-        "Welcome to your interview session! I'm here to help you practice and improve your interview skills.",
-      sender: "ai",
-      timestamp: new Date(),
-    },
-  ]);
-
+  const [recording, setRecording] = useState<boolean>(false);
   const [mediaState, setMediaState] = useState<MediaState>({
     video: false,
     audio: false,
     screenShare: false,
   });
 
-  const [message, setMessage] = useState<string>("");
-  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
-  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { socket, transcript } = useSocket();
+
+  // Local Stream
+  const [localVideoStream, setLocalVideoStream] = useState<MediaStream | null>(
+    null
+  );
+  const [localScreenStream, setLocalScreenStream] =
+    useState<MediaStream | null>(null);
+
+  // Remote Stream
+  const [remoteVideoStream, setRemoteVideoStream] =
+    useState<MediaStream | null>(null);
+  const [remoteScreenStream, setRemoteScreenStream] =
+    useState<MediaStream | null>(null);
 
   // Refs
-  const transcriptRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const screenRef = useRef<HTMLVideoElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // URL params
   const params = useSearchParams();
-  const sessionId = params.get("id");
+  const sessionId = params?.get("id");
 
   const initializeVideo = useCallback(async () => {
     try {
@@ -84,8 +69,8 @@ const InterviewSessionPage = () => {
         video: true,
         audio: true,
       });
-      setVideoStream(stream);
-      setMediaState((prev) => ({ ...prev, video: true, audio: true }));
+      setLocalVideoStream(stream);
+      setMediaState((prev) => ({ ...prev, video: true }));
 
       // Set video source when stream is ready
       if (videoRef.current) {
@@ -101,50 +86,45 @@ const InterviewSessionPage = () => {
   }, []);
 
   useEffect(() => {
-    if (videoRef.current && videoStream) {
-      videoRef.current.srcObject = videoStream;
+    if (videoRef.current && localVideoStream) {
+      videoRef.current.srcObject = localVideoStream;
     }
-  }, [videoStream]);
+  }, [localVideoStream]);
 
-  const handleSend = useCallback(async () => {
-    setIsLoading(true)
+  const startRecording = useCallback(async () => {
     try {
-      const message = textareaRef.current?.value;
-      textareaRef.current!.value = "";
-      if (!message) return;
-      setTranscripts((prev) => [
-        ...prev,
-        {
-          id: String(prev.length + 1),
-          message,
-          sender: "user",
-          timestamp: new Date(),
-        },
-      ]);
-      setMessage("");
-      setTimeout(async () => {
-        setTranscripts((prev) => [
-          ...prev,
-          {
-            id: String(prev.length + 1),
-            message: "Thanks for starting the interview",
-            sender: "ai",
-            timestamp: new Date(),
-          },
-        ]);
-      }, 2000);
-      if (!transcriptRef.current) return;
-      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
+      const mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorderRef.current = mediaRecorder;
+
+      if (!socket) return;
+
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0 && event.data.type) {
+          const arrayBuffer = await event.data.arrayBuffer();
+          socket.emit("audio-chunk", new Uint8Array(arrayBuffer));
+          console.log("audio-chunk", new Uint8Array(arrayBuffer));
+        }
+      };
+      mediaRecorder.start(1000);
+      setRecording(true);
     } catch (error) {
       console.error(error);
-    } finally {
-      setIsLoading(false)
     }
-  }, [textareaRef, transcriptRef.current]);
+  }, [socket]);
+
+  const stopRecording = useCallback(() => {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  }, []);
 
   const toggleVideo = useCallback(() => {
-    if (videoStream) {
-      const videoTrack = videoStream.getVideoTracks()[0];
+    if (localVideoStream) {
+      const videoTrack = localVideoStream.getVideoTracks()[0];
       if (videoTrack) {
         const newVideoState = !mediaState.video;
         videoTrack.enabled = newVideoState;
@@ -152,7 +132,7 @@ const InterviewSessionPage = () => {
 
         if (videoRef.current) {
           if (newVideoState) {
-            videoRef.current.srcObject = videoStream;
+            videoRef.current.srcObject = localVideoStream;
             videoRef.current.play().catch(console.error);
           } else {
             videoRef.current.pause();
@@ -161,115 +141,97 @@ const InterviewSessionPage = () => {
         }
       }
     }
-  }, [videoStream, mediaState.video]);
+  }, [localVideoStream, mediaState.video]);
 
   const toggleAudio = useCallback(() => {
-    if (videoStream) {
-      const audioTrack = videoStream.getAudioTracks()[0];
+    if (localVideoStream) {
+      const audioTrack = localVideoStream.getAudioTracks()[0];
       if (audioTrack) {
-        audioTrack.enabled = !mediaState.audio;
-        setMediaState((prev) => ({ ...prev, audio: !prev.audio }));
+        const newAudioState = !mediaState.audio;
+        audioTrack.enabled = newAudioState;
+        setMediaState((prev) => ({ ...prev, audio: newAudioState }));
+
+        if (newAudioState && !recording) startRecording();
+        if (!newAudioState && recording) stopRecording();
       }
     }
-  }, [videoStream, mediaState.audio]);
+  }, [localVideoStream, mediaState.audio, recording]);
 
   const toggleScreenShare = useCallback(async () => {
     if (mediaState.screenShare) {
-      if (screenStream) {
-        screenStream.getTracks().forEach((track) => track.stop());
-        setScreenStream(null);
+      if (localScreenStream) {
+        localScreenStream.getTracks().forEach((track) => track.stop());
+        setLocalScreenStream(null);
       }
       setMediaState((prev) => ({ ...prev, screenShare: false }));
     } else {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
-          audio: true,
         });
-        setScreenStream(stream);
+        setLocalScreenStream(stream);
         setMediaState((prev) => ({ ...prev, screenShare: true }));
 
         stream.getVideoTracks()[0].onended = () => {
-          setScreenStream(null);
+          setLocalScreenStream(null);
           setMediaState((prev) => ({ ...prev, screenShare: false }));
         };
       } catch (error) {
         console.error("Failed to start screen sharing:", error);
       }
     }
-  }, [mediaState.screenShare, screenStream]);
+  }, [mediaState.screenShare, localScreenStream]);
 
   const endSession = useCallback(() => {
-    if (videoStream) {
-      videoStream.getTracks().forEach((track) => track.stop());
-      setVideoStream(null);
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+
+    if (localVideoStream) {
+      localVideoStream.getTracks().forEach((track) => track.stop());
+      setLocalVideoStream(null);
     }
-    if (screenStream) {
-      screenStream.getTracks().forEach((track) => track.stop());
-      setScreenStream(null);
+
+    if (localScreenStream) {
+      localScreenStream.getTracks().forEach((track) => track.stop());
+      setLocalScreenStream(null);
     }
+
     setMediaState({ video: false, audio: false, screenShare: false });
     alert("Session ended");
-  }, [videoStream, screenStream]);
+  }, [localVideoStream, localScreenStream]);
 
   useEffect(() => {
     initializeVideo();
 
     return () => {
-      if (videoStream) {
-        videoStream.getTracks().forEach((track) => track.stop());
+      if (localVideoStream) {
+        localVideoStream.getTracks().forEach((track) => track.stop());
       }
-      if (screenStream) {
-        screenStream.getTracks().forEach((track) => track.stop());
+      if (localScreenStream) {
+        localScreenStream.getTracks().forEach((track) => track.stop());
       }
     };
   }, []);
 
   useEffect(() => {
-    if (videoRef.current && videoStream) {
-      videoRef.current.srcObject = videoStream;
+    if (videoRef.current && localVideoStream) {
+      videoRef.current.srcObject = localVideoStream;
     }
-  }, [videoStream]);
+  }, [localVideoStream]);
 
   useEffect(() => {
-    if (screenRef.current && screenStream) {
-      screenRef.current.srcObject = screenStream;
+    if (screenRef.current && localScreenStream) {
+      screenRef.current.srcObject = localScreenStream;
     }
-  }, [screenStream]);
+  }, [localScreenStream]);
 
   useEffect(() => {
-    if (transcriptRef.current) {
-      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
-    }
-  }, [transcripts]);
+    if (!socket) return;
 
-  const actionButtons = [
-    {
-      icon: mediaState.video ? Video : VideoOff,
-      label: "Toggle Video",
-      action: toggleVideo,
-      active: mediaState.video,
-    },
-    {
-      icon: mediaState.audio ? Mic : MicOff,
-      label: "Toggle Audio",
-      action: toggleAudio,
-      active: mediaState.audio,
-    },
-    {
-      icon: mediaState.screenShare ? MonitorX : MonitorUp,
-      label: "Screen Share",
-      action: toggleScreenShare,
-      active: mediaState.screenShare,
-    },
-    {
-      icon: PhoneOff,
-      label: "End Session",
-      action: endSession,
-      active: false,
-      variant: "destructive" as const,
-    },
-  ];
+    socket.on("transcription", (data) => {
+      console.log(data)
+    })
+  }, [socket])
 
   return (
     <Container>
@@ -298,6 +260,7 @@ const InterviewSessionPage = () => {
                     className="w-full h-full object-contain"
                     autoPlay
                     playsInline
+                    muted
                   />
                 </div>
               </CardContent>
@@ -317,6 +280,7 @@ const InterviewSessionPage = () => {
                   className="w-full h-full object-contain rotate-y-180"
                   autoPlay
                   playsInline
+                  muted
                 />
               </div>
             </CardContent>
@@ -333,87 +297,23 @@ const InterviewSessionPage = () => {
             </CardContent>
           </Card>
         </div>
+        <div>
+          {transcript && (
+            <p className="text-muted-foreground text-sm">
+              Transcription: {transcript}
+            </p>
+          )}
+        </div>
       </section>
       <section className="bg-primary/3 md:p-4 p-2 grid grid-cols-1 md:grid-cols-2 rounded-xl">
-        <div className="w-full ml-auto">
-          <div className="action-buttons ">
-            <h2 className="text-xl md:text-2xl font-semibold text-transparent bg-gradient-to-br from-primary to-orange-700 bg-clip-text">
-              Actions
-            </h2>
-            <div className="bg-primary-30 p-8 rounded-xl w-full flex items-center justify-center">
-              <div className="flex items-center justify-around gap-2 p-4 rounded-xl shadow-lg bg-primary/10 md:w-2/3 w-full">
-                {actionButtons.map((action, idx) => {
-                  return (
-                    <Tooltip key={`action-tooltip-${idx}`}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          className="cursor-pointer"
-                          size={"lg"}
-                          variant={idx < 3 ? "ghost" : "default"}
-                          onClick={action.action}
-                        >
-                          <action.icon size={24} />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{action.label}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mr-auto w-full">
-          <h2 className="text-xl md:text-2xl font-semibold text-transparent bg-gradient-to-br from-primary to-orange-700 bg-clip-text">
-            Transcript
-          </h2>
-          <Card className="h-max w-full rounded-xl p-4 mt-4">
-            <ScrollArea className="h-[40vh]">
-              <div ref={transcriptRef} className="h-60">
-                {transcripts.map((transcript, idx) => (
-                  <div
-                    key={`transcript-${idx}`}
-                    className={`flex items-center gap-2 mt-2 ${transcript.sender === "user" ? "flex-row-reverse" : ""}`}
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-full overflow-hidden ${transcript.sender === "user" ? "order-2" : "order-1"}`}
-                    >
-                      <img
-                        src="/images/interviewer.jpg"
-                        alt="user"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div
-                      className={`p-2 rounded-xl ${transcript.sender === "user" ? "order-2 bg-primary/10 rounded-br-none" : "order-1 bg-gray-100 rounded-bl-none"}`}
-                    >
-                      <p>{transcript.message}</p>
-                      <p className="text-xs text-gray-500">{transcript.timestamp.toLocaleTimeString()}</p>
-                      {isLoading && idx === transcripts.length - 1 && (
-                        <p className="text-xs text-gray-500">AI is thinking...</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-            <div className="flex items-center gap-2">
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={2}
-                className="resize-none"
-                placeholder="Ask a question"
-                ref={textareaRef}
-              />
-              <Button onClick={handleSend} size={"icon"}>
-                <Send />
-              </Button>
-            </div>
-          </Card>
-        </div>
+        <ActionButtons
+          mediaState={mediaState}
+          toggleVideo={toggleVideo}
+          toggleAudio={toggleAudio}
+          toggleScreenShare={toggleScreenShare}
+          endSession={endSession}
+        />
+        <Transcript />
       </section>
     </Container>
   );

@@ -44,6 +44,9 @@ model User {
   Session        Session[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+
+  @@unique([email, role])
+  @@index([email], map: "user_email_idx")
 }
 
 model Resume {
@@ -53,6 +56,8 @@ model Resume {
   fileUrl    String
   parsedJson Json
   createdAt  DateTime @default(now())
+
+  @@index([userId], map: "resume_user_id_idx")
 }
 
 model JobListing {
@@ -64,6 +69,11 @@ model JobListing {
   recruiterId String
   sessions    InterviewSession[]
   createdAt   DateTime           @default(now())
+
+  InterveiwQuestions InterveiwQuestions[]
+
+  @@unique([recruiterId, title])
+  @@index([recruiterId], map: "job_recruiter_id_idx")
 }
 
 model InterviewSession {
@@ -81,6 +91,21 @@ model InterviewSession {
   recordingUrl       String?
   time               DateTime?
   createdAt          DateTime   @default(now())
+
+  @@unique([candidateId, jobId])
+  @@index([candidateId], map: "session_candidate_id_idx")
+}
+
+model InterveiwQuestions {
+  id        String     @id @default(uuid())
+  question  String
+  answers   String[]
+  jobId     String
+  job       JobListing @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@unique([jobId, question])
+  @@index([jobId], map: "question_job_id_idx")
 }
 
 model Subscription {
@@ -89,6 +114,10 @@ model Subscription {
   paymentId String  @unique
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, paymentId])
+  @@index([userId], map: "subscription_user_id_idx")
+  @@index([paymentId], map: "subscription_payment_id_idx")
 }
 
 model Payment {
@@ -99,6 +128,10 @@ model Payment {
   method       PaymentMethod @default(STRIPE)
   createdAt    DateTime      @default(now())
   subscription Subscription?
+
+  @@unique([status, method])
+  @@index([status], map: "payment_status_idx")
+  @@index([method], map: "payment_method_idx")
 }
 
 model Account {
