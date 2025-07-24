@@ -32,6 +32,7 @@
     "@react-email/components": "^0.1.1",
     "@supabase/supabase-js": "^2.50.3",
     "@types/bcrypt": "^5.0.2",
+    "@vapi-ai/web": "^2.3.8",
     "assemblyai": "^4.14.0",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
