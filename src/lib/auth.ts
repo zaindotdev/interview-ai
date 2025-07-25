@@ -5,82 +5,119 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/prisma";
 import bcrypt from "bcrypt";
+import { Role } from "@/generated/prisma";
+
 export const authOptions: NextAuthOptions = {
-    adapter: PrismaAdapter(db),
-    providers: [
-        CredentialsProvider({
-            name: "Credentials",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
-            },
-            async authorize(credentials) {
-                if (!credentials?.email || !credentials.password) return null;
-                console.log(credentials)
+  adapter: PrismaAdapter(db),
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials.password) return null;
+        console.log(credentials);
 
-                const user = await db.user.findUnique({
-                    where:{
-                        email:credentials.email
-                    }
-                })
-                if (!user) return null;
+        const user = await db.user.findUnique({
+          where: {
+            email: credentials.email,
+          },
+        });
+        if (!user) return null;
 
-                if(!user.password) return null;
+        if (!user.password) return null;
 
-                const pwValid = await bcrypt.compare(
-                    credentials.password,
-                    user.password
-                );
+        const pwValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
 
-                if (!pwValid) return null;
+        if (!pwValid) return null;
 
-                return {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    username: user.username,
-                    role: user.role,
-                };
-            },
-        }),
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+        };
+      },
+    }),
 
-        GitHubProvider({
-            clientId: process.env.GITHUB_CLIENT_ID!,
-            clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-        }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+    }),
 
-        GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        }),
-    ],
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking:true
+    }),
+  ],
 
-    session: { strategy: "jwt" },
-    events: {
-        async createUser({ user }) {
-            console.log(user);
-            await db.user.update({
-                where: { id: user.id },
-                data:{
-                    role:"CANDIDATE",
-                    username:user?.name ? user.name.replace(/\s/g, "").toLowerCase() : "",
-
-                }
-            });
-        },
+  session: { strategy: "jwt" },
+  
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) token.role = (user as any).role;
+      return token;
     },
-
-    callbacks: {
-        async jwt({ token, user }) {
-            if (user) token.role = (user as any).role;
-            return token;
-        },
-        async session({ session, token }) {
-            if (token.role && session.user) session.user.role = token.role as Role;
-            return session;
-        },
+    
+    async session({ session, token }) {
+      if (token.role && session.user) session.user.role = token.role as Role;
+      return session;
     },
+    
+    async signIn({ user, account, profile }) {
+      try {
+        // For OAuth providers (Google/GitHub)
+        if (account?.provider === "google" || account?.provider === "github") {
+          const existingUser = await db.user.findFirst({
+            where: {
+              email: profile?.email,
+            },
+          });
 
-    pages: { signIn: "/sign-in" },
-    secret: process.env.NEXTAUTH_SECRET,
+          // If user doesn't exist, create them
+          if (!existingUser) {
+            try {
+              await db.user.create({
+                data: {
+                  name: profile?.name || '',
+                  email: profile?.email!,
+                  username: profile?.name?.replace(/\s/g, "").toLowerCase() || '',
+                  role: "CANDIDATE",
+                },
+              });
+              console.log("New OAuth user created successfully");
+            } catch (createError) {
+              console.error("Error creating OAuth user:", createError);
+              return false;
+            }
+          }
+          
+          return true;
+        }
+        
+        // For credentials provider, user already exists if we reach here
+        return true;
+        
+      } catch (error) {
+        console.error("--------------------------- Authentication Error ---------------------------");
+        console.error(error);
+        return false;
+      }
+    },
+  },
+
+  pages: { 
+    signIn: "/sign-in",
+    error: "/auth/error",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
 };

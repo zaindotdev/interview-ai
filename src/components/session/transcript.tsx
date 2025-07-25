@@ -15,7 +15,7 @@ const Transcript = ({ transcripts, liveTranscription }: Props) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollToBottom = () => {
     if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+      bottomRef.current.scrollBy({ top: bottomRef.current.scrollHeight, behavior: "smooth" });
     }
   }
 

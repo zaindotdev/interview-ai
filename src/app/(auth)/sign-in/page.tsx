@@ -69,10 +69,16 @@ const SignInPage = () => {
     const handleGoogleSignIn = async () => {
         setGoogleLoading(true)
         try {
-            await signIn("google", {
+            const user = await signIn("google", {
                 redirect: true,
                 callbackUrl: "/dashboard"
             })
+
+            if (user?.error) {
+                toast.error("Something went wrong", {
+                    description: user.error
+                })
+            }
         } catch (error) {
             toast.error("Something went wrong", {
                 description: "Something went wrong while signing you in with google"
