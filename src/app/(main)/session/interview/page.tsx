@@ -20,6 +20,7 @@ import Transcript from "@/components/session/transcript";
 import axios from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
 import Timer from "@/components/session/timer";
+import { toast } from "sonner";
 
 type Message = {
   role: string;
@@ -254,6 +255,9 @@ const Interview = () => {
         console.error("Error ending call:", error);
       }
     }
+    toast.info("Times up - Call ended",{
+      description: "Redirecting to dashboard in 3 seconds..."
+    });
     setCallStarted(false);
     setCurrentRole(null);
     setCurrentTranscript("");

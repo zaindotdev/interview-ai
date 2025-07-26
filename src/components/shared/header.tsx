@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react';
-import { motion, useScroll, useTransform } from "framer-motion"
+import { easeInOut, motion, useScroll, useTransform } from "framer-motion"
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,10 @@ const Header: React.FC = () => {
     const { status } = useSession();
     const [isActive, setIsActive] = useState("Home");
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const { scrollYProgress } = useScroll();
-    const backgroundColor = useTransform(scrollYProgress, [0, 1], ["transparent", "#ffffff"]);
+    const { scrollY } = useScroll();
+    const padding = useTransform(scrollY, [10, 60], ["16px", "20px"],{
+        ease: easeInOut
+    });
     const navLinks = [{
         name: "Home",
         href: "/",
@@ -30,7 +32,7 @@ const Header: React.FC = () => {
     const handleClick = (element: string) => {
         setIsActive(element);
     }
-    return <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeIn" }} className={"p-4 fixed w-full top-0 left-0 z-[2]"} style={{ backgroundColor: backgroundColor }}>
+    return <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeIn" }} className={"p-4 fixed w-full top-0 left-0 z-[2]"} style={{ padding: padding }}>
         <nav className={"flex items-center justify-between md:justify-around mx-auto container"}>
             <h1 className={"text-lg md:text-xl font-medium italic text-pretty"}>
                 Interview <span className={"text-primary"}>
