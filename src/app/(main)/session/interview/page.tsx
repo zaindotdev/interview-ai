@@ -352,7 +352,7 @@ const Interview = () => {
       }
     };
 
-    // initializeVapi();
+    initializeVapi();
 
     // Cleanup on unmount
     return () => {
