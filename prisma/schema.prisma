@@ -80,7 +80,7 @@ model MockInterviews {
   topic          String   @unique
   description    String
   focus          String[]
-  estimated_time String
+  estimated_time Int
   difficulty     String
   candidateId    String
   createdAt      DateTime @default(now())
