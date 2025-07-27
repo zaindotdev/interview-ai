@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import VerifyClient from "./verify-client";
+import VerifyClient from "./verify-page";
 
 export default function VerifyPageWrapper() {
   return (
