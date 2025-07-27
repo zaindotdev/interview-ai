@@ -12,7 +12,7 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from "recharts";
-import { UploadCloud, Badge, CheckCircle, Loader, Loader2 } from "lucide-react";
+import { UploadCloud, Badge, CheckCircle } from "lucide-react";
 import { Badge as BadgeComp } from "../ui/badge";
 import {
   Select,
@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "../ui/label";
-import { ResumeScore } from "@/lib/types";
+import {  ResumeScore } from "@/lib/types";
 import { toast } from "sonner";
 import axios from "axios";
 import { ChartData } from "@/lib/types";
@@ -31,6 +31,7 @@ import Link from "next/link";
 
 interface AnalysisCardProps {
   handleResumeScore: React.Dispatch<React.SetStateAction<ResumeScore | null>>;
+  fetchPracticeInterviews: () => Promise<void>;
 }
 
 type MockJobs = {
@@ -91,7 +92,7 @@ const mockJobs: MockJobs[] = [
   },
 ];
 
-const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
+const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPracticeInterviews }) => {
   const [selectedJob, setSelectedJob] = useState<string>("");
   const [resumeScore, setResumeScore] = useState<ResumeScore | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -101,6 +102,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
 
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const targetProgressRef = useRef<number>(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const animateProgress = useCallback((targetProgress: number) => {
     targetProgressRef.current = targetProgress;
@@ -137,21 +139,41 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
     };
   }, []);
 
+  const resetLoadingState = useCallback(() => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    setLoading(false);
+    setPercentageProgress(0);
+  }, []);
+
   const handleResumeAnalysis = async (e: any) => {
+    const selectedFile = e.target.files?.[0];
+    
+    if (!selectedFile) {
+      return;
+    }
+
+    if (!selectedJob) {
+      toast.error("Please select a job description");
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Clear previous results and start loading
+    setResumeScore(null);
+    handleResumeScore(null);
+    resetLoadingState();
     setLoading(true);
     setPercentageProgress(0);
+    setFile(selectedFile);
 
     try {
-      if (!selectedJob) {
-        toast.error("Please select a job description");
-        return;
-      }
-
       const formData = new FormData();
-      const f = e.target.files[0];
-      setFile(f);
-
-      formData.append("resume", f);
+      formData.append("resume", selectedFile);
       formData.append("jobDescription", selectedJob);
 
       animateProgress(5);
@@ -176,25 +198,39 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
         toast.error("Something went wrong", {
           description: "Something went wrong while analyzing your resume",
         });
+        resetLoadingState();
         return;
       }
+      console.log("Full API Response:", data);
+      console.log("Resume Score Data:", data.data);
 
       animateProgress(100);
 
       setTimeout(() => {
-        setResumeScore(data.data);
-        handleResumeScore(data.data);
+        // Handle different possible data structures
+  
+        const resumeData = data.data || data;
+        
+        setResumeScore(resumeData.analysis);
+        handleResumeScore(resumeData.analysis);
+        fetchPracticeInterviews();
+        resetLoadingState();
+        toast.success("Resume analyzed successfully", {
+          description: "Resume analyzed successfully",
+        });
       }, 500);
+
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong", {
         description: "Something went wrong while analyzing your resume",
       });
+      resetLoadingState();
     } finally {
-      setTimeout(() => {
-        setLoading(false);
-        setPercentageProgress(0);
-      }, 1000);
+      // Reset file input to allow re-selection of the same file
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -220,6 +256,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
         toast.error("Something went wrong", {
           description: "Something went wrong while fetching your resume score",
         });
+        resetLoadingState();
         return;
       }
 
@@ -228,16 +265,14 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
       setTimeout(() => {
         setResumeScore(response.data.data.parsedJson);
         handleResumeScore(response.data.data.parsedJson);
+        resetLoadingState();
       }, 300);
+
     } catch (error) {
       console.error(error);
-    } finally {
-      setTimeout(() => {
-        setLoading(false);
-        setPercentageProgress(0);
-      }, 500);
+      resetLoadingState();
     }
-  }, [animateProgress]);
+  }, [animateProgress, handleResumeScore, resetLoadingState]);
 
   useEffect(() => {
     fetchResumeScore();
@@ -258,12 +293,18 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
             {resumeScore && (
               <div className="ml-auto w-full">
                 <Label className="mb-2 text-gray-400">Upload New Resume</Label>
-                <Input type="file" onChange={handleResumeAnalysis} />
+                <Input 
+                  ref={fileInputRef}
+                  type="file" 
+                  onChange={handleResumeAnalysis}
+                  accept="application/pdf"
+                  disabled={loading}
+                />
               </div>
             )}
             <div className="w-full">
               <Label className="mb-2 text-gray-400">Choose a Job Role</Label>
-              <Select value={selectedJob} onValueChange={setSelectedJob}>
+              <Select value={selectedJob} onValueChange={setSelectedJob} disabled={loading}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Job" />
                 </SelectTrigger>
@@ -278,7 +319,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
             </div>
           </div>
         </div>
-        {!resumeScore ? (
+        {!resumeScore || loading ? (
           <div className="min-h-[250px] flex flex-col items-center justify-center p-4">
             {loading ? (
               <div className="w-full flex items-center justify-center flex-col">
@@ -311,11 +352,12 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
                     </p>
                   </div>
                   <Input
-                    value={file?.name || ""}
+                    value=""
                     onChange={handleResumeAnalysis}
                     accept="application/pdf"
                     type="file"
                     className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 opacity-0 cursor-pointer"
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -329,21 +371,21 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
                   <div className="flex items-center gap-2">
                     <Badge size={24} className="text-primary mb-2" />
                     <p className="text-gray-500 text-sm md:text-base">
-                      {resumeScore?.score}%
+                      {resumeScore?.score || resumeScore?.score || 0}%
                     </p>
                   </div>
                   <BadgeComp variant={"outline"}>
                     {resumeScore?.matchLevel}
                   </BadgeComp>
                 </div>
-                <Progress value={resumeScore?.score} />
+                <Progress value={resumeScore?.score || resumeScore?.score || 0} />
               </div>
               <div className="strengths">
                 <p className="text-gray-500 text-sm md:text-base">Strengths:</p>
                 <ul className="max-h-[200px] overflow-y-auto scroll-smooth ">
                   {resumeScore &&
-                    resumeScore.strengths &&
-                    resumeScore?.strengths.map((strength, index) => (
+                    (resumeScore.strengths || resumeScore.strengths || []) &&
+                    (resumeScore.strengths || resumeScore.strengths || []).map((strength, index) => (
                       <li className="flex items-center gap-2 mt-2" key={index}>
                         <CheckCircle size={20} className="text-primary" />
                         <p className="text-sm md:tex-base text-gray-500">

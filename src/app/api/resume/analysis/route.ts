@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
     const parsed = await pdfParse(buffer);
     const resumeText = parsed.text?.slice(0, 8000) || ""; // Truncate for Gemini
 
-    // ⬇ Prepare prompt
-    const prompt = `You are a senior technical recruiter with 10+ years of experience in software engineering hiring across Fortune 500 companies and high-growth startups. Your expertise spans full-stack development, DevOps, cloud architecture, mobile development, and emerging technologies.
+    // ⬇ Prepare analysis prompt
+    const analysisPrompt = `You are a senior technical recruiter with 10+ years of experience in software engineering hiring across Fortune 500 companies and high-growth startups. Your expertise spans full-stack development, DevOps, cloud architecture, mobile development, and emerging technologies.
 
-TASK: Conduct a comprehensive analysis of the provided candidate résumé against the specified job description. Your analysis should be thorough, objective, and actionable for hiring decisions.
+TASK: Conduct a comprehensive analysis of the provided candidate résumé against the specified job description. Your analysis should be thorough, objective, actionable for hiring decisions and also create the mock interview sessions for the candidate.
 
 ANALYSIS FRAMEWORK:
 1. **Technical Skills Assessment**: Evaluate programming languages, frameworks, tools, and technologies
@@ -150,33 +150,107 @@ JOB DESCRIPTION:
 """${jobDescription}"""
 
 Analyze the above résumé against the job description and return the JSON response following the specified schema exactly.`;
+
+    // ⬇ Prepare mock interview prompt
+    const mockInterviewPrompt = `You are an experienced technical interview coach and curriculum designer specializing in preparing software engineers for technical and behavioral interviews across different roles and difficulty levels. Your role is to create a series of structured mock interview sessions based on the candidate's resume and the provided job description.
+
+TASK:
+Analyze the resume and job description to design custom mock interview sessions that target the candidate's current skill level, the job requirements, and areas where they need practice. Each session should follow this interface format:
+
+interface PracticeInterview {
+  topic: string;
+  description: string;
+  focus: string[];
+  estimated_time: string;
+  difficulty: "easy" | "medium" | "hard";
+  candidateId: string;
+}
+
+GUIDELINES:
+- Select a variety of topics including technical, system design, behavioral, and role-specific skills.
+- Adjust the difficulty level based on the candidate's experience and job expectations.
+- Ensure each session is concise, focused, and realistically scoped to be completed in 10–30 minutes.
+- Include relevant keywords from the resume and job description.
+- The \`focus\` array should highlight specific themes (e.g., ["React", "state management", "accessibility"] or ["conflict resolution", "team leadership"]).
+- You may mix technical and behavioral sessions, depending on the role.
+
+OUTPUT FORMAT:
+Return ONLY valid JSON as an array of PracticeInterview objects. No additional text, explanations, or markdown formatting.
+
+[
+  {
+    "topic": "Topic Title",
+    "description": "Brief description of what this mock interview will cover.",
+    "focus": ["string", "string", "..."],
+    "estimated_time": "15 min",
+    "difficulty": "easy" | "medium" | "hard",
+    "candidateId": "${user.id}"
+  },
+  ...
+]
+
+RESUME:
+"""${resumeText}"""
+
+JOB DESCRIPTION:
+"""${jobDescription}"""
+
+Generate 4–6 mock interview sessions targeting the candidate's preparation needs for the given role.`;
+
     // ⬇ Get Gemini Model
     const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
+    // ⬇ Run both prompts concurrently
+    const [analysisResult, mockInterviewResult] = await Promise.all([
+      model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: analysisPrompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.3,
+          responseMimeType: "application/json",
         },
-      ],
-      generationConfig: {
-        temperature: 0.3,
-        responseMimeType: "application/json",
-      },
-    });
+      }),
+      model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: mockInterviewPrompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.4,
+          responseMimeType: "application/json",
+        },
+      }),
+    ]);
 
-    const content = result.response.candidates?.[0]?.content.parts?.[0]?.text;
+    const analysisContent =
+      analysisResult.response.candidates?.[0]?.content.parts?.[0]?.text;
+    const mockInterviewContent =
+      mockInterviewResult.response.candidates?.[0]?.content.parts?.[0]?.text;
 
-    if (!content) {
+    if (!analysisContent || !mockInterviewContent) {
       return NextResponse.json(
         { message: "No content returned from Gemini" },
         { status: 500 }
       );
     }
-    const filePath = `${user.id}/${Date.now()}-${resume.name}`;
-    const analysis = JSON.parse(content);
 
+    const filePath = `${user.id}/${Date.now()}-${resume.name}`;
+    const analysis = JSON.parse(analysisContent);
+    const mockInterviews = JSON.parse(mockInterviewContent);
+
+    // ⬇ Ensure all mock interviews have the candidateId (fallback in case AI doesn't include it)
+    const mockInterviewsWithCandidateId = mockInterviews.map((interview: any) => ({
+      ...interview,
+      candidateId: user.id, // Ensure candidateId is always present
+    }));
+
+    // ⬇ Upload resume to Supabase
     const { data, error } = await supabase.storage
       .from("resumes")
       .upload(filePath, buffer, {
@@ -184,11 +258,11 @@ Analyze the above résumé against the job description and return the JSON respo
         upsert: true,
       });
 
-    // console.log("ERRRR_______________",error)
     if (error) {
       return NextResponse.json({ message: error }, { status: 400 });
     }
 
+    // ⬇ Save resume analysis
     await db.resume.create({
       data: {
         userId: user.id,
@@ -197,11 +271,19 @@ Analyze the above résumé against the job description and return the JSON respo
       },
     });
 
+    // ⬇ Save mock interviews with proper candidateId
+    await db.mockInterviews.createMany({
+      data: mockInterviewsWithCandidateId,
+    });
+
     return NextResponse.json(
       {
         status: 200,
         message: "Resume analyzed successfully",
-        data: analysis,
+        data: {
+          analysis: analysis,
+          mockInterviews: mockInterviewsWithCandidateId,
+        },
       },
       { status: 200 }
     );
@@ -212,4 +294,4 @@ Analyze the above résumé against the job description and return the JSON respo
       { status: 500 }
     );
   }
-}
+} 

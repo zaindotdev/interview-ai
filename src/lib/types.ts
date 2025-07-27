@@ -68,3 +68,15 @@ export type ChartData = {
         Behavioral: number
         Communication: number
     }
+
+
+
+export interface PracticeInterview {
+  id:string;
+  topic: string;
+  description: string;
+  focus: string[];
+  estimated_time: string;
+  difficulty: "easy" | "medium" | "hard";
+  candidateId: string;
+}

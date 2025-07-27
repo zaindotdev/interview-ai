@@ -36,16 +36,7 @@ type ConnectionStatus =
   | "Listening..."
   | "Call ended"
   | "Time up - Call ended"
-  | string; // for error messages
-
-const INTERVIEW_CONFIG = {
-  topic: "JS Mastery",
-  description:
-    "This interview will test your knowledge of advanced JavaScript concepts, including closures, async/await, and ES6 features.",
-  focus: ["closures", "async/await", "ES6 features"],
-  estimated_time: 60, // In seconds
-  difficulty: "easy",
-} as const;
+  | string;
 
 const createAnimationVariants = (isActive: boolean) => ({
   initial: { scale: 0.95 },
@@ -116,16 +107,43 @@ const Interview = () => {
   const vapiRef = useRef<Vapi | null>(null);
   const messageHandlerRef = useRef<((message: any) => void) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
+  const [interviewConfig, setInterviewConfig] = useState<any>(null);
+
+  const fetchPracticeInterviews = useCallback(async () => {
+    try {
+      const response = await axios.get("/api/interview/mock/get");
+      if (response.status !== 200) {
+        toast.error("Something went wrong", {
+          description: response.data.message
+        });
+        return;
+      }
+      setInterviewConfig(response.data.data);
+      console.log(response.data.data);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to fetch interview config");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPracticeInterviews();
+  }, [fetchPracticeInterviews]);
 
   // Memoized assistant data validation
-  const isValidTopic = useMemo(() => INTERVIEW_CONFIG.topic === id, [id]);
+  const isValidTopic = useMemo(() => {
+    const item = interviewConfig?.find((item: any) => item.id === id);
+    return !!item;
+  }, [id, interviewConfig]);
 
   const getAssistantId = useCallback(async () => {
-    if (!isValidTopic) return;
+    if (!isValidTopic || !interviewConfig?.length) return;
 
     setLoading(true);
+    const INTERVIEW_CONFIG = interviewConfig.find((item: any) => item.id === id) || interviewConfig[0];
 
     try {
+      console.log(interviewConfig);
       const response = await axios.post(
         "/api/assistant",
         INTERVIEW_CONFIG,
@@ -141,10 +159,11 @@ const Interview = () => {
     } catch (error) {
       console.error("Failed to get assistant ID:", error);
       setConnectionStatus("Failed to initialize assistant");
+      toast.error("Failed to initialize assistant");
     } finally {
       setLoading(false);
     }
-  }, [isValidTopic]);
+  }, [isValidTopic, interviewConfig, id]);
 
   // Memoized microphone permission handler
   const requestMicrophonePermission =
@@ -172,7 +191,7 @@ const Interview = () => {
   const handleTimeUp = useCallback(async () => {
     console.info("Time limit reached - auto-ending call...");
     setConnectionStatus("Time up - Call ended");
-    
+
     if (vapiRef.current && callStarted) {
       try {
         await vapiRef.current.stop();
@@ -180,12 +199,16 @@ const Interview = () => {
         console.error("Error stopping call:", error);
       }
     }
-    
+
+    toast.info("Time's up - Call ended", {
+      description: "Redirecting to dashboard in 3 seconds..."
+    });
+
     // Optional: Auto-redirect after a delay
     setTimeout(() => {
-      router.replace("/dashboard");
+      router.replace(`/report/${id}`);
     }, 3000); // 3 second delay before redirect
-  }, [callStarted, router]);
+  }, [callStarted, router, id]);
 
   // Optimized message handler with better duplicate prevention
   const createMessageHandler = useCallback(() => {
@@ -255,19 +278,25 @@ const Interview = () => {
         console.error("Error ending call:", error);
       }
     }
-    toast.info("Times up - Call ended",{
-      description: "Redirecting to dashboard in 3 seconds..."
+    toast.info("Call ended", {
+      description: "Redirecting to dashboard..."
     });
     setCallStarted(false);
     setCurrentRole(null);
     setCurrentTranscript("");
-    router.replace("/dashboard");
+
+    // Small delay to allow state updates
+    setTimeout(() => {
+      router.replace("/dashboard");
+    }, 1000);
   }, [callStarted, router]);
 
-  // Initialize assistant ID
+  // Initialize assistant ID when interview config is loaded
   useEffect(() => {
-    getAssistantId();
-  }, [getAssistantId]);
+    if (interviewConfig && interviewConfig.length > 0) {
+      getAssistantId();
+    }
+  }, [interviewConfig, getAssistantId]);
 
   // Main Vapi initialization effect
   useEffect(() => {
@@ -351,6 +380,17 @@ const Interview = () => {
     return callStarted ? "text-green-600" : "text-orange-600";
   }, [microphoneAccess, callStarted]);
 
+  if (!interviewConfig) {
+    return (
+      <main className="p-4 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
+          <p className="mt-4 text-lg">Loading interview configuration...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main>
       <section className="p-4">
@@ -363,11 +403,11 @@ const Interview = () => {
           </div>
           <div className="flex items-center gap-2">
             <TimerIcon className="w-8 h-8 text-orange-600" />
-            <Timer 
-              callStarted={callStarted} 
+            <Timer
+              callStarted={callStarted}
               setTimer={setTimer}
               onTimeUp={handleTimeUp}
-              maxTime={INTERVIEW_CONFIG.estimated_time}
+              maxTime={interviewConfig?.[0]?.estimated_time}
             />
           </div>
         </div>

@@ -27,23 +27,24 @@ enum PaymentMethod {
 }
 
 model User {
-  id             String             @id @default(uuid())
-  username       String?
-  name           String?
-  email          String             @unique
-  emailVerified  DateTime?
-  image          String?
-  password       String?
-  role           Role               @default(CANDIDATE)
-  resumes        Resume[]
-  jobPosts       JobListing[]       @relation("RecruiterJobs")
-  sessions       InterviewSession[] @relation("CandidateSessions")
-  subscription   Subscription?
-  subscriptionId String?
-  Account        Account[]
-  Session        Session[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id              String             @id @unique @default(uuid())
+  username        String?
+  name            String?
+  email           String             @unique
+  emailVerified   DateTime?
+  image           String?
+  password        String?
+  role            Role               @default(CANDIDATE)
+  resumes         Resume[]
+  jobPosts        JobListing[]       @relation("RecruiterJobs")
+  sessions        InterviewSession[] @relation("CandidateSessions")
+  subscription    Subscription?
+  mockInterviewId String?
+  subscriptionId  String?
+  Account         Account[]
+  Session         Session[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@unique([email, role])
   @@index([email], map: "user_email_idx")
@@ -70,10 +71,21 @@ model JobListing {
   sessions    InterviewSession[]
   createdAt   DateTime           @default(now())
 
-  InterveiwQuestions InterveiwQuestions[]
-
   @@unique([recruiterId, title])
   @@index([recruiterId], map: "job_recruiter_id_idx")
+}
+
+model MockInterviews {
+  id             String   @id @unique @default(uuid())
+  topic          String   @unique
+  description    String
+  focus          String[]
+  estimated_time String
+  difficulty     String
+  candidateId    String
+  createdAt      DateTime @default(now())
+
+  @@index([candidateId], map: "mock_interviews_candidate_id_idx")
 }
 
 model InterviewSession {
@@ -94,18 +106,6 @@ model InterviewSession {
 
   @@unique([candidateId, jobId])
   @@index([candidateId], map: "session_candidate_id_idx")
-}
-
-model InterveiwQuestions {
-  id        String     @id @default(uuid())
-  question  String
-  answers   String[]
-  jobId     String
-  job       JobListing @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  createdAt DateTime   @default(now())
-
-  @@unique([jobId, question])
-  @@index([jobId], map: "question_job_id_idx")
 }
 
 model Subscription {
