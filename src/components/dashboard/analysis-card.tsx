@@ -263,13 +263,24 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPra
       animateProgress(100);
 
       setTimeout(() => {
-        setResumeScore(response.data.data.parsedJson);
-        handleResumeScore(response.data.data.parsedJson);
+        // Check if we have valid data from the API
+        const apiData = response.data?.data?.parsedJson;
+        if (apiData) {
+          setResumeScore(apiData);
+          handleResumeScore(apiData);
+        } else {
+          // No data from API, keep resumeScore as null to show upload card
+          setResumeScore(null);
+          handleResumeScore(null);
+        }
         resetLoadingState();
       }, 300);
 
     } catch (error) {
       console.error(error);
+      // On error, also keep resumeScore as null to show upload card
+      setResumeScore(null);
+      handleResumeScore(null);
       resetLoadingState();
     }
   }, [animateProgress, handleResumeScore, resetLoadingState]);
@@ -319,51 +330,30 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPra
             </div>
           </div>
         </div>
-        {!resumeScore || loading ? (
+        
+        {/* Show loading state */}
+        {loading ? (
           <div className="min-h-[250px] flex flex-col items-center justify-center p-4">
-            {loading ? (
-              <div className="w-full flex items-center justify-center flex-col">
-                <div className="w-full max-w-xs">
-                  <Progress value={percentageProgress} className="mb-2" />
-                  <p className="text-sm font-semibold text-center text-gray-400">
-                    {percentageProgress}%
-                  </p>
-                  <p className="text-xs text-center text-gray-400 mt-2">
-                    {percentageProgress < 10
-                      ? "Starting analysis..."
-                      : percentageProgress < 70
-                        ? "Uploading resume..."
-                        : percentageProgress < 90
-                          ? "Processing data..."
-                          : "Finalizing results..."}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="w-full">
-                <p className="text-gray-500 text-sm md:text-base mb-2">
-                  {!file ? "Upload your resume to get started" : file.name}
+            <div className="w-full flex items-center justify-center flex-col">
+              <div className="w-full max-w-xs">
+                <Progress value={percentageProgress} className="mb-2" />
+                <p className="text-sm font-semibold text-center text-gray-400">
+                  {percentageProgress}%
                 </p>
-                <div className="border-2 border-dashed border-primary  w-full h-[200px] rounded-xl relative">
-                  <div className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-col">
-                    <UploadCloud size={54} className="text-primary" />
-                    <p className="text-xl font-medium text-gray-500">
-                      Upload Resume
-                    </p>
-                  </div>
-                  <Input
-                    value=""
-                    onChange={handleResumeAnalysis}
-                    accept="application/pdf"
-                    type="file"
-                    className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 opacity-0 cursor-pointer"
-                    disabled={loading}
-                  />
-                </div>
+                <p className="text-xs text-center text-gray-400 mt-2">
+                  {percentageProgress < 10
+                    ? "Starting analysis..."
+                    : percentageProgress < 70
+                      ? "Uploading resume..."
+                      : percentageProgress < 90
+                        ? "Processing data..."
+                        : "Finalizing results..."}
+                </p>
               </div>
-            )}
+            </div>
           </div>
-        ) : (
+        ) : resumeScore ? (
+          /* Show resume score data */
           <div>
             <div className="card-content">
               <div className="mb-4">
@@ -371,34 +361,58 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPra
                   <div className="flex items-center gap-2">
                     <Badge size={24} className="text-primary mb-2" />
                     <p className="text-gray-500 text-sm md:text-base">
-                      {resumeScore?.score || resumeScore?.score || 0}%
+                      {resumeScore?.score || 0}%
                     </p>
                   </div>
                   <BadgeComp variant={"outline"}>
                     {resumeScore?.matchLevel}
                   </BadgeComp>
                 </div>
-                <Progress value={resumeScore?.score || resumeScore?.score || 0} />
+                <Progress value={resumeScore?.score || 0} />
               </div>
               <div className="strengths">
                 <p className="text-gray-500 text-sm md:text-base">Strengths:</p>
                 <ul className="max-h-[200px] overflow-y-auto scroll-smooth ">
-                  {resumeScore &&
-                    (resumeScore.strengths || resumeScore.strengths || []) &&
-                    (resumeScore.strengths || resumeScore.strengths || []).map((strength, index) => (
-                      <li className="flex items-center gap-2 mt-2" key={index}>
-                        <CheckCircle size={20} className="text-primary" />
-                        <p className="text-sm md:tex-base text-gray-500">
-                          {strength}
-                        </p>
-                      </li>
-                    ))}
+                  {resumeScore?.strengths?.map((strength, index) => (
+                    <li className="flex items-center gap-2 mt-2" key={index}>
+                      <CheckCircle size={20} className="text-primary" />
+                      <p className="text-sm md:tex-base text-gray-500">
+                        {strength}
+                      </p>
+                    </li>
+                  ))}
                 </ul>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Show upload resume card when no data */
+          <div className="min-h-[250px] flex flex-col items-center justify-center p-4">
+            <div className="w-full">
+              <p className="text-gray-500 text-sm md:text-base mb-2">
+                {!file ? "Upload your resume to get started" : file.name}
+              </p>
+              <div className="border-2 border-dashed border-primary w-full h-[200px] rounded-xl relative">
+                <div className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-col">
+                  <UploadCloud size={54} className="text-primary" />
+                  <p className="text-xl font-medium text-gray-500">
+                    Upload Resume
+                  </p>
+                </div>
+                <Input
+                  value=""
+                  onChange={handleResumeAnalysis}
+                  accept="application/pdf"
+                  type="file"
+                  className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 opacity-0 cursor-pointer"
+                  disabled={loading}
+                />
               </div>
             </div>
           </div>
         )}
       </Card>
+      
       <Card className="w-full p-4 shadow-md rounded-2xl bg-white">
         <div className="card-title">
           <h2 className="text-lg md:text-xl font-semibold text-primary">
