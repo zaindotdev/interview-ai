@@ -39,20 +39,39 @@ const Timer: React.FC<TimerProps> = ({
         return () => clearInterval(interval);
     }, [callStarted, setTimer, maxTime, onTimeUp]);
 
+    // Format elapsed time
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    const formatted = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const elapsedTimeFormatted = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 
-    // Show time remaining if maxTime is provided
+    // Calculate and format remaining time
     const timeRemaining = maxTime ? maxTime - seconds : null;
     const isNearEnd = timeRemaining !== null && timeRemaining <= 30; // Last 30 seconds
+    const hasTimeLimit = maxTime !== undefined && maxTime > 0;
+
+    // Format remaining time in MM:SS
+    const formatRemainingTime = (remainingSeconds: number) => {
+        if (remainingSeconds <= 0) return "00:00";
+        const mins = Math.floor(remainingSeconds / 60);
+        const secs = remainingSeconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     return (
         <div className={`font-mono text-lg ${isNearEnd ? 'text-red-600 font-bold' : ''}`}>
-            {formatted}
-            {timeRemaining !== null && (
-                <div className="text-xs text-gray-500">
-                    {timeRemaining > 0 ? `${timeRemaining}s remaining` : 'Time up!'}
+            {/* Show elapsed time */}
+            <div>
+                Elapsed: {elapsedTimeFormatted}
+            </div>
+            
+            {/* Show remaining time if maxTime is provided */}
+            {hasTimeLimit && timeRemaining !== null && (
+                <div className={`text-sm ${isNearEnd ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
+                    {timeRemaining > 0 ? (
+                        <>Remaining: {formatRemainingTime(timeRemaining)}</>
+                    ) : (
+                        <span className="text-red-600 font-bold">Time up!</span>
+                    )}
                 </div>
             )}
         </div>

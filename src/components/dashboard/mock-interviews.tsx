@@ -14,6 +14,13 @@ interface MockInterviewsProps {
 
 const MockInterviews: React.FC<MockInterviewsProps> = ({ weaknessess, practiceInterview }) => {
     const router = useRouter();
+
+     const formatRemainingTime = (remainingSeconds: number) => {
+        if (remainingSeconds <= 0) return "00:00";
+        const mins = Math.floor(remainingSeconds / 60);
+        
+        return `${mins.toString().padStart(2, '0')} mins`;
+    };
     return (
         <section className="p-4 md:grid grid-cols-3 gap-4">
             <Card className="p-4 bg-white shadow-md">
@@ -79,7 +86,7 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({ weaknessess, practiceIn
                                     {interview.difficulty}
                                 </Badge>
                                 <p className="text-gray-500 text-sm md:text-base font-sm">
-                                    {interview.estimated_time.toLocaleString()}
+                                    {formatRemainingTime(interview.estimated_time)}
                                 </p>
                                 <Button onClick={() => router.push(`/session/interview/?id=${interview.id}`)} className="mt-4 cursor-pointer">
                                     Start Interview
