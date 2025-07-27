@@ -98,7 +98,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPra
   const [loading, setLoading] = useState<boolean>(false);
   const [percentageProgress, setPercentageProgress] = useState(0);
   const [file, setFile] = useState<File | null>(null);
-  const [chartData, setChartData] = useState<ChartData[] | null>(null);
+  const [chartData] = useState<ChartData[] | null>(null);
 
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const targetProgressRef = useRef<number>(0);
@@ -147,7 +147,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPra
     setPercentageProgress(0);
   }, []);
 
-  const handleResumeAnalysis = async (e: any) => {
+  const handleResumeAnalysis = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     
     if (!selectedFile) {
@@ -286,7 +286,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPra
             Resume Analysis
           </h2>
           <p className="text-gray-500 text-sm md:text-base">
-            An overview of your resume's performance and highlights key
+            An overview of your resume&apos;s performance and highlights key
             strengths.
           </p>
           <div className="mt-4 w-full flex items-center gap-2">
@@ -405,7 +405,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPra
             Interview Analysis
           </h2>
           <p className="text-gray-500 text-sm md:text-base">
-            An overview of your interview's performance and highlights key
+            An overview of your interview&apos;s performance and highlights key
             strengths.
           </p>
         </div>

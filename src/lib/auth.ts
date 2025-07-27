@@ -5,7 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/prisma";
 import bcrypt from "bcrypt";
-import { Role } from "@/generated/prisma";
+import { Role, User } from "@/generated/prisma";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
@@ -63,7 +63,7 @@ export const authOptions: NextAuthOptions = {
   
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.role = (user as any).role;
+      if (user) token.role = (user as User).role;
       return token;
     },
     
@@ -72,7 +72,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     
-    async signIn({ user, account, profile }) {
+    async signIn({ account, profile }) {
       try {
         // For OAuth providers (Google/GitHub)
         if (account?.provider === "google" || account?.provider === "github") {
@@ -88,7 +88,7 @@ export const authOptions: NextAuthOptions = {
               await db.user.create({
                 data: {
                   name: profile?.name || '',
-                  email: profile?.email!,
+                  email: profile?.email || '',
                   username: profile?.name?.replace(/\s/g, "").toLowerCase() || '',
                   role: "CANDIDATE",
                 },

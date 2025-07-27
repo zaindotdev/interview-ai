@@ -73,7 +73,7 @@ const RootLayout = ({ children }: Props) => {
                   src={session?.user?.image}
                   width={40}
                   height={40}
-                  alt={session?.user?.name!}
+                  alt={session?.user?.name || "User"}
                 />
               ) : (
                 <UserCircle className="w-8 h-8" />

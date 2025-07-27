@@ -5,6 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/prisma";
+import { PracticeInterview } from "@/lib/types";
 
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -245,7 +246,7 @@ Generate 4–6 mock interview sessions targeting the candidate's preparation nee
     const mockInterviews = JSON.parse(mockInterviewContent);
 
     // ⬇ Ensure all mock interviews have the candidateId (fallback in case AI doesn't include it)
-    const mockInterviewsWithCandidateId = mockInterviews.map((interview: any) => ({
+    const mockInterviewsWithCandidateId = mockInterviews.map((interview:PracticeInterview) => ({
       ...interview,
       candidateId: user.id, // Ensure candidateId is always present
     }));

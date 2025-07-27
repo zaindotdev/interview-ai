@@ -21,6 +21,7 @@ import axios from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
 import Timer from "@/components/session/timer";
 import { toast } from "sonner";
+import { PracticeInterview } from "@/lib/types";
 
 type Message = {
   role: string;
@@ -98,16 +99,16 @@ const Interview = () => {
   const [microphoneAccess, setMicrophoneAccess] = useState<boolean>(false);
   const [assistantId, setAssistantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [timer, setTimer] = useState(0);
+  const [_, setTimer] = useState(0);
 
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const router = useRouter();
 
   const vapiRef = useRef<Vapi | null>(null);
-  const messageHandlerRef = useRef<((message: any) => void) | null>(null);
+  const messageHandlerRef = useRef<((message: Message) => void) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
-  const [interviewConfig, setInterviewConfig] = useState<any>(null);
+  const [interviewConfig, setInterviewConfig] = useState<PracticeInterview[]|null>(null);
 
   const fetchPracticeInterviews = useCallback(async () => {
     try {
@@ -132,7 +133,7 @@ const Interview = () => {
 
   // Memoized assistant data validation
   const isValidTopic = useMemo(() => {
-    const item = interviewConfig?.find((item: any) => item.id === id);
+    const item = interviewConfig?.find((item: PracticeInterview) => item.id === id);
     return !!item;
   }, [id, interviewConfig]);
 
@@ -140,7 +141,7 @@ const Interview = () => {
     if (!isValidTopic || !interviewConfig?.length) return;
 
     setLoading(true);
-    const INTERVIEW_CONFIG = interviewConfig.find((item: any) => item.id === id) || interviewConfig[0];
+    const INTERVIEW_CONFIG = interviewConfig.find((item: PracticeInterview) => item.id === id) || interviewConfig[0];
 
     try {
       console.log(interviewConfig);
@@ -212,7 +213,7 @@ const Interview = () => {
 
   // Optimized message handler with better duplicate prevention
   const createMessageHandler = useCallback(() => {
-    return (message: any) => {
+    return (message: { type?: any; role: any; transcriptType?: any; transcript?: any; }) => {
       switch (message.type) {
         case "transcript": {
           const { role, transcriptType, transcript } = message;
@@ -265,7 +266,7 @@ const Interview = () => {
     setConnectionStatus("Call ended");
   }, []);
 
-  const handleError = useCallback((error: any) => {
+  const handleError = useCallback((error: Error) => {
     console.error("Vapi error:", error);
     setConnectionStatus(`Error: ${error.message || "Connection failed"}`);
   }, []);
@@ -407,7 +408,7 @@ const Interview = () => {
               callStarted={callStarted}
               setTimer={setTimer}
               onTimeUp={handleTimeUp}
-              maxTime={interviewConfig?.[0]?.estimated_time}
+              maxTime={parseInt(interviewConfig?.[0]?.estimated_time)}
             />
           </div>
         </div>
