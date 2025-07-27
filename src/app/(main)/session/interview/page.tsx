@@ -99,7 +99,7 @@ const Interview = () => {
   const [microphoneAccess, setMicrophoneAccess] = useState<boolean>(false);
   const [assistantId, setAssistantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [_, setTimer] = useState(0);
+  const [, setTimer] = useState(0);
 
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
