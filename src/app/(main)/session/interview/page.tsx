@@ -352,7 +352,7 @@ const Interview = () => {
       }
     };
 
-    initializeVapi();
+    // initializeVapi();
 
     // Cleanup on unmount
     return () => {
@@ -408,7 +408,7 @@ const Interview = () => {
               callStarted={callStarted}
               setTimer={setTimer}
               onTimeUp={handleTimeUp}
-              maxTime={parseInt(interviewConfig?.[0]?.estimated_time)}
+              maxTime={interviewConfig?.[0]?.estimated_time}
             />
           </div>
         </div>

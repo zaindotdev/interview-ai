@@ -162,7 +162,7 @@ interface PracticeInterview {
   topic: string;
   description: string;
   focus: string[];
-  estimated_time: string;
+  estimated_time: number;
   difficulty: "easy" | "medium" | "hard";
   candidateId: string;
 }
@@ -183,7 +183,7 @@ Return ONLY valid JSON as an array of PracticeInterview objects. No additional t
     "topic": "Topic Title",
     "description": "Brief description of what this mock interview will cover.",
     "focus": ["string", "string", "..."],
-    "estimated_time": "15 min",
+    "estimated_time": number,
     "difficulty": "easy" | "medium" | "hard",
     "candidateId": "${user.id}"
   },

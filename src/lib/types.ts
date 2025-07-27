@@ -76,7 +76,7 @@ export interface PracticeInterview {
   topic: string;
   description: string;
   focus: string[];
-  estimated_time: string;
+  estimated_time: number;
   difficulty: "easy" | "medium" | "hard";
   candidateId: string;
 }
