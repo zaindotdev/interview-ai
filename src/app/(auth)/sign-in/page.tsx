@@ -41,18 +41,20 @@ const SignInPage = () => {
   const submitForm = async (data: SignInSchemaType) => {
     setLoading(true);
     try {
+      console.log(data);
       const user = await signIn("credentials", {
         redirect: true,
-        data,
+        callbackUrl: "/dashboard",
+        email: data.email,         // <-- Pass email
+        password: data.password,   // <-- Pass password
       });
       if (user?.error) {
         toast.error("Something went wrong", {
           description: user.error,
         });
+      } else {
+        toast.success("Signed in successfully");
       }
-      toast.success("Signed in successfully", {
-        description: user?.ok,
-      });
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {

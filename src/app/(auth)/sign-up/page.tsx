@@ -25,13 +25,15 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 
 const SignUpPage = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
+  const router = useRouter();
+
   const form = useForm<SignUpSchemaType>({
     resolver: zodResolver(SignUpSchema),
     defaultValues: {
@@ -51,18 +53,14 @@ const SignUpPage = () => {
       });
       if (user.status !== 200) {
         console.log(user);
-        toast.error("Something went wrong", {
-          description: "Something went wrong while signing you up",
+        toast.error(user?.message, {
+          description: "An error occurred, please try again.",
+          icon: "🚨",
         });
+        return;
       }
-      console.log(user);
-      // await signIn("credentials", {
-      //     callbackUrl: "/dashboard",
-      // })
-      toast.success("Signed up successfully", {
-        description: user.message,
-      });
-      redirect("/dashboard");
+
+      router.replace("/verify");
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {

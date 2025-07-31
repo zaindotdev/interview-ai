@@ -1,21 +1,43 @@
 'use client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import React, { useEffect } from 'react'
-import { useSession } from "next-auth/react"
+import React, { useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
+import axios from 'axios'
 
 const VerifyPage = () => {
-    const { data: session } = useSession();
     const email = useSearchParams().get("email");
     const router = useRouter();
 
-    useEffect(() => {
-        if (email === session?.user?.email) {
-            router.replace("/dashboard");
+    const verifyUser = useCallback(async () => {
+    try {
+        const response = await axios.patch("/api/user/verify", { email });
+        if (response.status !== 200) {
+            toast.error("We cannot verify your email", {
+                description: "Try again later"
+            });
+            return;
         } else {
-            router.replace("/sign-in")
+            toast.success("Email verified successfully");
+            setTimeout(() => {
+                router.replace("/dashboard");
+            }, 1500); // Wait 1.5 seconds for toast
         }
-    }, [email, session, router])
+    } catch (error) {
+        console.error(error);
+        toast.error("We cannot verify your email", {
+            description: "There was an error verifying your email. Please try again later."
+        });
+    }
+}, [email, router]);
+
+    useEffect(() => {
+        if(!email){
+            router.replace("/sign-in")
+            return
+        }
+        verifyUser()
+    }, [email, verifyUser])
     return (
         <section className='w-full min-h-screen flex items-center justify-center'>
             <Card className='max-w-lg w-full'>

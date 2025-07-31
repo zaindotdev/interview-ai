@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { name, email, password } = await req.json();
-    console.log("ERRRRR",name,email,password)
+    console.log("ERRRRR", name, email, password);
 
     if (!email || !password || !name) {
       return NextResponse.json({
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log("ERRRR",existingUser)
+    console.log("ERRRR", existingUser);
 
     if (existingUser) {
       return NextResponse.json({
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log("ERRRR",hashedPassword)
+    console.log("ERRRR", hashedPassword);
 
     const user = await db.user.create({
       data: {
@@ -43,8 +43,7 @@ export async function POST(req: NextRequest) {
         role: "CANDIDATE",
       },
     });
-    console.log("ERRRR",user)
-
+    console.log("User", user);
 
     if (!user) {
       return NextResponse.json({
@@ -53,16 +52,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    console.log("ERRRR",user)
+    console.log("User", user);
 
-    const mailSent = await sendMail(
+    const mailSent = await sendMail({
       email,
       name,
-        `${process.env.NEXTAUTH_URL}/verify?email=${email}`,
-    );
+      verificationLink: `${process.env.NEXTAUTH_URL}/verify?email=${email}`,
+    });
 
-    console.log("ERRRR",mailSent)
-
+    console.log("User", mailSent);
 
     if (!mailSent) {
       return NextResponse.json({
@@ -71,8 +69,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    console.log("ERRRR",mailSent)
-
+    console.log("ERRRR", mailSent);
 
     return NextResponse.json({
       status: 200,
@@ -80,7 +77,7 @@ export async function POST(req: NextRequest) {
       user,
     });
   } catch (error) {
-    console.error(error)
+    console.error(error);
     return NextResponse.json({
       status: 500,
       message: "Something went wrong",
