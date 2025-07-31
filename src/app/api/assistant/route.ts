@@ -6,7 +6,6 @@ export async function POST(req: Request) {
     const { topic, description, focus, estimated_time, difficulty } =
       await req.json();
 
-      console.log({topic,description,focus,estimated_time,difficulty})
 
     const assistant = await vapiClient.assistants.create({
       name: "Nora",

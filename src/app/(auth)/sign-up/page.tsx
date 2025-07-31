@@ -52,7 +52,7 @@ const SignUpPage = () => {
         },
       });
       if (user.status !== 200) {
-        console.log(user);
+        ;
         toast.error(user?.message, {
           description: "An error occurred, please try again.",
           icon: "🚨",

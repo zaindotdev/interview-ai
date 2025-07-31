@@ -18,7 +18,6 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
-          console.log("Missing credentials");
           return null;
         }
 
@@ -26,12 +25,10 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
         if (!user) {
-          console.log("User not found");
           return null;
         }
 
         if (!user.password) {
-          console.log("User has no password (probably OAuth)");
           return null;
         }
 
@@ -40,7 +37,7 @@ export const authOptions: NextAuthOptions = {
           user.password
         );
         if (!pwValid) {
-          console.log("Invalid password");
+          console.error("Invalid password");
           return null;
         }
 
@@ -102,7 +99,6 @@ export const authOptions: NextAuthOptions = {
                   role: "CANDIDATE",
                 },
               });
-              console.log("New OAuth user created successfully");
             } catch (createError) {
               console.error("Error creating OAuth user:", createError);
               return false;

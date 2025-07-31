@@ -201,8 +201,6 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPra
         resetLoadingState();
         return;
       }
-      console.log("Full API Response:", data);
-      console.log("Resume Score Data:", data.data);
 
       animateProgress(100);
 

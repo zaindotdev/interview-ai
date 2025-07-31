@@ -41,7 +41,7 @@ const SignInPage = () => {
   const submitForm = async (data: SignInSchemaType) => {
     setLoading(true);
     try {
-      console.log(data);
+      ;
       const user = await signIn("credentials", {
         redirect: true,
         callbackUrl: "/dashboard",

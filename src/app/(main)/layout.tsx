@@ -40,7 +40,7 @@ const RootLayout = ({ children }: Props) => {
         redirect: true,
       });
     } catch (error) {
-      console.log(error);
+      ;
       toast.error("Something went wrong", {
         description: "Something went wrong while signing you out",
       });

@@ -120,7 +120,7 @@ const Interview = () => {
         return;
       }
       setInterviewConfig(response.data.data);
-      console.log(response.data.data);
+      ;
     } catch (error) {
       console.error(error);
       toast.error("Failed to fetch interview config");
@@ -144,7 +144,6 @@ const Interview = () => {
     const INTERVIEW_CONFIG = interviewConfig.find((item: PracticeInterview) => item.id === id) || interviewConfig[0];
 
     try {
-      console.log(interviewConfig);
       const response = await axios.post(
         "/api/assistant",
         INTERVIEW_CONFIG,
@@ -155,7 +154,6 @@ const Interview = () => {
         }
       );
 
-      console.log("Assistant response:", response.data.data.assistant);
       setAssistantId(response.data.data.assistant.id);
     } catch (error) {
       console.error("Failed to get assistant ID:", error);
