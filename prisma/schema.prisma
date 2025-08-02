@@ -27,24 +27,25 @@ enum PaymentMethod {
 }
 
 model User {
-  id              String             @id @unique @default(uuid())
+  id              String        @id @unique @default(uuid())
   username        String?
   name            String?
-  email           String             @unique
-  emailVerified   DateTime?
+  otp             String?          @unique
+  otpExpiry       DateTime?
+  email           String        @unique
+  emailVerified   Boolean?
   image           String?
   password        String?
-  role            Role               @default(CANDIDATE)
+  role            Role          @default(CANDIDATE)
   resumes         Resume[]
-  jobPosts        JobListing[]       @relation("RecruiterJobs")
-  sessions        InterviewSession[] @relation("CandidateSessions")
+  jobPosts        JobListing[]  @relation("RecruiterJobs")
   subscription    Subscription?
   mockInterviewId String?
   subscriptionId  String?
   Account         Account[]
   Session         Session[]
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@unique([email, role])
   @@index([email], map: "user_email_idx")
@@ -62,14 +63,13 @@ model Resume {
 }
 
 model JobListing {
-  id          String             @id @default(uuid())
+  id          String   @id @default(uuid())
   title       String
   description String
   skills      String[]
-  recruiter   User               @relation("RecruiterJobs", fields: [recruiterId], references: [id])
+  recruiter   User     @relation("RecruiterJobs", fields: [recruiterId], references: [id])
   recruiterId String
-  sessions    InterviewSession[]
-  createdAt   DateTime           @default(now())
+  createdAt   DateTime @default(now())
 
   @@unique([recruiterId, title])
   @@index([recruiterId], map: "job_recruiter_id_idx")
@@ -86,26 +86,6 @@ model MockInterviews {
   createdAt      DateTime @default(now())
 
   @@index([candidateId], map: "mock_interviews_candidate_id_idx")
-}
-
-model InterviewSession {
-  id                 String     @id @default(uuid())
-  candidate          User       @relation("CandidateSessions", fields: [candidateId], references: [id])
-  candidateId        String
-  job                JobListing @relation(fields: [jobId], references: [id])
-  jobId              String
-  transcript         Json?
-  score              Int?
-  technicalScore     Int?
-  behavioralScore    Int?
-  communicationScore Int?
-  feedback           String?
-  recordingUrl       String?
-  time               DateTime?
-  createdAt          DateTime   @default(now())
-
-  @@unique([candidateId, jobId])
-  @@index([candidateId], map: "session_candidate_id_idx")
 }
 
 model Subscription {

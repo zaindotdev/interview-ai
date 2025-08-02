@@ -38,6 +38,7 @@ const SignUpPage = () => {
     resolver: zodResolver(SignUpSchema),
     defaultValues: {
       name: "",
+      username: "",
       email: "",
       password: "",
     },
@@ -52,7 +53,6 @@ const SignUpPage = () => {
         },
       });
       if (user.status !== 200) {
-        ;
         toast.error(user?.message, {
           description: "An error occurred, please try again.",
           icon: "🚨",
@@ -60,7 +60,7 @@ const SignUpPage = () => {
         return;
       }
 
-      router.replace("/verify");
+      router.replace(`/verify?email=${data.email}`);
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
@@ -111,20 +111,20 @@ const SignUpPage = () => {
     }
   };
   return (
-    <section className={"w-full min-h-screen flex items-center justify-center"}>
-      <Card className={"max-w-md w-full"}>
+    <section className={"flex min-h-screen w-full items-center justify-center"}>
+      <Card className={"w-full max-w-md"}>
         <CardHeader>
           <CardTitle>
             <h1
               className={
-                "text-lg md:text-xl font-medium italic text-pretty text-center"
+                "text-center text-lg font-medium text-pretty italic md:text-xl"
               }
             >
               Interview <span className={"text-primary"}>AI.</span>
             </h1>
           </CardTitle>
           <CardContent>
-            <h2 className={"text-2xl/8 font-semibold text-center"}>
+            <h2 className={"text-center text-2xl/8 font-semibold"}>
               Sign Up to your account
             </h2>
           </CardContent>
@@ -143,6 +143,23 @@ const SignUpPage = () => {
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
                       <Input type="name" placeholder="Your Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="name"
+                        placeholder="Your username"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -187,15 +204,15 @@ const SignUpPage = () => {
               </Button>
             </form>
           </Form>
-          <CardFooter className="w-full mt-4 flex items-center justify-center">
+          <CardFooter className="mt-4 flex w-full items-center justify-center">
             <p>
               Already have an Account? <Link href={"/sign-in"}>Sign In</Link>
             </p>
           </CardFooter>
         </CardContent>
         <Separator />
-        <CardFooter className="p-4 space-y-4 flex-col">
-          <p className="text-center mb-4">OR</p>
+        <CardFooter className="flex-col space-y-4 p-4">
+          <p className="mb-4 text-center">OR</p>
           <Button
             onClick={handleGithubSignIn}
             className="w-full cursor-pointer"

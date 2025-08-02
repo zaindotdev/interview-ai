@@ -1,57 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
-export async function PATCH(req:NextRequest) {
+export async function PATCH(req: NextRequest) {
   try {
-    const {email} = await req.json();
+    const { otp,email } = await req.json();
 
-    if(!email){
-        return NextResponse.json({
-            status: 400,
-            message: "Missing required fields",
-        })
+    if (!email || !otp || typeof otp !== "string") {
+      return NextResponse.json(
+        { message: "Invalid or missing OTP and email" },
+        { status: 400 }
+      );
     }
 
+    
     const user = await db.user.findUnique({
-        where:{
-            email
-        }
+      where: {
+        email
+      },
     });
 
-    if(!user){
-        return NextResponse.json({
-            status: 400,
-            message: "User not found",
-        })
+    if (!user) {
+      return NextResponse.json(
+        { message: "User not found" },
+        { status: 404 }
+      );
     }
 
-    if(user.emailVerified){
-        return NextResponse.json({
-            status: 400,
-            message: "User already verified",
-        })
+    if (user.emailVerified) {
+      return NextResponse.json(
+        { message: "Email already verified" },
+        { status: 400 }
+      );
     }
 
+    if (!user.otp) {
+      return NextResponse.json(
+        { message: "No verification code found. Please request a new one." },
+        { status: 400 }
+      );
+    }
+
+    if (user.otpExpiry && user.otpExpiry < new Date()) {
+      return NextResponse.json(
+        { message: "Verification code expired. Please request a new one." },
+        { status: 400 }
+      );
+    }
+
+    if (user.otp !== otp) {
+      return NextResponse.json(
+        { message: "Invalid verification code" },
+        { status: 400 }
+      );
+    }
+
+    // Update user to mark as verified and clear OTP
     await db.user.update({
-        where:{
-            email
-        },
-        data:{
-            emailVerified:new Date().toISOString(),
-        }
-    })
+      where: {
+        id: user.id,
+      },
+      data: {
+        emailVerified: true,
+        otp: null,
+        otpExpiry: null,
+      },
+    });
 
-    return NextResponse.json({
-        status: 200,
-        message: "User verified",
-    })
-    
+    return NextResponse.json(
+      { message: "Email verified successfully" },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error verifying user:", error);
     return NextResponse.json(
-      { message: "Error verifying user", data: error },
+      { message: "Internal server error" },
       { status: 500 }
     );
   }

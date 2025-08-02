@@ -1,16 +1,26 @@
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('ADMIN', 'CANDIDATE', 'RECRUITER');
 
+-- CreateEnum
+CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'CANCELLED', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "PaymentMethod" AS ENUM ('PAYPAL', 'STRIPE');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "username" TEXT,
     "name" TEXT,
+    "otp" INTEGER,
+    "otpExpiry" TIMESTAMP(3),
     "email" TEXT NOT NULL,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
     "password" TEXT,
     "role" "Role" NOT NULL DEFAULT 'CANDIDATE',
+    "mockInterviewId" TEXT,
+    "subscriptionId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -41,17 +51,38 @@ CREATE TABLE "JobListing" (
 );
 
 -- CreateTable
-CREATE TABLE "InterviewSession" (
+CREATE TABLE "MockInterviews" (
     "id" TEXT NOT NULL,
+    "topic" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "focus" TEXT[],
+    "estimated_time" INTEGER NOT NULL,
+    "difficulty" TEXT NOT NULL,
     "candidateId" TEXT NOT NULL,
-    "jobId" TEXT NOT NULL,
-    "transcript" JSONB,
-    "score" INTEGER,
-    "feedback" TEXT,
-    "recordingUrl" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "InterviewSession_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "MockInterviews_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Subscription" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "paymentId" TEXT NOT NULL,
+
+    CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Payment" (
+    "id" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'USD',
+    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
+    "method" "PaymentMethod" NOT NULL DEFAULT 'STRIPE',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -90,10 +121,58 @@ CREATE TABLE "VerificationToken" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
+CREATE UNIQUE INDEX "User_id_key" ON "User"("id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE INDEX "user_email_idx" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_role_key" ON "User"("email", "role");
+
+-- CreateIndex
+CREATE INDEX "resume_user_id_idx" ON "Resume"("userId");
+
+-- CreateIndex
+CREATE INDEX "job_recruiter_id_idx" ON "JobListing"("recruiterId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "JobListing_recruiterId_title_key" ON "JobListing"("recruiterId", "title");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MockInterviews_id_key" ON "MockInterviews"("id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MockInterviews_topic_key" ON "MockInterviews"("topic");
+
+-- CreateIndex
+CREATE INDEX "mock_interviews_candidate_id_idx" ON "MockInterviews"("candidateId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Subscription_userId_key" ON "Subscription"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Subscription_paymentId_key" ON "Subscription"("paymentId");
+
+-- CreateIndex
+CREATE INDEX "subscription_user_id_idx" ON "Subscription"("userId");
+
+-- CreateIndex
+CREATE INDEX "subscription_payment_id_idx" ON "Subscription"("paymentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Subscription_userId_paymentId_key" ON "Subscription"("userId", "paymentId");
+
+-- CreateIndex
+CREATE INDEX "payment_status_idx" ON "Payment"("status");
+
+-- CreateIndex
+CREATE INDEX "payment_method_idx" ON "Payment"("method");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Payment_status_method_key" ON "Payment"("status", "method");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");
@@ -114,10 +193,10 @@ ALTER TABLE "Resume" ADD CONSTRAINT "Resume_userId_fkey" FOREIGN KEY ("userId") 
 ALTER TABLE "JobListing" ADD CONSTRAINT "JobListing_recruiterId_fkey" FOREIGN KEY ("recruiterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "InterviewSession" ADD CONSTRAINT "InterviewSession_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "InterviewSession" ADD CONSTRAINT "InterviewSession_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "JobListing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "Payment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
