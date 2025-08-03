@@ -50,28 +50,36 @@ cd interview-ai
 Create a `.env` file and configure the following variables:
 
 ```env
-DATABASE_URL=
+DATABASE_URL="postgresql://postgres:1234@localhost:5432/interview_ai"
 
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_STORAGE_URL = 
+NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY = 
 
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
+GITHUB_CLIENT_SECRET = 
+GITHUB_CLIENT_ID =
 
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
+GOOGLE_CLIENT_SECRET = 
+GOOGLE_CLIENT_ID =
 
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=http://localhost:3000 # Change for production
+NEXTAUTH_SECRET = 
+NEXTAUTH_URL = "http://localhost:3000"
+RESEND_API_KEY = 
 
-GEMINI_API_KEY=
+GEMINI_API_KEY = 
+
+
+VAPI_AI_PRIVATE_API_KEY = 
+NEXT_PUBLIC_VAPI_AI_API_KEY = 
+NEXT_PUBLIC_VAPI_ASSISTANT_API_KEY = 
 ```
 
 After setting up the environment variables:
 
 ```bash
-npx prisma generate
-npx prisma db push
+npm run db:generate
+npm run db:migrate
 npm run dev
 ```
 
