@@ -15,3 +15,10 @@ export const SignUpSchema = z.object({
 })
 
 export type SignUpSchemaType = z.infer<typeof SignUpSchema>
+
+
+// File validation
+
+export const analyzeResumeSchema = z.object({
+  jobDescription: z.string().min(2, "Job description must be at least 2 characters"),
+});

@@ -1,471 +1,335 @@
-"use client";
-import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Progress } from "@/components/ui/progress";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  Radar,
-  RadarChart,
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  ResponsiveContainer,
-} from "recharts";
-import { UploadCloud, Badge, CheckCircle } from "lucide-react";
-import { Badge as BadgeComp } from "../ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "../ui/label";
-import {  ResumeScore } from "@/lib/types";
-import { toast } from "sonner";
-import axios from "axios";
-import { ChartData } from "@/lib/types";
-import { Button } from "../ui/button";
-import Link from "next/link";
+"use client"
+import type React from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
+import { Progress } from "@/components/ui/progress"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { UploadCloud, FileText, CheckCircle, TrendingUp, AlertCircle, Sparkles } from "lucide-react"
+import type { ResumeScore } from "@/lib/types"
+import { toast } from "sonner"
+import axios from "axios"
+import Link from "next/link"
 
 interface AnalysisCardProps {
-  handleResumeScore: React.Dispatch<React.SetStateAction<ResumeScore | null>>;
-  fetchPracticeInterviews: () => Promise<void>;
+  handleResumeScore: React.Dispatch<React.SetStateAction<ResumeScore | null>>
+  fetchPracticeInterviews: () => Promise<void>
 }
 
-type MockJobs = {
-  jobTitle: string;
-  jobDescription: string;
-};
-
-const mockJobs: MockJobs[] = [
-  {
-    jobTitle: "Frontend Developer",
-    jobDescription:
-      "Design and implement user interfaces using modern JavaScript frameworks like React or Vue. Ensure responsive design, cross-browser compatibility, and accessibility across all devices.",
-  },
-  {
-    jobTitle: "Backend Developer",
-    jobDescription:
-      "Build and maintain robust server-side logic, APIs, and database interactions using Node.js, Express, and PostgreSQL or MongoDB. Ensure high performance and responsiveness to requests from the frontend.",
-  },
-  {
-    jobTitle: "Full Stack Developer",
-    jobDescription:
-      "Work across the entire technology stack to build scalable web applications. Integrate frontend and backend components, manage databases, and deploy applications using cloud platforms like Vercel or AWS.",
-  },
-  {
-    jobTitle: "DevOps Engineer",
-    jobDescription:
-      "Automate and manage infrastructure, CI/CD pipelines, and deployment workflows. Monitor system performance, optimize resource usage, and ensure application availability using tools like Docker, Kubernetes, and Jenkins.",
-  },
-  {
-    jobTitle: "Mobile App Developer",
-    jobDescription:
-      "Create cross-platform mobile applications using React Native or Flutter. Integrate APIs, optimize performance, and ensure a smooth user experience across Android and iOS platforms.",
-  },
-  {
-    jobTitle: "UI/UX Designer",
-    jobDescription:
-      "Design intuitive, user-centric interfaces using tools like Figma or Adobe XD. Conduct user research, create wireframes and prototypes, and ensure design consistency throughout the product lifecycle.",
-  },
-  {
-    jobTitle: "Data Analyst",
-    jobDescription:
-      "Interpret complex datasets to provide actionable insights using SQL, Python, and visualization tools like Tableau or Power BI. Collaborate with teams to support decision-making and improve business performance.",
-  },
-  {
-    jobTitle: "Machine Learning Engineer",
-    jobDescription:
-      "Design and deploy machine learning models to solve real-world problems. Work with large datasets, preprocess data, and use frameworks like TensorFlow or PyTorch to train and evaluate models.",
-  },
-  {
-    jobTitle: "QA Engineer",
-    jobDescription:
-      "Develop and execute test plans, identify bugs, and ensure the delivery of high-quality software. Use automated and manual testing strategies to verify functionality, performance, and security.",
-  },
-  {
-    jobTitle: "Cloud Solutions Architect",
-    jobDescription:
-      "Design scalable and secure cloud infrastructures tailored to business needs using platforms like AWS, Azure, or Google Cloud. Lead architectural reviews, optimize cloud resources, and ensure compliance with best practices.",
-  },
-];
-
 const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPracticeInterviews }) => {
-  const [selectedJob, setSelectedJob] = useState<string>("");
-  const [resumeScore, setResumeScore] = useState<ResumeScore | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [percentageProgress, setPercentageProgress] = useState(0);
-  const [file, setFile] = useState<File | null>(null);
-  const [chartData] = useState<ChartData[] | null>(null);
-
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const targetProgressRef = useRef<number>(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedJob, setSelectedJob] = useState<string>("")
+  const [resumeScore, setResumeScore] = useState<ResumeScore | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [percentageProgress, setPercentageProgress] = useState(0)
+  const [file, setFile] = useState<File | null>(null)
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const targetProgressRef = useRef<number>(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const animateProgress = useCallback((targetProgress: number) => {
-    targetProgressRef.current = targetProgress;
-
+    targetProgressRef.current = targetProgress
     if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
+      clearInterval(progressIntervalRef.current)
     }
-
     progressIntervalRef.current = setInterval(() => {
       setPercentageProgress((currentProgress) => {
-        const diff = targetProgressRef.current - currentProgress;
-
+        const diff = targetProgressRef.current - currentProgress
         if (Math.abs(diff) < 1) {
           if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
+            clearInterval(progressIntervalRef.current)
           }
-          return targetProgressRef.current;
+          return targetProgressRef.current
         }
-
-        const increment =
-          diff > 0
-            ? Math.max(1, Math.ceil(diff * 0.1))
-            : Math.min(-1, Math.floor(diff * 0.1));
-        return currentProgress + increment;
-      });
-    }, 50);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-    };
-  }, []);
+        const increment = diff > 0 ? Math.max(1, Math.ceil(diff * 0.1)) : Math.min(-1, Math.floor(diff * 0.1))
+        return currentProgress + increment
+      })
+    }, 50)
+  }, [])
 
   const resetLoadingState = useCallback(() => {
     if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
+      clearInterval(progressIntervalRef.current)
     }
-    setLoading(false);
-    setPercentageProgress(0);
-  }, []);
+    setLoading(false)
+    setPercentageProgress(0)
+  }, [])
 
   const handleResumeAnalysis = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    
-    if (!selectedFile) {
-      return;
-    }
+    const selectedFile = e.target.files?.[0]
+    if (!selectedFile) return
 
     if (!selectedJob) {
-      toast.error("Please select a job description");
-      // Reset file input
+      toast.error("Please select a job description")
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = ""
       }
-      return;
+      return
     }
 
-    // Clear previous results and start loading
-    setResumeScore(null);
-    handleResumeScore(null);
-    resetLoadingState();
-    setLoading(true);
-    setPercentageProgress(0);
-    setFile(selectedFile);
+    setResumeScore(null)
+    handleResumeScore(null)
+    resetLoadingState()
+    setLoading(true)
+    setPercentageProgress(0)
+    setFile(selectedFile)
 
     try {
-      const formData = new FormData();
-      formData.append("resume", selectedFile);
-      formData.append("jobDescription", selectedJob);
-
-      animateProgress(5);
+      const formData = new FormData()
+      formData.append("resume", selectedFile)
+      formData.append("jobDescription", selectedJob)
+      animateProgress(5)
 
       const response = await axios.post("/api/resume/analysis", formData, {
         onUploadProgress: (progressEvent) => {
           if (progressEvent && progressEvent.loaded && progressEvent.total) {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded / progressEvent.total) * 100
-            );
-            const adjustedProgress = Math.min(percentCompleted * 0.7, 70);
-            animateProgress(adjustedProgress);
+            const percentCompleted = Math.round((progressEvent.loaded / progressEvent.total) * 100)
+            const adjustedProgress = Math.min(percentCompleted * 0.7, 70)
+            animateProgress(adjustedProgress)
           }
         },
-      });
+      })
 
-      animateProgress(85);
-
-      const data = await response.data;
+      animateProgress(85)
+      const data = await response.data
 
       if (data.status !== 200) {
-        toast.error("Something went wrong", {
+        toast.error("Analysis failed", {
           description: "Something went wrong while analyzing your resume",
-        });
-        resetLoadingState();
-        return;
+        })
+        resetLoadingState()
+        return
       }
 
-      animateProgress(100);
-
+      animateProgress(100)
       setTimeout(() => {
-        // Handle different possible data structures
-  
-        const resumeData = data.data || data;
-        
-        setResumeScore(resumeData.analysis);
-        handleResumeScore(resumeData.analysis);
-        fetchPracticeInterviews();
-        resetLoadingState();
-        toast.success("Resume analyzed successfully", {
-          description: "Resume analyzed successfully",
-        });
-      }, 500);
-
+        const resumeData = data.data || data
+        setResumeScore(resumeData.analysis)
+        handleResumeScore(resumeData.analysis)
+        fetchPracticeInterviews()
+        resetLoadingState()
+        toast.success("Resume analyzed successfully")
+      }, 500)
     } catch (error) {
-      console.error(error);
-      toast.error("Something went wrong", {
+      console.error(error)
+      toast.error("Analysis failed", {
         description: "Something went wrong while analyzing your resume",
-      });
-      resetLoadingState();
+      })
+      resetLoadingState()
     } finally {
-      // Reset file input to allow re-selection of the same file
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = ""
       }
     }
-  };
+  }
 
   const fetchResumeScore = useCallback(async () => {
-    setLoading(true);
-    setPercentageProgress(0);
-
+    setLoading(true)
+    setPercentageProgress(0)
     try {
-      animateProgress(10);
-
+      animateProgress(10)
       const response = await axios.get("/api/resume/report", {
         onDownloadProgress: (progressEvent) => {
           if (progressEvent && progressEvent.loaded && progressEvent.total) {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded / progressEvent.total) * 100
-            );
-            animateProgress(percentCompleted);
+            const percentCompleted = Math.round((progressEvent.loaded / progressEvent.total) * 100)
+            animateProgress(percentCompleted)
           }
         },
-      });
+      })
 
       if (response.status !== 200) {
-        toast.error("Something went wrong", {
-          description: "Something went wrong while fetching your resume score",
-        });
-        resetLoadingState();
-        return;
+        toast.error("Failed to fetch resume data")
+        resetLoadingState()
+        return
       }
 
-      animateProgress(100);
-
+      animateProgress(100)
       setTimeout(() => {
-        // Check if we have valid data from the API
-        const apiData = response.data?.data?.parsedJson;
+        const apiData = response.data?.data?.parsedJson
         if (apiData) {
-          setResumeScore(apiData);
-          handleResumeScore(apiData);
+          setResumeScore(apiData)
+          handleResumeScore(apiData)
         } else {
-          // No data from API, keep resumeScore as null to show upload card
-          setResumeScore(null);
-          handleResumeScore(null);
+          setResumeScore(null)
+          handleResumeScore(null)
         }
-        resetLoadingState();
-      }, 300);
-
+        resetLoadingState()
+      }, 300)
     } catch (error) {
-      console.error(error);
-      // On error, also keep resumeScore as null to show upload card
-      setResumeScore(null);
-      handleResumeScore(null);
-      resetLoadingState();
+      console.error(error)
+      setResumeScore(null)
+      handleResumeScore(null)
+      resetLoadingState()
     }
-  }, [animateProgress, handleResumeScore, resetLoadingState]);
+  }, [animateProgress, handleResumeScore, resetLoadingState])
 
   useEffect(() => {
-    fetchResumeScore();
-  }, [fetchResumeScore]);
+    fetchResumeScore()
+  }, [fetchResumeScore])
+
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+      }
+    }
+  }, [])
 
   return (
-    <section className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 p-4 relative">
-      <Card className="w-full p-4 shadow-md rounded-2xl bg-white">
-        <div className="card-title">
-          <h2 className="text-lg md:text-xl font-semibold text-primary">
-            Resume Analysis
-          </h2>
-          <p className="text-gray-500 text-sm md:text-base">
-            An overview of your resume&apos;s performance and highlights key
-            strengths.
-          </p>
-          <div className="mt-4 w-full flex items-center gap-2">
-            {resumeScore && (
-              <div className="ml-auto w-full">
-                <Label className="mb-2 text-gray-400">Upload New Resume</Label>
-                <Input 
-                  ref={fileInputRef}
-                  type="file" 
-                  onChange={handleResumeAnalysis}
-                  accept="application/pdf"
-                  disabled={loading}
-                />
-              </div>
-            )}
-            <div className="w-full">
-              <Label className="mb-2 text-gray-400">Choose a Job Role</Label>
-              <Select value={selectedJob} onValueChange={setSelectedJob} disabled={loading}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Job" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockJobs.map((job, idx) => (
-                    <SelectItem key={`job-${idx}`} value={job.jobDescription}>
-                      {job.jobTitle}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <div className="grid gap-6 md:grid-cols-2">
+      {/* Resume Analysis Card */}
+      <Card className="relative overflow-hidden">
+        <CardHeader className="pb-4">
+          <div className="flex items-center space-x-2">
+            <div className="rounded-full bg-primary/10 p-2">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Resume Analysis</CardTitle>
+              <CardDescription>Upload your resume to get detailed feedback and improvement suggestions</CardDescription>
             </div>
           </div>
-        </div>
-        
-        {/* Show loading state */}
-        {loading ? (
-          <div className="min-h-[250px] flex flex-col items-center justify-center p-4">
-            <div className="w-full flex items-center justify-center flex-col">
-              <div className="w-full max-w-xs">
-                <Progress value={percentageProgress} className="mb-2" />
-                <p className="text-sm font-semibold text-center text-gray-400">
-                  {percentageProgress}%
-                </p>
-                <p className="text-xs text-center text-gray-400 mt-2">
-                  {percentageProgress < 10
-                    ? "Starting analysis..."
-                    : percentageProgress < 70
-                      ? "Uploading resume..."
-                      : percentageProgress < 90
-                        ? "Processing data..."
-                        : "Finalizing results..."}
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : resumeScore ? (
-          /* Show resume score data */
-          <div>
-            <div className="card-content">
-              <div className="mb-4">
-                <div className="flex items-center gap-2 justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge size={24} className="text-primary mb-2" />
-                    <p className="text-gray-500 text-sm md:text-base">
-                      {resumeScore?.score || 0}%
-                    </p>
-                  </div>
-                  <BadgeComp variant={"outline"}>
-                    {resumeScore?.matchLevel}
-                  </BadgeComp>
-                </div>
-                <Progress value={resumeScore?.score || 0} />
-              </div>
-              <div className="strengths">
-                <p className="text-gray-500 text-sm md:text-base">Strengths:</p>
-                <ul className="max-h-[200px] overflow-y-auto scroll-smooth ">
-                  {resumeScore?.strengths?.map((strength, index) => (
-                    <li className="flex items-center gap-2 mt-2" key={index}>
-                      <CheckCircle size={20} className="text-primary" />
-                      <p className="text-sm md:tex-base text-gray-500">
-                        {strength}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* Show upload resume card when no data */
-          <div className="min-h-[250px] flex flex-col items-center justify-center p-4">
-            <div className="w-full">
-              <p className="text-gray-500 text-sm md:text-base mb-2">
-                {!file ? "Upload your resume to get started" : file.name}
-              </p>
-              <div className="border-2 border-dashed border-primary w-full h-[200px] rounded-xl relative">
-                <div className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-col">
-                  <UploadCloud size={54} className="text-primary" />
-                  <p className="text-xl font-medium text-gray-500">
-                    Upload Resume
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {loading ? (
+            <div className="flex min-h-[300px] flex-col items-center justify-center space-y-4">
+              <div className="w-full max-w-sm space-y-3">
+                <Progress value={percentageProgress} className="h-2" />
+                <div className="text-center">
+                  <p className="text-lg font-semibold">{percentageProgress}%</p>
+                  <p className="text-sm text-muted-foreground">
+                    {percentageProgress < 10
+                      ? "Initializing analysis..."
+                      : percentageProgress < 70
+                        ? "Uploading and processing..."
+                        : percentageProgress < 90
+                          ? "Analyzing content..."
+                          : "Finalizing results..."}
                   </p>
                 </div>
-                <Input
-                  value=""
-                  onChange={handleResumeAnalysis}
-                  accept="application/pdf"
-                  type="file"
-                  className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 opacity-0 cursor-pointer"
-                  disabled={loading}
-                />
               </div>
             </div>
-          </div>
-        )}
-      </Card>
-      
-      <Card className="w-full p-4 shadow-md rounded-2xl bg-white">
-        <div className="card-title">
-          <h2 className="text-lg md:text-xl font-semibold text-primary">
-            Interview Analysis
-          </h2>
-          <p className="text-gray-500 text-sm md:text-base">
-            An overview of your interview&apos;s performance and highlights key
-            strengths.
-          </p>
-        </div>
-        <div className="min-h-[250px] flex items-center justify-center">
-          {chartData ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="session" />
-                <PolarRadiusAxis />
-                <Radar
-                  name="Behavioral"
-                  dataKey="Behavioral"
-                  stroke="var(--chart-1)"
-                  fill="var(--chart-1)"
-                  fillOpacity={0.6}
-                />
-                <Radar
-                  name="Technical"
-                  dataKey="Technical"
-                  stroke="var(--chart-2)"
-                  fill="var(--chart-2)"
-                  fillOpacity={0.6}
-                />
-                <Radar
-                  name="Communication"
-                  dataKey="Communication"
-                  stroke="var(--chart-3)"
-                  fill="var(--chart-3)"
-                  fillOpacity={0.6}
-                />
-                <Tooltip />
-              </RadarChart>
-            </ResponsiveContainer>
+          ) : resumeScore ? (
+            <div className="space-y-6">
+              {/* Score Overview */}
+              <div className="rounded-lg border bg-gradient-to-r from-primary/5 to-primary/10 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <span className="font-semibold">Overall Score</span>
+                  </div>
+                  <Badge
+                    variant={
+                      resumeScore.score >= 80 ? "default" : resumeScore.score >= 60 ? "secondary" : "destructive"
+                    }
+                  >
+                    {resumeScore.matchLevel}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold">{resumeScore.score}%</span>
+                  </div>
+                  <Progress value={resumeScore.score} className="h-2" />
+                </div>
+              </div>
+
+              {/* Strengths */}
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <h3 className="font-semibold">Key Strengths</h3>
+                </div>
+                <div className="max-h-48 space-y-2 overflow-y-auto">
+                  {resumeScore.strengths?.map((strength, index) => (
+                    <div key={index} className="flex items-start space-x-2 rounded-lg bg-green-50 p-3">
+                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm">{strength}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
-            <div className="w-full flex items-center justify-center flex-col">
-              <p className="text-sm font-semibold my-2 text-gray-400">
-                No interviews Yet
-              </p>
-              <Button variant={"outline"}>
-                <Link href="/dashboard#interview">View Interviews</Link>
-              </Button>
+            <div className="space-y-4">
+              {/* Job Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="job-select">Select Job Type</Label>
+                <Select value={selectedJob} onValueChange={setSelectedJob}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a job description" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="software-engineer">Software Engineer</SelectItem>
+                    <SelectItem value="data-scientist">Data Scientist</SelectItem>
+                    <SelectItem value="product-manager">Product Manager</SelectItem>
+                    <SelectItem value="designer">UI/UX Designer</SelectItem>
+                    <SelectItem value="marketing">Marketing Specialist</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Upload Area */}
+              <div className="relative">
+                <div className="flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/25 bg-primary/5 transition-colors hover:border-primary/50 hover:bg-primary/10">
+                  <div className="text-center space-y-3">
+                    <div className="rounded-full bg-primary/10 p-3 mx-auto w-fit">
+                      <UploadCloud className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-medium">{file ? file.name : "Upload your resume"}</p>
+                      <p className="text-sm text-muted-foreground">PDF files only, max 10MB</p>
+                    </div>
+                  </div>
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleResumeAnalysis}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
             </div>
           )}
-        </div>
+        </CardContent>
       </Card>
-    </section>
-  );
-};
 
-export default AnalysisCard;
+      {/* Interview Performance Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center space-x-2">
+            <div className="rounded-full bg-blue-100 p-2">
+              <Sparkles className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Interview Performance</CardTitle>
+              <CardDescription>Track your mock interview progress and performance metrics</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex min-h-[300px] items-center justify-center">
+            <div className="text-center space-y-4">
+              <div className="rounded-full bg-muted p-4 mx-auto w-fit">
+                <AlertCircle className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground">No interviews completed yet</p>
+                <p className="text-sm text-muted-foreground">Start your first mock interview to see performance data</p>
+              </div>
+              <Button asChild>
+                <Link href="/mock-interviews">Start Interview</Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export default AnalysisCard

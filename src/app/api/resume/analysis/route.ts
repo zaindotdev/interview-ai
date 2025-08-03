@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     if (!resume || !jobDescription) {
       return NextResponse.json(
         { message: "Missing resume or job description" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -152,120 +152,36 @@ JOB DESCRIPTION:
 
 Analyze the above résumé against the job description and return the JSON response following the specified schema exactly.`;
 
-    // ⬇ Prepare mock interview prompt
-    // ⬇ Prepare mock interview prompt
-    const mockInterviewPrompt = `You are an experienced technical interview coach and curriculum designer specializing in preparing software engineers for technical and behavioral interviews across different roles and difficulty levels. Your role is to create a series of structured mock interview sessions based on the candidate's resume and the provided job description.
-
-TASK:
-Analyze the resume and job description to design custom mock interview sessions that target the candidate's current skill level, the job requirements, and areas where they need practice. Each session should follow this interface format:
-
-interface PracticeInterview {
-  topic: string;
-  description: string;
-  focus: string[];
-  estimated_time: number; // TIME IN SECONDS (e.g., 600 for 10 minutes, 1200 for 20 minutes, 1800 for 30 minutes)
-  difficulty: "easy" | "medium" | "hard";
-  candidateId: string;
-}
-
-GUIDELINES:
-- Select a variety of topics including technical, system design, behavioral, and role-specific skills.
-- Adjust the difficulty level based on the candidate's experience and job expectations.
-- Ensure each session is concise, focused, and realistically scoped to be completed in 10–30 minutes.
-- Include relevant keywords from the resume and job description.
-- The \`focus\` array should highlight specific themes (e.g., ["React", "state management", "accessibility"] or ["conflict resolution", "team leadership"]).
-- You may mix technical and behavioral sessions, depending on the role.
-- **IMPORTANT**: \`estimated_time\` must be specified in SECONDS, not minutes:
-  - 10 minutes = 600 seconds
-  - 15 minutes = 900 seconds  
-  - 20 minutes = 1200 seconds
-  - 25 minutes = 1500 seconds
-  - 30 minutes = 1800 seconds
-
-TIME RECOMMENDATIONS BY DIFFICULTY:
-- Easy sessions: 600-900 seconds (10-15 minutes)
-- Medium sessions: 900-1200 seconds (15-20 minutes)  
-- Hard sessions: 1200-1800 seconds (20-30 minutes)
-
-OUTPUT FORMAT:
-Return ONLY valid JSON as an array of PracticeInterview objects. No additional text, explanations, or markdown formatting.
-
-[
-  {
-    "topic": "Topic Title",
-    "description": "Brief description of what this mock interview will cover.",
-    "focus": ["string", "string", "..."],
-    "estimated_time": 900, // EXAMPLE: 15 minutes in seconds
-    "difficulty": "easy" | "medium" | "hard",
-    "candidateId": "${user.id}"
-  },
-  ...
-]
-
-RESUME:
-"""${resumeText}"""
-
-JOB DESCRIPTION:
-"""${jobDescription}"""
-
-Generate 4–6 mock interview sessions targeting the candidate's preparation needs for the given role.`;
-
     // ⬇ Get Gemini Model
     const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // ⬇ Run both prompts concurrently
-    const [analysisResult, mockInterviewResult] = await Promise.all([
-      model.generateContent({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: analysisPrompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.3,
-          responseMimeType: "application/json",
+    const analysisResult = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: analysisPrompt }],
         },
-      }),
-      model.generateContent({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: mockInterviewPrompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.4,
-          responseMimeType: "application/json",
-        },
-      }),
-    ]);
+      ],
+      generationConfig: {
+        temperature: 0.3,
+        responseMimeType: "application/json",
+      },
+    });
 
     const analysisContent =
       analysisResult.response.candidates?.[0]?.content.parts?.[0]?.text;
-    const mockInterviewContent =
-      mockInterviewResult.response.candidates?.[0]?.content.parts?.[0]?.text;
 
-    if (!analysisContent || !mockInterviewContent) {
+    if (!analysisContent) {
       return NextResponse.json(
         { message: "No content returned from Gemini" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     const filePath = `${user.id}/${Date.now()}-${resume.name}`;
     const analysis = JSON.parse(analysisContent);
-    const mockInterviews = JSON.parse(mockInterviewContent);
 
-    // ⬇ Ensure all mock interviews have the candidateId (fallback in case AI doesn't include it)
-    const mockInterviewsWithCandidateId = mockInterviews.map(
-      (interview: PracticeInterview) => ({
-        ...interview,
-        candidateId: user.id, // Ensure candidateId is always present
-      })
-    );
-
-    // ⬇ Upload resume to Supabase
     const { data, error } = await supabase.storage
       .from("resumes")
       .upload(filePath, buffer, {
@@ -286,27 +202,21 @@ Generate 4–6 mock interview sessions targeting the candidate's preparation nee
       },
     });
 
-    // ⬇ Save mock interviews with proper candidateId
-    await db.mockInterviews.createMany({
-      data: mockInterviewsWithCandidateId,
-    });
-
     return NextResponse.json(
       {
         status: 200,
         message: "Resume analyzed successfully",
         data: {
           analysis: analysis,
-          mockInterviews: mockInterviewsWithCandidateId,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Resume analysis error:", error);
     return NextResponse.json(
       { message: "Something went wrong", error },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

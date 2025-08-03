@@ -34,7 +34,7 @@ export const authOptions: NextAuthOptions = {
 
         const pwValid = await bcrypt.compare(
           credentials.password,
-          user.password
+          user.password,
         );
         if (!pwValid) {
           console.error("Invalid password");
@@ -68,12 +68,22 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.role = (user as User).role;
+      if (user) {
+        const dbUser = await db.user.findUnique({
+          where: { email: user.email! },
+        });
+
+        token.role = dbUser?.role;
+        token.hasOnboarded = dbUser?.hasOnboarded;
+      }
       return token;
     },
 
     async session({ session, token }) {
-      if (token.role && session.user) session.user.role = token.role as Role;
+      if (session.user) {
+        session.user.role = token.role as Role;
+        (session.user as any).hasOnboarded = token.hasOnboarded;
+      }
       return session;
     },
 
@@ -112,7 +122,7 @@ export const authOptions: NextAuthOptions = {
         return true;
       } catch (error) {
         console.error(
-          "--------------------------- Authentication Error ---------------------------"
+          "--------------------------- Authentication Error ---------------------------",
         );
         console.error(error);
         return false;

@@ -5,6 +5,7 @@ import {authOptions} from "@/lib/auth";
 declare module "next-auth" {
   interface Session {
     user?: {
+      id: any;
       name?: string | null;
       email?: string | null;
       image?: string | null;
