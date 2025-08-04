@@ -1,9 +1,254 @@
-import React from 'react'
+"use client";
+import type React from "react";
+import Link from "next/link";
 
-const Profile = () => {
-  return (
-    <div>Profile</div>
-  )
+import { useCallback, useEffect, useState } from "react";
+import { Mail, User, Calendar, Award, Target, LogOut } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import axios, { AxiosError } from "axios";
+import { toast } from "sonner";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  username?: string;
+  image?: string;
+  bio?: string;
+  joinDate?: string;
+  totalInterviews?: number;
+  averageScore?: number;
 }
 
-export default Profile
+const ProfilePage: React.FC = () => {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true); // Manage loading state locally
+  const { status } = useSession();
+  const router = useRouter();
+
+  const fetchUser = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Replace with your actual API call
+      const response = await axios.get("/api/user/get", {
+        headers: {
+          // Assuming token is stored in sessionStorage as per original code
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+        },
+      });
+
+      if (response.status !== 200) {
+        console.error(response.data.message);
+        toast.error(response.data.message);
+        setUser(null);
+        return;
+      }
+
+      // Map API response to UserProfile type
+      const apiUser = response.data.data;
+      setUser({
+        id: apiUser.id || "N/A",
+        name: apiUser.name || "User Name",
+        email: apiUser.email || "user@example.com",
+        username: apiUser.username || "interview_ai_user",
+        image: apiUser.image || "/placeholder.svg?height=128&width=128",
+        bio:
+          apiUser.bio ||
+          "Aspiring professional leveraging AI for interview success.",
+        joinDate: apiUser.createdAt
+          ? new Date(apiUser.createdAt).toLocaleDateString()
+          : "N/A",
+        totalInterviews: apiUser.totalInterviews || 15,
+        averageScore: apiUser.averageScore || 85,
+      });
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      if (error instanceof AxiosError) {
+        console.error(error.response?.data?.message);
+        toast.error(
+          error.response?.data?.message || "Failed to load profile data.",
+        );
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
+      setUser(null); // Ensure user is null on error
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      const response = await signOut();
+      if (response) {
+        toast.success("Successfully signed out.");
+      }
+      router.replace("/sign-in");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast.error("Failed to sign out.");
+    }
+  }, []);
+
+  useEffect(() => {
+    // Only fetch user data if session is loaded and authenticated
+    if (status === "authenticated") {
+      fetchUser();
+    } else if (status === "unauthenticated") {
+      setLoading(false); // Stop loading if not authenticated
+      setUser(null); // Clear user data if not authenticated
+      toast.info("Please sign in to view your profile.");
+    }
+  }, [status, fetchUser]);
+
+  if (loading || status === "loading") {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <div className="border-primary/20 h-12 w-12 rounded-full border-4"></div>
+            <div className="border-t-primary absolute top-0 left-0 h-12 w-12 animate-spin rounded-full border-4 border-transparent"></div>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-medium">Loading your profile...</p>
+            <p className="text-muted-foreground text-sm">
+              Please wait while we fetch your data.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center space-y-4 text-center">
+        <div className="bg-muted rounded-full p-4">
+          <User className="text-muted-foreground h-12 w-12" />
+        </div>
+        <h2 className="text-2xl font-bold">Profile Not Found</h2>
+        <p className="text-muted-foreground max-w-md">
+          We couldn't load your profile. This might happen if you're not logged
+          in or if there's an issue with your account.
+        </p>
+        {status === "unauthenticated" && (
+          <Button asChild>
+            <Link href="/sign-in">Sign In</Link>
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <section className="space-y-8">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
+          <p className="text-muted-foreground">
+            Manage your personal information and account settings.
+          </p>
+        </div>
+        <Button
+          onClick={handleSignOut}
+          variant="outline"
+          className="flex items-center gap-2 bg-transparent"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
+      </div>
+
+      {/* Profile Overview Card */}
+      <Card className="overflow-hidden">
+        <CardHeader className="relative p-0">
+          <div className="from-primary/20 to-primary/10 h-32 bg-gradient-to-r" />
+          <div className="absolute -bottom-16 left-6">
+            <Avatar className="h-28 w-28 border-4 border-white shadow-lg">
+              <AvatarImage
+                src={user.image || "/placeholder.svg"}
+                alt={user.name}
+              />
+              <AvatarFallback className="bg-primary text-primary-foreground text-4xl font-semibold">
+                {user.name?.charAt(0) || "U"}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6 px-6 pt-20 pb-6">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold">{user.name}</h2>
+            <p className="text-muted-foreground">@{user.username}</p>
+          </div>
+
+          <p className="text-muted-foreground leading-relaxed">{user.bio}</p>
+
+          <Separator />
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="text-muted-foreground flex items-center gap-3">
+              <Mail className="text-primary h-5 w-5" />
+              <span>{user.email}</span>
+            </div>
+            <div className="text-muted-foreground flex items-center gap-3">
+              <Calendar className="text-primary h-5 w-5" />
+              <span>Joined: {user.joinDate}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Performance Stats Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Performance Summary</CardTitle>
+          <CardDescription>
+            Your progress and key metrics in mock interviews.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="flex items-center gap-4 rounded-lg border bg-blue-50 p-4">
+            <div className="rounded-full bg-blue-100 p-3">
+              <Target className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-muted-foreground text-sm">Total Interviews</p>
+              <p className="text-2xl font-bold text-blue-800">
+                {user.totalInterviews}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 rounded-lg border bg-green-50 p-4">
+            <div className="rounded-full bg-green-100 p-3">
+              <Award className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-muted-foreground text-sm">Average Score</p>
+              <p className="text-2xl font-bold text-green-800">
+                {user.averageScore}%
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add more sections here as needed, e.g., Account Settings, Security, etc. */}
+    </section>
+  );
+};
+
+export default ProfilePage;

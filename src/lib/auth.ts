@@ -47,6 +47,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           username: user.username,
           role: user.role,
+          hasOnboarded: user.hasOnboarded, // Include hasOnboarded from DB
         };
       },
     }),
@@ -64,30 +65,57 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
-  session: { strategy: "jwt" },
+  session: { 
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // On sign in, set initial token data
       if (user) {
         const dbUser = await db.user.findUnique({
           where: { email: user.email! },
+          select: { id: true, role: true, hasOnboarded: true }
         });
 
         token.role = dbUser?.role;
         token.hasOnboarded = dbUser?.hasOnboarded;
+        token.userId = dbUser?.id;
       }
+
+      // Handle token refresh - fetch fresh data from database
+      // This happens when the token is accessed and needs to be refreshed
+      if (trigger === "update" || (!user && token.email)) {
+        try {
+          const dbUser = await db.user.findUnique({
+            where: { email: token.email! },
+            select: { id: true, role: true, hasOnboarded: true }
+          });
+
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.hasOnboarded = dbUser.hasOnboarded;
+            token.userId = dbUser.id;
+          }
+        } catch (error) {
+          console.error("Error refreshing token data:", error);
+        }
+      }
+
       return token;
     },
 
     async session({ session, token }) {
-      if (session.user) {
+      if (session.user && token) {
         session.user.role = token.role as Role;
         (session.user as any).hasOnboarded = token.hasOnboarded;
+        (session.user as any).userId = token.userId;
       }
       return session;
     },
 
-    async signIn({ account, profile }) {
+    async signIn({ account, profile, user }) {
       try {
         // For OAuth providers (Google/GitHub)
         if (account?.provider === "google" || account?.provider === "github") {
@@ -107,6 +135,7 @@ export const authOptions: NextAuthOptions = {
                   username:
                     profile?.name?.replace(/\s/g, "").toLowerCase() || "",
                   role: "CANDIDATE",
+                  hasOnboarded: false, // Explicitly set to false for new users
                 },
               });
             } catch (createError) {
@@ -118,7 +147,6 @@ export const authOptions: NextAuthOptions = {
           return true;
         }
 
-        // For credentials provider, user already exists if we reach here
         return true;
       } catch (error) {
         console.error(

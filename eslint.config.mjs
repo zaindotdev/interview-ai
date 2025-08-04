@@ -13,7 +13,7 @@ const eslintConfig = [
   {
     ignores: ["src/generated/**"], // ✅ Exclude generated folder
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends("next/core-web-vitals", "next/typescript","next/react", "plugin:tailwindcss/recommended"),
 ];
 
 export default eslintConfig;

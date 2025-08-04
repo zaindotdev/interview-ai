@@ -1,91 +1,28 @@
-"use client";
-
-import React from "react";
-import { Meteors } from "@/components/magicui/meteors";
-import { signOut, useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { LogOut, UserCircle } from "lucide-react";
-import { Separator } from "@radix-ui/react-separator";
-import { toast } from "sonner";
-import Link from "next/link";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
+import type React from "react";
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/shared/sidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 
-type Props = { children: React.ReactNode };
-
-const RootLayout = ({ children }: Props) => {
-  const { data: session } = useSession();
-  const pathname = usePathname();
-
-  const handleSignOut = async () => {
-    try {
-      await signOut({
-        callbackUrl: "/sign-in",
-        redirect: true,
-      });
-    } catch (error) {
-      toast.error("Something went wrong", {
-        description: "Something went wrong while signing you out",
-      });
-    }
-  };
-
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-      <SidebarProvider>
-    <main className="flex items-center justify-between gap-4 overflow-hidden p-4">
-        <AppSidebar />
-
-        <div className="col-span-4 container mx-auto">
-          {pathname !== "/onboarding" && (
-            <header className="mb-8 py-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
-                    Welcome{" "}
-                    <span className="text-primary">{session?.user?.name}</span>
-                  </h1>
-                  <p className="text-sm text-gray-500 md:text-base">
-                    You are logged in as{" "}
-                    <span className="text-primary text-sm md:text-base">
-                      {session?.user?.email}
-                    </span>
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-4">
-                  <Link
-                    href={`/profile/${session?.user?.name?.toLowerCase().split(" ").join("-")}`}
-                  >
-                    {session?.user?.image ? (
-                      <Image
-                        src={session?.user?.image}
-                        width={40}
-                        height={40}
-                        alt={session?.user?.name || "User"}
-                      />
-                    ) : (
-                      <UserCircle className="h-8 w-8" />
-                    )}
-                  </Link>
-                  <Button
-                    onClick={handleSignOut}
-                    className="cursor-pointer"
-                    variant={"primary"}
-                  >
-                    <LogOut />
-                    Logout
-                  </Button>
-                </div>
-              </div>
-              <Separator className="border-primary my-4 border" />
-            </header>
-          )}
-          {children}
-        </div>
-    </main>
-      </SidebarProvider>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 md:px-6">
+          <SidebarTrigger className="-ml-1 md:hidden" />
+          <Separator orientation="vertical" className="mr-2 h-4 md:hidden" />
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold md:text-xl">
+              Interview <span className="text-primary">AI</span>
+            </h1>
+          </div>
+        </header>
+        <main className="flex-1 p-4 pb-20 md:p-6 md:pb-6 max-w-7xl w-full mx-auto">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
-};
-
-export default RootLayout;
+}

@@ -6,47 +6,81 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/prisma";
 import { PracticeInterview } from "@/lib/types";
+import { ErrorResponse, HttpResponse } from "@/utils/response";
+
+// Constants
+const MAX_RESUME_TEXT_LENGTH = 8000;
+const ANALYSIS_TEMPERATURE = 0.3;
+const MOCK_INTERVIEW_TEMPERATURE = 0.4;
+const MODEL_NAME = "gemini-2.5-flash";
 
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+// Error response helper
+const errorResponse = (message: string, status: number, error?: any) => {
+  if (error) console.error("API Error:", error);
+  return NextResponse.json(new ErrorResponse(message), { status });
+};
 
-  if (!session || !session.user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+// Validation helpers
+const validateInput = (resume: File | null, jobDescription: string | null) => {
+  if (!resume || !jobDescription) {
+    throw new Error("Missing resume or job description");
   }
 
+  if (!resume.type?.includes("pdf")) {
+    throw new Error("Only PDF files are supported");
+  }
+
+  if (resume.size > 10 * 1024 * 1024) {
+    // 10MB limit
+    throw new Error("File size too large. Maximum 10MB allowed");
+  }
+
+  if (jobDescription.length < 50) {
+    throw new Error("Job description too short. Please provide more details");
+  }
+};
+
+// Extract and validate user
+const getValidatedUser = async (session: any) => {
+  if (!session?.user?.email) {
+    throw new Error("Invalid session");
+  }
+
+  const user = await db.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true, email: true, hasOnboarded: true },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return user;
+};
+
+// Process PDF with better error handling
+const processPDF = async (resume: File): Promise<string> => {
   try {
-    const formData = await req.formData();
-    const resume = formData.get("resume") as File;
-    const jobDescription = formData.get("jobDescription") as string;
-
-    if (!resume || !jobDescription) {
-      return NextResponse.json(
-        { message: "Missing resume or job description" },
-        { status: 400 },
-      );
-    }
-
-    const user = await db.user.findUnique({
-      where: {
-        email: session.user.email!,
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    // ⬇ Convert File to Buffer
     const buffer = Buffer.from(await resume.arrayBuffer());
-
-    // ⬇ Extract text using pdf-parse (safe import version)
     const parsed = await pdfParse(buffer);
-    const resumeText = parsed.text?.slice(0, 8000) || ""; // Truncate for Gemini
 
-    // ⬇ Prepare analysis prompt
-    const analysisPrompt = `You are a senior technical recruiter with 10+ years of experience in software engineering hiring across Fortune 500 companies and high-growth startups. Your expertise spans full-stack development, DevOps, cloud architecture, mobile development, and emerging technologies.
+    if (!parsed.text || parsed.text.trim().length === 0) {
+      throw new Error("No text could be extracted from the PDF");
+    }
+
+    return parsed.text.slice(0, MAX_RESUME_TEXT_LENGTH);
+  } catch (error) {
+    throw new Error(
+      `Failed to process PDF: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+};
+
+// Generate prompts (extracted for better maintainability)
+const createAnalysisPrompt = (resumeText: string, jobDescription: string) => `
+You are a senior technical recruiter with 10+ years of experience in software engineering hiring across Fortune 500 companies and high-growth startups. Your expertise spans full-stack development, DevOps, cloud architecture, mobile development, and emerging technologies.
 
 TASK: Conduct a comprehensive analysis of the provided candidate résumé against the specified job description. Your analysis should be thorough, objective, actionable for hiring decisions and also create the mock interview sessions for the candidate.
 
@@ -66,22 +100,7 @@ SCORING METHODOLOGY:
 - **50-59**: Weak match - Some relevant experience but major gaps in key areas
 - **Below 50**: Poor match - Insufficient relevant experience for the role
 
-MATCH LEVEL CRITERIA:
-- **High**: Score 80+, minimal training needed, can contribute immediately
-- **Medium**: Score 60-79, some training required, can contribute with ramp-up time
-- **Low**: Score below 60, extensive training needed, high risk for role success
-
-ANALYSIS REQUIREMENTS:
-- Be specific and detailed in your assessment
-- Provide concrete examples from the résumé
-- Consider both hard and soft skills
-- Evaluate potential for growth and learning
-- Account for transferable skills from adjacent domains
-- Consider the seniority level of the position
-- Factor in industry-specific requirements
-
-OUTPUT FORMAT:
-Return ONLY valid JSON matching this exact schema (no additional text, explanations, or markdown formatting):
+OUTPUT FORMAT: Return ONLY valid JSON matching this exact schema:
 
 {
   "score": number,
@@ -121,102 +140,211 @@ Return ONLY valid JSON matching this exact schema (no additional text, explanati
   }
 }
 
-FIELD DESCRIPTIONS:
-- **score**: Overall compatibility score (0-100)
-- **matchLevel**: High/Medium/Low based on score and requirements
-- **missingSkills**: Critical skills absent from résumé but required for role
-- **strengths**: Key qualifications that make candidate attractive
-- **summary**: 2-3 sentence overview of candidate fit and recommendation
-- **technicalSkillsMatch**: Detailed breakdown of technical competencies
-- **experienceAnalysis**: Work history relevance and seniority assessment
-- **educationAndCertifications**: Academic background and professional development
-- **softSkillsIndicators**: Non-technical competencies derived from résumé
-- **recommendations**: Actionable insights for interview process and onboarding
+RESUME: """${resumeText}"""
+JOB DESCRIPTION: """${jobDescription}"""
 
-IMPORTANT GUIDELINES:
-- Base analysis solely on information provided in résumé and job description
-- Avoid assumptions about unstated qualifications or experience
-- Consider the specific requirements and preferences in the job description
-- Account for different ways skills might be expressed or demonstrated
-- Evaluate the candidate fairly regardless of educational background or career path
-- Focus on job-relevant skills and experience
-- Be objective and eliminate unconscious bias
+Analyze the above résumé against the job description and return the JSON response following the specified schema exactly.
+`;
 
----
-RESUME:
-"""${resumeText}"""
+const createMockInterviewPrompt = (
+  resumeText: string,
+  jobDescription: string,
+  userId: string,
+) => `
+You are an experienced technical interview coach. Create 4-6 structured mock interview sessions based on the candidate's resume and job requirements.
 
----
-JOB DESCRIPTION:
-"""${jobDescription}"""
+Each session must follow this interface:
+{
+  "topic": string,
+  "description": string,
+  "focus": string[],
+  "estimated_time": number, // TIME IN SECONDS (600=10min, 900=15min, 1200=20min, 1800=30min)
+  "difficulty": "easy" | "medium" | "hard",
+  "candidateId": "${userId}"
+}
 
-Analyze the above résumé against the job description and return the JSON response following the specified schema exactly.`;
+TIME RECOMMENDATIONS:
+- Easy: 600-900 seconds (10-15 minutes)
+- Medium: 900-1200 seconds (15-20 minutes)  
+- Hard: 1200-1800 seconds (20-30 minutes)
 
-    // ⬇ Get Gemini Model
-    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+Return ONLY valid JSON array format.
 
-    // ⬇ Run both prompts concurrently
-    const analysisResult = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: analysisPrompt }],
-        },
-      ],
+RESUME: """${resumeText}"""
+JOB DESCRIPTION: """${jobDescription}"""
+`;
+
+// Generate AI content with better error handling
+const generateAIContent = async (
+  model: any,
+  prompt: string,
+  temperature: number,
+) => {
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.3,
+        temperature,
         responseMimeType: "application/json",
       },
     });
 
-    const analysisContent =
-      analysisResult.response.candidates?.[0]?.content.parts?.[0]?.text;
-
-    if (!analysisContent) {
-      return NextResponse.json(
-        { message: "No content returned from Gemini" },
-        { status: 500 },
-      );
+    const content = result.response.candidates?.[0]?.content.parts?.[0]?.text;
+    if (!content) {
+      throw new Error("No content generated");
     }
 
-    const filePath = `${user.id}/${Date.now()}-${resume.name}`;
-    const analysis = JSON.parse(analysisContent);
+    return JSON.parse(content);
+  } catch (error) {
+    throw new Error(
+      `AI generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+};
 
+// Handle file upload with better error handling
+const uploadResumeToStorage = async (
+  buffer: Buffer,
+  filePath: string,
+  contentType: string,
+) => {
+  try {
     const { data, error } = await supabase.storage
       .from("resumes")
       .upload(filePath, buffer, {
-        contentType: resume.type || "application/pdf",
+        contentType,
         upsert: true,
       });
 
     if (error) {
-      return NextResponse.json({ message: error }, { status: 400 });
+      throw new Error(`Upload failed: ${error.message}`);
     }
 
-    // ⬇ Save resume analysis
-    await db.resume.create({
-      data: {
-        userId: user.id,
-        fileUrl: data.fullPath,
-        parsedJson: analysis,
-      },
-    });
+    return data;
+  } catch (error) {
+    throw new Error(
+      `Storage upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+};
 
-    return NextResponse.json(
-      {
-        status: 200,
-        message: "Resume analyzed successfully",
+// Database operations with transaction support
+const saveAnalysisData = async (
+  userId: string,
+  fileUrl: string,
+  analysis: any,
+  mockInterviews: PracticeInterview[],
+) => {
+  try {
+    await db.$transaction(async (tx) => {
+      // Save resume analysis
+      await tx.resume.create({
         data: {
-          analysis: analysis,
+          userId,
+          fileUrl,
+          parsedJson: analysis,
         },
-      },
-      { status: 200 },
+      });
+
+      // Clean up existing mock interviews with same topics
+      const existingTopics = mockInterviews.map((interview) => interview.topic);
+      if (existingTopics.length > 0) {
+        await tx.mockInterviews.deleteMany({
+          where: {
+            candidateId: userId,
+            topic: { in: existingTopics },
+          },
+        });
+      }
+
+      // Save new mock interviews
+      await tx.mockInterviews.createMany({
+        data: mockInterviews,
+      });
+
+      // Update user onboarding status
+      await tx.user.update({
+        where: { id: userId },
+        data: { hasOnboarded: true },
+      });
+    });
+  } catch (error) {
+    throw new Error(
+      `Database operation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+};
+
+export async function POST(req: NextRequest) {
+  try {
+    // Authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return errorResponse("Unauthorized", 401);
+    }
+
+    // Parse form data
+    const formData = await req.formData();
+    const resume = formData.get("resume") as File;
+    const jobDescription = formData.get("jobDescription") as string;
+
+    // Validation
+    validateInput(resume, jobDescription);
+    const user = await getValidatedUser(session);
+
+    // Process PDF
+    const resumeText = await processPDF(resume);
+    const buffer = Buffer.from(await resume.arrayBuffer());
+
+    // Prepare AI model and prompts
+    const model = ai.getGenerativeModel({ model: MODEL_NAME });
+    const analysisPrompt = createAnalysisPrompt(resumeText, jobDescription);
+    const mockInterviewPrompt = createMockInterviewPrompt(
+      resumeText,
+      jobDescription,
+      user.id,
+    );
+
+    // Run AI analysis concurrently
+    const [analysis, mockInterviews] = await Promise.all([
+      generateAIContent(model, analysisPrompt, ANALYSIS_TEMPERATURE),
+      generateAIContent(model, mockInterviewPrompt, MOCK_INTERVIEW_TEMPERATURE),
+    ]);
+
+    // Ensure mock interviews have candidateId
+    const mockInterviewsWithCandidateId = mockInterviews.map(
+      (interview: PracticeInterview) => ({
+        ...interview,
+        candidateId: user.id,
+      }),
+    );
+
+    // Upload resume and save data
+    const filePath = `${user.id}/${Date.now()}-${resume.name}`;
+    const uploadData = await uploadResumeToStorage(
+      buffer,
+      filePath,
+      resume.type || "application/pdf",
+    );
+
+    await saveAnalysisData(
+      user.id,
+      uploadData.fullPath,
+      analysis,
+      mockInterviewsWithCandidateId,
+    );
+
+    // Return success response with a flag to indicate session should be refreshed
+    return NextResponse.json(
+      new HttpResponse("success", "Resume Analyzed Successfully", {
+        shouldRefreshSession: true, // Flag for client to refresh session
+        analysis,
+        mockInterviews: mockInterviewsWithCandidateId,
+      }),
     );
   } catch (error) {
-    console.error("Resume analysis error:", error);
-    return NextResponse.json(
-      { message: "Something went wrong", error },
-      { status: 500 },
-    );
+    const message =
+      error instanceof Error ? error.message : "Something went wrong";
+    return errorResponse(message, 500, error);
   }
 }

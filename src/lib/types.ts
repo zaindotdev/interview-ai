@@ -80,3 +80,60 @@ export interface PracticeInterview {
   difficulty: "easy" | "medium" | "hard";
   candidateId: string;
 }
+
+// server-side
+export interface GenerateSystemPrompt{
+  topic: string;
+  description: string;
+  focus: string[];
+  estimated_time: string;
+  difficulty: string;
+}
+
+export type CallStatus = "queued" | "in-progress" | "ended";
+export type CallType = "outboundPhoneCall" | "vapi.websocketCall";
+export type EndedReason =
+  | "hangup"
+  | "assistant-error"
+  | "user-error"
+  | "network-error"
+  | "timeout"
+  | "unknown";
+
+export interface CallObject {
+  // Basic Information
+  id: string;
+  assistantId: string;
+  type: CallType;
+  createdAt: string; // or Date if you're using actual Date objects
+  updatedAt: string;
+  orgId: string;
+  cost?: number;
+  status: CallStatus;
+
+  // Call Details
+  customer: {
+    phoneNumber: string;
+    [key: string]: any; // if there might be more fields
+  };
+  phoneCallProvider: string; // e.g., "twilio"
+  phoneCallProviderId: string;
+  phoneCallTransport: string; // e.g., "pstn"
+
+  // Monitoring Information
+  monitor: {
+    listenUrl: string;
+    controlUrl: string;
+  };
+
+  // Optional fields (when call ends)
+  endedReason?: EndedReason;
+  recordingUrl?: string;
+  summary?: string;
+  transcript?: string;
+  messages?: Array<{
+    role: "assistant" | "user";
+    content: string;
+    timestamp?: string;
+  }>;
+}

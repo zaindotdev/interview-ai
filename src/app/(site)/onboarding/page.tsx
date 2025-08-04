@@ -20,6 +20,7 @@ import { analyzeResumeSchema } from "@/lib/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/context/app-provider";
+import {useSession} from "next-auth/react"
 
 // Constants
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -54,7 +55,8 @@ const Onboarding: React.FC = () => {
     },
   });
 
-  // Clear error when component mounts or when moving between steps
+  const {update} = useSession();
+
   useEffect(() => {
     if (error) {
       clearError();
@@ -105,6 +107,7 @@ const Onboarding: React.FC = () => {
 
       console.log("Submitting analysis request...");
       await analyzeResume(formData);
+      await update();
       
       // Reset form on success
       form.reset();
@@ -279,8 +282,7 @@ const Onboarding: React.FC = () => {
                         <FormItem className="w-full">
                           <FormControl className="w-full">
                             <Textarea
-                              className="w-full resize-none"
-                              rows={10}
+                              className="w-full h-[150px] resize-none"
                               placeholder="Paste the job description here..."
                               disabled={loading}
                               {...field}

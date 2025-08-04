@@ -76,6 +76,14 @@ model MockInterviews {
   @@index([candidateId], map: "mock_interviews_candidate_id_idx")
 }
 
+model MockInterviewsReport{
+  id             String   @id @unique @default(uuid())
+  callId         String
+  candidateId    String
+  report         String
+  createdAt      DateTime @default(now())
+}
+
 model Subscription {
   id        String  @id @default(cuid())
   userId    String  @unique

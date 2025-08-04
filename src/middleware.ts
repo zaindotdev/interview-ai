@@ -27,9 +27,9 @@ export async function middleware(request: NextRequest) {
 
   // Case 1: User is not authenticated
   if (!token) {
-    // Redirect protected routes to signin
+    // Redirect protected routes to sign-in
     if (isProtectedRoute || isOnboardingRoute) {
-      return NextResponse.redirect(new URL('/signin', request.url))
+      return NextResponse.redirect(new URL('/sign-in', request.url))
     }
     
     // Allow access to auth routes and public routes
