@@ -14,28 +14,30 @@ export async function middleware(request: NextRequest) {
   console.log("Middleware - Has onboarded:", token?.hasOnboarded);
 
   // Define route categories
-  const authRoutes = ["/sign-in", "/sign-up", "/verify/:path*"];
+  const authRoutes = ["/sign-in", "/sign-up"];
+  const verifyRoutes = ["/verify"];
   const protectedRoutes = [
     "/dashboard",
     "/mock-interviews",
     "/resume-analysis",
     "/interview-history",
     "/profile",
-    "/report/:id*",
+    "/report",
     "/practice-questions",
-    '/analytics'
+    "/analytics"
   ];
   const publicRoutes = ["/"];
   const onboardingRoutes = ["/onboarding"];
 
-  // Check route types
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+  // Check route types with more precise matching
+  const isAuthRoute = authRoutes.some((route) => pathname === route);
+  const isVerifyRoute = verifyRoutes.some((route) => pathname.startsWith(route));
   const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route),
+    pathname.startsWith(route)
   );
   const isPublicRoute = publicRoutes.includes(pathname);
   const isOnboardingRoute = onboardingRoutes.some((route) =>
-    pathname.startsWith(route),
+    pathname.startsWith(route)
   );
 
   // Case 1: User is not authenticated
@@ -45,8 +47,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
-    // Allow access to auth routes and public routes
-    if (isAuthRoute || isPublicRoute) {
+    // Allow access to auth routes, verify routes, and public routes
+    if (isAuthRoute || isVerifyRoute || isPublicRoute) {
       return NextResponse.next();
     }
 
@@ -57,13 +59,24 @@ export async function middleware(request: NextRequest) {
   // Case 2: User is authenticated
   if (token) {
     // Check if user has completed onboarding
+    // Fix: Handle undefined/null hasOnboarded more explicitly
     const hasOnboarded = token.hasOnboarded === true;
 
     // If user hasn't onboarded yet
     if (!hasOnboarded) {
-      // Redirect auth routes to onboarding
-      if (isAuthRoute) {
+      // Allow verify routes even without onboarding (for email verification)
+      if (isVerifyRoute) {
+        return NextResponse.next();
+      }
+
+      // Redirect auth routes to onboarding (except during sign-up process)
+      if (isAuthRoute && pathname !== "/sign-up") {
         return NextResponse.redirect(new URL("/onboarding", request.url));
+      }
+
+      // Allow sign-up to complete without redirect
+      if (pathname === "/sign-up") {
+        return NextResponse.next();
       }
 
       // Redirect protected routes to onboarding
@@ -87,6 +100,11 @@ export async function middleware(request: NextRequest) {
       // Redirect auth routes to dashboard
       if (isAuthRoute) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+
+      // Allow verify routes
+      if (isVerifyRoute) {
+        return NextResponse.next();
       }
 
       // Redirect onboarding routes to dashboard (user already onboarded)
@@ -122,9 +140,9 @@ export const config = {
     "/resume-analysis",
     "/interview-history",
     "/profile",
-    "/report/:id*",
+    "/report/:path*",
     "/onboarding",
     "/practice-questions",
-    '/analytics'
+    "/analytics"
   ],
 };
