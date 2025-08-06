@@ -22,6 +22,8 @@ export async function middleware(request: NextRequest) {
     "/interview-history",
     "/profile",
     "/report/:id*",
+    "/practice-questions",
+    '/analytics'
   ];
   const publicRoutes = ["/"];
   const onboardingRoutes = ["/onboarding"];
@@ -122,5 +124,7 @@ export const config = {
     "/profile",
     "/report/:id*",
     "/onboarding",
+    "/practice-questions",
+    '/analytics'
   ],
 };

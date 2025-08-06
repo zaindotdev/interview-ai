@@ -84,16 +84,6 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
         href: "/analytics",
         icon: BarChart3,
       },
-      {
-        name: "Career Resources",
-        href: "/career-resources",
-        icon: Briefcase,
-      },
-      {
-        name: "Skill Assessment",
-        href: "/skill-assessment",
-        icon: Target,
-      },
     ],
   },
 ];
