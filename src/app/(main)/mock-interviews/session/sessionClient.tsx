@@ -33,6 +33,72 @@ const SessionPage = () => {
   const [loading, setLoading] = useState(false);
 
   const vapiRef = useRef<Vapi | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const isPageActive = useRef(true);
+  const hasAutoStarted = useRef(false);
+
+  // Cleanup function that stops everything
+  const cleanup = useCallback(async () => {
+    console.log("🧹 Cleaning up session...");
+    isPageActive.current = false;
+
+    try {
+      // Stop VAPI call
+      if (vapiRef.current) {
+        await vapiRef.current.stop();
+        vapiRef.current = null;
+      }
+
+      // Stop microphone stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => {
+          track.stop();
+          console.log("Stopped microphone track");
+        });
+        streamRef.current = null;
+      }
+    } catch (error) {
+      console.error("Cleanup error:", error);
+    }
+
+    // Reset states
+    setCallStarted(false);
+    setMicrophoneAccess(false);
+    setCurrentRole(null);
+    setCurrentTranscript("");
+  }, []);
+
+  // Page visibility change handler
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log("👀 Page hidden - stopping call");
+        cleanup();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      console.log("🚪 Page unloading - stopping call");
+      cleanup();
+    };
+
+    // Add event listeners for page visibility and navigation
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handleBeforeUnload);
+      cleanup();
+    };
+  }, [cleanup]);
+
+  // Note: App Router doesn't support router.events like Pages Router
+  // Navigation cleanup is handled through the beforeunload and pagehide events above
+  // If you need route change detection, you would need to implement it differently
+  // using usePathname() and useEffect to track path changes
 
   // --- Fetch interview config ---
   const fetchInterviewConfig = useCallback(async () => {
@@ -57,11 +123,7 @@ const SessionPage = () => {
 
   // --- Get assistant ID from API ---
   const getAssistantId = useCallback(async () => {
-    if (!interviewConfig || !session?.user?.name) {
-      console.log("Missing config or session:", {
-        interviewConfig: !!interviewConfig,
-        userName: !!session?.user?.name,
-      });
+    if (!interviewConfig || !session?.user?.name || !isPageActive.current) {
       return;
     }
 
@@ -71,6 +133,8 @@ const SessionPage = () => {
         ...interviewConfig,
         candidateName: session.user.name,
       });
+
+      if (!isPageActive.current) return; // Stop if page is no longer active
 
       if (res.status !== 200 && res.status !== 201) {
         toast.error(res.data?.message || "Failed to get assistant ID");
@@ -85,6 +149,7 @@ const SessionPage = () => {
       console.log("Assistant created:", res.data.data.id);
       setAssistantId(res.data.data.id);
     } catch (err) {
+      if (!isPageActive.current) return;
       console.error("Assistant creation failed:", err);
       toast.error("Failed to initialize assistant");
       setConnectionStatus("Assistant initialization failed");
@@ -94,6 +159,11 @@ const SessionPage = () => {
   // --- Request Mic Access ---
   const requestMicrophonePermission =
     useCallback(async (): Promise<boolean> => {
+      if (!isPageActive.current) {
+        console.log("Page not active, skipping mic request");
+        return false;
+      }
+
       try {
         console.log("Requesting microphone permission...");
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -104,16 +174,21 @@ const SessionPage = () => {
           },
         });
 
-        // Test the stream
-        console.log("Microphone stream obtained:", stream.getAudioTracks());
+        if (!isPageActive.current) {
+          // If page became inactive while requesting, stop the stream
+          stream.getTracks().forEach((track) => track.stop());
+          return false;
+        }
 
-        // Don't stop the stream immediately - keep it active
-        // stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = stream;
+        console.log("Microphone stream obtained:", stream.getAudioTracks());
 
         setMicrophoneAccess(true);
         setConnectionStatus("Microphone access granted");
         return true;
       } catch (error) {
+        if (!isPageActive.current) return false;
+
         console.error("Microphone permission error:", error);
         setMicrophoneAccess(false);
         setConnectionStatus(
@@ -126,15 +201,8 @@ const SessionPage = () => {
 
   // --- Start call ---
   const startCall = useCallback(async () => {
-    if (!assistantId) {
-      console.error("No assistant ID available");
-      toast.error("Assistant not ready");
-      return;
-    }
-
-    if (!microphoneAccess) {
-      console.error("No microphone access");
-      toast.error("Microphone access required");
+    if (!assistantId || !isPageActive.current) {
+      console.log("Cannot start call - missing assistant or page inactive");
       return;
     }
 
@@ -152,14 +220,19 @@ const SessionPage = () => {
 
       const vapi = vapiRef.current;
 
-      // Set up event listeners
+      // Clear any existing listeners
+      vapi.removeAllListeners();
+
+      // Set up event listeners with page active checks
       vapi.on("call-start", () => {
+        if (!isPageActive.current) return;
         console.log("Call started");
         setCallStarted(true);
         setConnectionStatus("Call active - You can speak now");
       });
 
       vapi.on("call-end", () => {
+        if (!isPageActive.current) return;
         console.log("Call ended");
         setCallStarted(false);
         setCurrentRole(null);
@@ -168,16 +241,19 @@ const SessionPage = () => {
       });
 
       vapi.on("speech-start", () => {
+        if (!isPageActive.current) return;
         console.log("Speech started");
         setConnectionStatus("Listening...");
       });
 
       vapi.on("speech-end", () => {
+        if (!isPageActive.current) return;
         console.log("Speech ended");
         setConnectionStatus("Processing...");
       });
 
-      vapi.on("message", (message: Message) => {
+      vapi.on("message", (message: any) => {
+        if (!isPageActive.current) return;
         console.log("Vapi message:", message);
 
         switch (message.type) {
@@ -212,41 +288,36 @@ const SessionPage = () => {
         }
       });
 
-      vapi.on("error", (error: Error) => {
+      vapi.on("error", (error: any) => {
+        if (!isPageActive.current) return;
         console.error("Vapi error:", error);
         setConnectionStatus(`Error: ${error.message || "Unknown error"}`);
         toast.error(`Call error: ${error.message || "Unknown error"}`);
       });
 
-      // Start the call
-      await vapi.start(assistantId);
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error("Call error:", error);
-        setConnectionStatus(`Error: ${error.message || "Unknown error"}`);
-        toast.error(`Call error: ${error.message || "Unknown error"}`);
+      // Start the call only if page is still active
+      if (isPageActive.current) {
+        await vapi.start(assistantId);
+        hasAutoStarted.current = true;
       }
+    } catch (error: any) {
+      if (!isPageActive.current) return;
+      console.error("Call error:", error);
+      setConnectionStatus(`Error: ${error.message || "Unknown error"}`);
+      toast.error(`Call error: ${error.message || "Unknown error"}`);
     }
-  }, [assistantId, microphoneAccess]);
+  }, [assistantId]);
 
   // --- End call ---
   const endCall = useCallback(async () => {
-    try {
-      if (vapiRef.current && callStarted) {
-        console.log("Ending call...");
-        await vapiRef.current.stop();
-      }
-    } catch (err) {
-      console.error("Error stopping call:", err);
-    } finally {
-      setCallStarted(false);
-      setConnectionStatus("Call ended");
-      setCurrentRole(null);
-      setCurrentTranscript("");
+    await cleanup();
+    if (isPageActive.current) {
       toast.info("Call ended. Redirecting to dashboard...");
-      setTimeout(() => router.replace("/dashboard"), 1000);
     }
-  }, [callStarted, router]);
+    router.replace(`/report/${id}`, {
+      scroll: false,
+    });
+  }, [cleanup, router]);
 
   // --- Effects ---
   useEffect(() => {
@@ -256,32 +327,36 @@ const SessionPage = () => {
   }, [id, fetchInterviewConfig]);
 
   useEffect(() => {
-    if (interviewConfig && session?.user?.name) {
+    if (interviewConfig && session?.user?.name && isPageActive.current) {
       getAssistantId();
     }
   }, [interviewConfig, session, getAssistantId]);
 
+  // Auto-start effect - only runs once when assistant is ready
   useEffect(() => {
-    if (assistantId && !callStarted) {
-      requestMicrophonePermission().then((hasAccess) => {
-        if (hasAccess) {
-          // Auto-start call after getting mic access
+    const autoStart = async () => {
+      if (
+        assistantId &&
+        !callStarted &&
+        !hasAutoStarted.current &&
+        isPageActive.current
+      ) {
+        console.log("🚀 Auto-starting interview...");
+
+        const hasAccess = await requestMicrophonePermission();
+        if (hasAccess && isPageActive.current) {
+          // Small delay to ensure mic is ready
           setTimeout(() => {
-            startCall();
+            if (isPageActive.current && !hasAutoStarted.current) {
+              startCall();
+            }
           }, 1000);
         }
-      });
-    }
-  }, [assistantId, callStarted, requestMicrophonePermission, startCall]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (vapiRef.current) {
-        vapiRef.current.stop();
       }
     };
-  }, []);
+
+    autoStart();
+  }, [assistantId, callStarted, requestMicrophonePermission, startCall]);
 
   // --- Memoized avatars ---
   const sessionCardElem = useMemo(
@@ -341,7 +416,7 @@ const SessionPage = () => {
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
       <section className="mx-auto flex max-w-6xl flex-col rounded-xl bg-white p-6 shadow-lg md:p-8">
         <div className="mb-8 border-b pb-4">
-          <h1 className="text-2xl md:text-3xl/8 font-bold tracking-tight text-gray-900">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl/8">
             {interviewConfig?.topic || "Loading..."}
           </h1>
           <p className="text-muted-foreground max-w-2xl text-sm md:text-lg">
@@ -389,12 +464,6 @@ const SessionPage = () => {
           </div>
 
           <div className="flex gap-2 self-start">
-            {!callStarted && assistantId && microphoneAccess && (
-              <Button onClick={startCall} className="flex items-center gap-2">
-                <Phone />
-                Start Interview
-              </Button>
-            )}
             {callStarted && (
               <Button
                 onClick={endCall}
