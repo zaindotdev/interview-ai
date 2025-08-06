@@ -62,7 +62,6 @@ model Resume {
   @@index([userId], map: "resume_user_id_idx")
 }
 
-
 model MockInterviews {
   id             String   @id @unique @default(uuid())
   topic          String   @unique
@@ -71,17 +70,18 @@ model MockInterviews {
   estimated_time Int
   difficulty     String
   candidateId    String
+  isCompleted    Boolean?
   createdAt      DateTime @default(now())
 
   @@index([candidateId], map: "mock_interviews_candidate_id_idx")
 }
 
-model MockInterviewsReport{
-  id             String   @id @unique @default(uuid())
-  callId         String
-  candidateId    String
-  report         String
-  createdAt      DateTime @default(now())
+model MockInterviewsReport {
+  id          String   @id @unique @default(uuid())
+  callId      String
+  candidateId String
+  report      String
+  createdAt   DateTime @default(now())
 }
 
 model Subscription {

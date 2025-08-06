@@ -14,6 +14,7 @@ import SessionCard from "@/components/session/card";
 import Transcript from "@/components/session/transcript";
 
 import type { PracticeInterview, Message } from "@/lib/types";
+import Timer from "@/components/session/timer";
 
 const SessionPage = () => {
   const { data: session } = useSession();
@@ -31,6 +32,8 @@ const SessionPage = () => {
   const [currentTranscript, setCurrentTranscript] = useState("");
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [maxTime, setMaxTime] = useState<number>(0);
 
   const vapiRef = useRef<Vapi | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -95,11 +98,6 @@ const SessionPage = () => {
     };
   }, [cleanup]);
 
-  // Note: App Router doesn't support router.events like Pages Router
-  // Navigation cleanup is handled through the beforeunload and pagehide events above
-  // If you need route change detection, you would need to implement it differently
-  // using usePathname() and useEffect to track path changes
-
   // --- Fetch interview config ---
   const fetchInterviewConfig = useCallback(async () => {
     if (!id) {
@@ -112,6 +110,7 @@ const SessionPage = () => {
       const res = await axios.get(`/api/mock-interview/get/id?id=${id}`);
       if (res.status === 200) {
         setInterviewConfig(res.data.data);
+        setMaxTime(res.data.data.estimated_time);
       }
     } catch (err) {
       console.error("Failed to fetch interview config:", err);
@@ -134,7 +133,7 @@ const SessionPage = () => {
         candidateName: session.user.name,
       });
 
-      if (!isPageActive.current) return; // Stop if page is no longer active
+      if (!isPageActive.current) return;
 
       if (res.status !== 200 && res.status !== 201) {
         toast.error(res.data?.message || "Failed to get assistant ID");
@@ -461,6 +460,15 @@ const SessionPage = () => {
                 {microphoneAccess ? "Mic Active" : "Mic Disabled"}
               </p>
             </div>
+          </div>
+
+          <div>
+            <Timer
+              callStarted={callStarted}
+              setTimer={setTimer}
+              maxTime={maxTime}
+              onTimeUp={endCall}
+            />
           </div>
 
           <div className="flex gap-2 self-start">

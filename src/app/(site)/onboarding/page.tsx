@@ -20,7 +20,7 @@ import { analyzeResumeSchema } from "@/lib/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/context/app-provider";
-import {useSession} from "next-auth/react"
+import { useSession } from "next-auth/react";
 
 // Constants
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -43,11 +43,11 @@ const Onboarding: React.FC = () => {
     total: TOTAL_STEPS,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
+
   // Hooks
   const router = useRouter();
   const { analyzeResume, loading, error, clearError } = useAppContext();
-  
+
   const form = useForm<FormData>({
     resolver: zodResolver(analyzeResumeSchema),
     defaultValues: {
@@ -55,85 +55,100 @@ const Onboarding: React.FC = () => {
     },
   });
 
-  const {update} = useSession();
+  const { update } = useSession();
 
   useEffect(() => {
     if (error) {
+      toast.error(error);
       clearError();
     }
-  }, [clearError,error]);
+  }, [error]);
 
   // File validation helper
   const validateFile = useCallback((file: File): string | null => {
     if (file.size > MAX_FILE_SIZE) {
       return "File size must be less than 5MB";
     }
-    
+
     if (file.type !== ALLOWED_FILE_TYPE) {
       return "Only PDF files are allowed";
     }
-    
+
     return null;
   }, []);
 
   // File selection handler
-  const handleFileSelect = useCallback((file: File) => {
-    console.info("Processing file upload...");
-    
-    const validationError = validateFile(file);
-    if (validationError) {
-      toast.error(validationError);
-      return;
-    }
+  const handleFileSelect = useCallback(
+    (file: File) => {
+      console.info("Processing file upload...");
 
-    setSelectedFile(file);
-    setSteps(prev => ({ ...prev, current: prev.current + 1 }));
-    
-    toast.success(`File "${file.name}" uploaded successfully!`);
-    console.info("File uploaded successfully:", file.name);
-  }, [validateFile]);
+      const validationError = validateFile(file);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      setSelectedFile(file);
+      setSteps((prev) => ({ ...prev, current: prev.current + 1 }));
+
+      toast.success(`File "${file.name}" uploaded successfully!`);
+      console.info("File uploaded successfully:", file.name);
+    },
+    [validateFile],
+  );
 
   // Form submission handler
-  const onSubmit = useCallback(async (data: FormData) => {
-    if (!selectedFile) {
-      toast.error("Please upload a resume first");
-      return;
-    }
+  const onSubmit = useCallback(
+    async (data: FormData) => {
+      if (!selectedFile) {
+        toast.error("Please upload a resume first");
+        return;
+      }
 
-    try {
-      const formData = new FormData();
-      formData.append("resume", selectedFile);
-      formData.append("jobDescription", data.jobDescription);
+      try {
+        const formData = new FormData();
+        formData.append("resume", selectedFile);
+        formData.append("jobDescription", data.jobDescription);
 
-      console.log("Submitting analysis request...");
-      await analyzeResume(formData);
-      await update();
-      
-      // Reset form on success
-      form.reset();
-      toast.success("Resume analysis completed successfully!");
-      
-      // Navigate to results page (adjust route as needed)
-      router.push("/dashboard");
-    } catch (err) {
-      // Error is handled by the context, just show a toast
-      console.error(err)
-      toast.error("Failed to analyze resume. Please try again.");
-    }
-  }, [selectedFile, analyzeResume, form, router, update]);
+        console.log("Submitting analysis request...");
+        await analyzeResume(formData);
+        await update();
+
+        // Reset form on success
+        form.reset();
+        if (error) {
+          toast.error("Resume analysis unsuccessful. Please try again.");
+          return;
+        }
+
+        toast.success("Resume analysis successful!");
+
+        // Navigate to results page (adjust route as needed)
+        router.push("/dashboard");
+      } catch (err) {
+        // Error is handled by the context, just show a toast
+        console.error(err);
+        toast.error("Failed to analyze resume. Please try again.");
+      }
+    },
+    [selectedFile, analyzeResume, form, router, update],
+  );
 
   // Step navigation handler
-  const handleStepClick = useCallback((stepNum: number) => {
-    // Only allow navigation to valid steps
-    if (stepNum === 1 || (stepNum === 2 && selectedFile)) {
-      setSteps(prev => ({ ...prev, current: stepNum }));
-    }
-  }, [selectedFile]);
+  const handleStepClick = useCallback(
+    (stepNum: number) => {
+      // Only allow navigation to valid steps
+      if (stepNum === 1 || (stepNum === 2 && selectedFile)) {
+        setSteps((prev) => ({ ...prev, current: stepNum }));
+      }
+    },
+    [selectedFile],
+  );
 
   // File removal handler
   const handleRemoveFile = useCallback(() => {
     setSelectedFile(null);
-    setSteps(prev => ({ ...prev, current: 1 }));
+    setSteps((prev) => ({ ...prev, current: 1 }));
     toast.info("File removed");
   }, []);
 
@@ -146,9 +161,7 @@ const Onboarding: React.FC = () => {
     return (
       <div
         className={`flex h-12 w-12 rotate-45 items-center justify-center border-4 border-white transition-all duration-300 ${
-          isClickable
-            ? "cursor-pointer"
-            : "cursor-not-allowed opacity-50"
+          isClickable ? "cursor-pointer" : "cursor-not-allowed opacity-50"
         } ${
           isActive
             ? "bg-primary ring-primary shadow-lg ring-4"
@@ -207,9 +220,11 @@ const Onboarding: React.FC = () => {
 
                 {/* Steps Container */}
                 <div className="relative z-20 flex items-center justify-between">
-                  {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((stepNum) => (
-                    <StepIndicator key={stepNum} stepNum={stepNum} />
-                  ))}
+                  {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(
+                    (stepNum) => (
+                      <StepIndicator key={stepNum} stepNum={stepNum} />
+                    ),
+                  )}
                 </div>
               </div>
             </CardTitle>
@@ -223,25 +238,27 @@ const Onboarding: React.FC = () => {
                   Upload your resume
                 </h2>
                 <DragAndDropInput handleFileSelect={handleFileSelect} />
-                
+
                 {selectedFile && (
-                  <motion.div 
-                    className="mt-4 text-center p-4 bg-green-50 rounded-lg border border-green-200"
+                  <motion.div
+                    className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4 text-center"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                   >
-                    <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="mb-2 flex items-center justify-center gap-2">
                       <FileText className="h-4 w-4 text-green-600" />
                       <p className="text-sm font-medium text-green-800">
                         {selectedFile.name}
                       </p>
                     </div>
-                    <p className="text-xs text-green-600 mb-3">
+                    <p className="mb-3 text-xs text-green-600">
                       {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                     </p>
-                    <div className="flex gap-2 justify-center">
+                    <div className="flex justify-center gap-2">
                       <Button
-                        onClick={() => setSteps(prev => ({ ...prev, current: 2 }))}
+                        onClick={() =>
+                          setSteps((prev) => ({ ...prev, current: 2 }))
+                        }
                         size="sm"
                       >
                         Continue
@@ -261,7 +278,7 @@ const Onboarding: React.FC = () => {
 
             {/* Step 2: Job Description */}
             {steps.current === 2 && (
-              <motion.div 
+              <motion.div
                 className="text-center"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -270,7 +287,7 @@ const Onboarding: React.FC = () => {
                 <h2 className="text-primary mb-4 text-xl font-bold md:text-2xl">
                   Add Job Description
                 </h2>
-                
+
                 <Form {...form}>
                   <form
                     onSubmit={form.handleSubmit(onSubmit)}
@@ -283,7 +300,7 @@ const Onboarding: React.FC = () => {
                         <FormItem className="w-full">
                           <FormControl className="w-full">
                             <Textarea
-                              className="w-full h-[150px] resize-none"
+                              className="h-[150px] w-full resize-none"
                               placeholder="Paste the job description here..."
                               disabled={loading}
                               {...field}
@@ -293,18 +310,20 @@ const Onboarding: React.FC = () => {
                         </FormItem>
                       )}
                     />
-                    
+
                     {error && (
-                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                         <p className="text-sm text-red-700">{error}</p>
                       </div>
                     )}
-                    
+
                     <div className="flex justify-center gap-4">
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setSteps(prev => ({ ...prev, current: 1 }))}
+                        onClick={() =>
+                          setSteps((prev) => ({ ...prev, current: 1 }))
+                        }
                         disabled={loading}
                       >
                         Back

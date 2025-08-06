@@ -45,7 +45,9 @@ const MockInterviewPage: React.FC = () => {
     <section className="min-h-[calc(100vh-4rem)] space-y-8">
       {/* Page Header */}
       <div className="space-y-2">
-        <h1 className="md:text-3xl/8 text-2xl font-bold tracking-tight">Mock Interviews</h1>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl/8">
+          Mock Interviews
+        </h1>
         <p className="text-muted-foreground text-sm md:text-lg">
           Prepare for your next interview with our AI-powered mock sessions.
         </p>
@@ -66,7 +68,7 @@ const MockInterviewPage: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {mockInterviews && mockInterviews?.length > 0 ? (
             mockInterviews?.map((mockInterview) => (
               <Card
