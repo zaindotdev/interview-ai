@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Container, Heading, Hr, Text } from "@react-email/components";
+import { Container, Heading, Hr, Text } from "@react-email/components";
 
 interface VerificationEmailProps {
   name: string;

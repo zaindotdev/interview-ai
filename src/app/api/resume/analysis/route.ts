@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GenerativeModel, GoogleGenerativeAI } from "@google/generative-ai";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/prisma";
@@ -17,7 +17,7 @@ const MODEL_NAME = "gemini-2.5-flash";
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 // Error response helper
-const errorResponse = (message: string, status: number, error?: any) => {
+const errorResponse = (message: string, status: number, error?: Error) => {
   if (error) console.error("API Error:", error);
   return NextResponse.json(new ErrorResponse(message), { status });
 };
@@ -43,7 +43,7 @@ const validateInput = (resume: File | null, jobDescription: string | null) => {
 };
 
 // Extract and validate user
-const getValidatedUser = async (session: any) => {
+const getValidatedUser = async (session: Session|any) => {
   if (!session?.user?.email) {
     throw new Error("Invalid session");
   }
@@ -176,7 +176,7 @@ JOB DESCRIPTION: """${jobDescription}"""
 
 // Generate AI content with better error handling
 const generateAIContent = async (
-  model: any,
+  model: GenerativeModel,
   prompt: string,
   temperature: number,
 ) => {
@@ -215,7 +215,6 @@ const uploadResumeToStorage = async (
         contentType,
         upsert: true,
       });
-
     if (error) {
       throw new Error(`Upload failed: ${error.message}`);
     }
@@ -232,7 +231,7 @@ const uploadResumeToStorage = async (
 const saveAnalysisData = async (
   userId: string,
   fileUrl: string,
-  analysis: any,
+  analysis: string,
   mockInterviews: PracticeInterview[],
 ) => {
   try {
@@ -342,7 +341,7 @@ export async function POST(req: NextRequest) {
         mockInterviews: mockInterviewsWithCandidateId,
       }),
     );
-  } catch (error) {
+  } catch (error: Error | any) {
     const message =
       error instanceof Error ? error.message : "Something went wrong";
     return errorResponse(message, 500, error);

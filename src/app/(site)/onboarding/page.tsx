@@ -61,7 +61,7 @@ const Onboarding: React.FC = () => {
     if (error) {
       clearError();
     }
-  }, [steps.current, clearError]);
+  }, [clearError,error]);
 
   // File validation helper
   const validateFile = useCallback((file: File): string | null => {
@@ -117,9 +117,10 @@ const Onboarding: React.FC = () => {
       router.push("/dashboard");
     } catch (err) {
       // Error is handled by the context, just show a toast
+      console.error(err)
       toast.error("Failed to analyze resume. Please try again.");
     }
-  }, [selectedFile, analyzeResume, form, router]);
+  }, [selectedFile, analyzeResume, form, router, update]);
 
   // Step navigation handler
   const handleStepClick = useCallback((stepNum: number) => {

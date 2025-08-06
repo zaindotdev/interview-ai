@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import React, { use, useCallback, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import axios from "axios";
@@ -77,7 +77,7 @@ const VerifyPage = () => {
         setLoading(false);
       }
     },
-    [router, form],
+    [router, form, email],
   );
 
   return (

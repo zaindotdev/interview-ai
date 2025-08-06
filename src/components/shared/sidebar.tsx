@@ -257,46 +257,6 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ pathname }) => (
   </Sidebar>
 );
 
-interface MobileBottomNavProps {
-  pathname: string;
-}
-
-const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ pathname }) => (
-  <div className="bg-background border-border fixed right-0 bottom-0 left-0 z-50 border-t md:hidden">
-    <nav
-      className="flex items-center justify-around px-2 py-2"
-      role="navigation"
-      aria-label="Mobile navigation"
-    >
-      {MOBILE_NAV_ITEMS.map((item) => {
-        const isActive = pathname === item.href;
-        const { name, href, icon: Icon, disabled } = item;
-
-        return (
-          <Link
-            key={name}
-            href={disabled ? "#" : href}
-            className={`flex min-w-0 flex-col items-center gap-1 rounded-lg px-3 py-2 transition-colors ${
-              disabled
-                ? "pointer-events-none cursor-not-allowed opacity-50"
-                : isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            }`}
-            aria-label={`Navigate to ${name}`}
-            aria-current={isActive ? "page" : undefined}
-          >
-            <Icon
-              className={`size-5 flex-shrink-0 ${isActive ? "text-primary" : ""}`}
-            />
-            <span className="truncate text-xs font-medium">{name}</span>
-          </Link>
-        );
-      })}
-    </nav>
-  </div>
-);
-
 // Main Component
 export function AppSidebar() {
   const pathname = usePathname();
@@ -304,7 +264,6 @@ export function AppSidebar() {
   return (
     <>
       <DesktopSidebar pathname={pathname} />
-      <MobileBottomNav pathname={pathname} />
     </>
   );
 }

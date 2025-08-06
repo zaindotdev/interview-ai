@@ -5,7 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/prisma";
 import bcrypt from "bcrypt";
-import { Role, User } from "@/generated/prisma";
+import { Role } from "@/generated/prisma";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
@@ -71,7 +71,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger }) {
       // On sign in, set initial token data
       if (user) {
         const dbUser = await db.user.findUnique({
@@ -115,7 +115,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
 
-    async signIn({ account, profile, user }) {
+    async signIn({ account, profile }) {
       try {
         // For OAuth providers (Google/GitHub)
         if (account?.provider === "google" || account?.provider === "github") {

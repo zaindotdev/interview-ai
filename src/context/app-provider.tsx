@@ -9,7 +9,7 @@ import React, {
 
 interface ResumeData {
   id: string;
-  analysisResults?: any;
+  analysisResults?: string|any;
   recommendations?: string[];
   score?: number;
 }

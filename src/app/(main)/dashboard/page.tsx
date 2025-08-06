@@ -9,7 +9,7 @@ import { useAppContext } from "@/context/app-provider";
 
 const Dashboard = () => {
   const [resumeScore, setResumeScore] = useState<ResumeScore | null>(null);
-  const [practiceInterview, setPracticeInterview] = useState<
+  const [practiceInterview] = useState<
     PracticeInterview[] | null
   >(null);
   const { fetchResumeData, loading } = useAppContext();
@@ -41,8 +41,8 @@ const Dashboard = () => {
     <div className="space-y-8">
       {/* Header Section */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl md:text-3xl/8  font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground text-sm md:text-lg">
           Track your interview preparation progress and improve your skills.
         </p>
       </div>

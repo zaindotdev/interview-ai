@@ -10,6 +10,12 @@ export interface KeyFeaturesData{
     description:string;
 }
 
+export interface Message {
+  role: string;
+  transcript: string;
+  type?: string;
+  transcriptType?: string;
+}
 
 export interface PricingPlans {
     title: string
@@ -114,7 +120,7 @@ export interface CallObject {
   // Call Details
   customer: {
     phoneNumber: string;
-    [key: string]: any; // if there might be more fields
+    [key: string]: unknown; // if there might be more fields
   };
   phoneCallProvider: string; // e.g., "twilio"
   phoneCallProviderId: string;

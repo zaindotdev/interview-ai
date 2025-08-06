@@ -101,7 +101,7 @@ const ProfilePage: React.FC = () => {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out.");
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     // Only fetch user data if session is loaded and authenticated
@@ -139,10 +139,10 @@ const ProfilePage: React.FC = () => {
         <div className="bg-muted rounded-full p-4">
           <User className="text-muted-foreground h-12 w-12" />
         </div>
-        <h2 className="text-2xl font-bold">Profile Not Found</h2>
-        <p className="text-muted-foreground max-w-md">
-          We couldn't load your profile. This might happen if you're not logged
-          in or if there's an issue with your account.
+        <h2 className="text-2xl font-bold md:text-3xl/8">Profile Not Found</h2>
+        <p className="text-muted-foreground max-w-md text-sm md:text-lg">
+          We couldn&apos;t load your profile. This might happen if you&apos;re
+          not logged in or if there&apos;s an issue with your account.
         </p>
         {status === "unauthenticated" && (
           <Button asChild>
@@ -158,8 +158,10 @@ const ProfilePage: React.FC = () => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl/8">
+            My Profile
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-lg">
             Manage your personal information and account settings.
           </p>
         </div>
@@ -167,9 +169,9 @@ const ProfilePage: React.FC = () => {
           onClick={handleSignOut}
           variant="outline"
           className="flex items-center gap-2 bg-transparent"
+          size="icon"
         >
           <LogOut className="h-4 w-4" />
-          Logout
         </Button>
       </div>
 

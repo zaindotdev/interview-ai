@@ -45,8 +45,8 @@ const MockInterviewPage: React.FC = () => {
     <section className="min-h-[calc(100vh-4rem)] space-y-8">
       {/* Page Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Mock Interviews</h1>
-        <p className="text-muted-foreground">
+        <h1 className="md:text-3xl/8 text-2xl font-bold tracking-tight">Mock Interviews</h1>
+        <p className="text-muted-foreground text-sm md:text-lg">
           Prepare for your next interview with our AI-powered mock sessions.
         </p>
       </div>

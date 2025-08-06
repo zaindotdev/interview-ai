@@ -12,7 +12,7 @@ const Header: React.FC = () => {
   const { status } = useSession()
   const [isActive, setIsActive] = useState("Home")
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
+  const [, setIsScrolled] = useState(false)
   const { scrollY } = useScroll()
 
   // Transform values for scroll animations
