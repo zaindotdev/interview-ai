@@ -267,7 +267,7 @@ const SessionPage = () => {
         if (hasAccess) {
           // Auto-start call after getting mic access
           setTimeout(() => {
-            // startCall();
+            startCall();
           }, 1000);
         }
       });
