@@ -498,3 +498,6 @@ const SessionPage = () => {
     </main>
   );
 }
+
+
+export default SessionPage;
