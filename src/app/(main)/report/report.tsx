@@ -51,8 +51,8 @@ interface ReportData {
     redFlags: string[];
   };
   metaData: {
-    interviewType: string[];
-    position: string;
+    focusedSkills: string[];
+    topic: string;
     duration: number;
     confidence: number;
     chartConfig: {
@@ -175,7 +175,7 @@ const Report = () => {
               <User className="text-muted-foreground h-4 w-4" />
               <span className="text-sm font-medium">Topic:</span>
               <span className="text-muted-foreground text-sm">
-                {reportData.metaData.position}
+                {reportData.metaData.topic}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -389,7 +389,7 @@ const Report = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {reportData.metaData.interviewType.map((topic, index) => (
+                  {reportData.metaData.focusedSkills.map((topic, index) => (
                     <Badge key={index} variant="outline" className="text-xs">
                       {topic}
                     </Badge>
