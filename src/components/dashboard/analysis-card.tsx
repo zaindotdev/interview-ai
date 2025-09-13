@@ -16,10 +16,10 @@ import Link from "next/link"
 
 interface AnalysisCardProps {
   handleResumeScore: React.Dispatch<React.SetStateAction<ResumeScore | null>>
-  fetchPracticeInterviews: () => Promise<void>
+  fetchMockInterviewss?: () => Promise<void>
 }
 
-const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPracticeInterviews }) => {
+const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchMockInterviewss }) => {
   const [selectedJob, setSelectedJob] = useState<string>("")
   const [resumeScore, setResumeScore] = useState<ResumeScore | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
@@ -108,7 +108,6 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchPra
         const resumeData = data.data || data
         setResumeScore(resumeData.analysis)
         handleResumeScore(resumeData.analysis)
-        fetchPracticeInterviews()
         resetLoadingState()
         toast.success("Resume analyzed successfully")
       }, 500)

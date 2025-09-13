@@ -1,3 +1,4 @@
+import { MockInterviews } from "@/lib/types";
 import axios, { AxiosError } from "axios";
 import React, {
   createContext,
@@ -5,11 +6,12 @@ import React, {
   useContext,
   useState,
   ReactNode,
+  useMemo,
 } from "react";
 
 interface ResumeData {
   id: string;
-  analysisResults?: string|any;
+  analysisResults?: string | any;
   recommendations?: string[];
   score?: number;
 }
@@ -156,7 +158,7 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           loading: false,
         });
       } catch (error) {
-        console.error("Error in analyzeResume",error);
+        console.error("Error in analyzeResume", error);
         updateState({
           error: handleApiError(error),
           loading: false,
@@ -190,14 +192,17 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   }, [updateState]);
 
-  const contextValue: AppContextProps = {
-    ...state,
-    fetchResumeData,
-    fetchMockInterviews,
-    analyzeResume,
-    clearError,
-    resetState,
-  };
+  const contextValue = useMemo<AppContextProps>(
+    () => ({
+      ...state,
+      fetchResumeData,
+      fetchMockInterviews,
+      analyzeResume,
+      clearError,
+      resetState,
+    }),
+    [state, fetchResumeData, fetchMockInterviews, analyzeResume, clearError, resetState],
+  );
 
   return (
     <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>

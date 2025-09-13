@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
   console.log("Middleware - Has onboarded:", token?.hasOnboarded);
 
   // Define route categories
-  const authRoutes = ["/sign-in", "/sign-up", "/verify/:path*"];
+  const authRoutes = ["/sign-in", "/sign-up", "/verify"];
   const protectedRoutes = [
     "/dashboard",
     "/mock-interviews",
@@ -115,7 +115,7 @@ export const config = {
   matcher: [
     "/sign-in",
     "/sign-up",
-    "/verify/:path*",
+    "/verify",
     "/",
     "/dashboard",
     "/mock-interviews",

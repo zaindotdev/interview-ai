@@ -1,22 +1,23 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import AnalysisCard from "@/components/dashboard/analysis-card";
-import MockInterviews from "@/components/dashboard/mock-interviews";
+import MockInterview from "@/components/dashboard/mock-interviews";
 import StatsOverview from "@/components/dashboard/stats-overview";
 import { ResumeScore } from "@/lib/types";
-import { PracticeInterview } from "@/lib/types";
+import type { MockInterviews } from "@/lib/types";
 import { useAppContext } from "@/context/app-provider";
 
 const Dashboard = () => {
   const [resumeScore, setResumeScore] = useState<ResumeScore | null>(null);
   const [practiceInterview] = useState<
-    PracticeInterview[] | null
+    MockInterviews[] | null
   >(null);
-  const { fetchResumeData, loading } = useAppContext();
+  const {mockInterviews,fetchMockInterviews, fetchResumeData, loading } = useAppContext();
 
   useEffect(() => {
     fetchResumeData();
-  }, [fetchResumeData]);
+    fetchMockInterviews();
+  }, [fetchResumeData,fetchMockInterviews]);
 
   if (loading) {
     return (
@@ -49,17 +50,17 @@ const Dashboard = () => {
 
       <StatsOverview
         resumeScore={resumeScore}
-        practiceInterview={practiceInterview}
+        practiceInterview={mockInterviews}
       />
 
       <AnalysisCard
         handleResumeScore={setResumeScore}
-        fetchPracticeInterviews={fetchResumeData}
+        fetchMockInterviewss={fetchResumeData}
       />
 
-      <MockInterviews
+      <MockInterview
         weaknessess={resumeScore?.missingSkills}
-        practiceInterview={practiceInterview}
+        practiceInterview={mockInterviews}
       />
     </div>
   );

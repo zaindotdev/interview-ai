@@ -60,11 +60,6 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
         icon: MessageSquare,
       },
       {
-        name: "Practice Questions",
-        href: "/practice-questions",
-        icon: BookOpen,
-      },
-      {
         name: "Interview History",
         href: "/interview-history",
         icon: History,
@@ -90,19 +85,9 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
 
 const FOOTER_ITEMS: NavigationItem[] = [
   {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
-  {
     name: "Profile",
     href: "/profile",
     icon: User,
-  },
-  {
-    name: "Help & Support",
-    href: "/help",
-    icon: HelpCircle,
   },
 ];
 

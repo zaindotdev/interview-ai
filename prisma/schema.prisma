@@ -34,6 +34,7 @@ model User {
   otpExpiry       DateTime?
   email           String        @unique
   emailVerified   Boolean?
+  phone_number    String?
   image           String?
   hasOnboarded    Boolean       @default(false)
   password        String?
@@ -81,6 +82,7 @@ model MockInterviewsReport{
   callId         String
   candidateId    String
   report         String
+  metaData       String
   createdAt      DateTime @default(now())
 }
 

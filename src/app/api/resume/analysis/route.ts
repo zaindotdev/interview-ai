@@ -5,7 +5,7 @@ import { GenerativeModel, GoogleGenerativeAI } from "@google/generative-ai";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/prisma";
-import { PracticeInterview } from "@/lib/types";
+import { MockInterviews } from "@/lib/types";
 import { ErrorResponse, HttpResponse } from "@/utils/response";
 
 // Constants
@@ -232,7 +232,7 @@ const saveAnalysisData = async (
   userId: string,
   fileUrl: string,
   analysis: string,
-  mockInterviews: PracticeInterview[],
+  mockInterviews: MockInterviews[],
 ) => {
   try {
     await db.$transaction(async (tx) => {
@@ -312,7 +312,7 @@ export async function POST(req: NextRequest) {
 
     // Ensure mock interviews have candidateId
     const mockInterviewsWithCandidateId = mockInterviews.map(
-      (interview: PracticeInterview) => ({
+      (interview: MockInterviews) => ({
         ...interview,
         candidateId: user.id,
       }),

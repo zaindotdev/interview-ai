@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { vapiClient } from "@/lib/vapi";
 import { VapiError } from "@vapi-ai/server-sdk";
 import redisClient from "@/lib/redis";
+import {db} from "@/lib/prisma";
 
 // Redis cache keys
 const ASSISTANT_CACHE_KEY = "vapi:assistant:cached_id";
@@ -283,7 +284,7 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
       },
       voice: {
         provider: "vapi",
-        voiceId: "Paige",
+        voiceId: "Elliot",
       },
       transcriber: {
         provider: "assembly-ai",

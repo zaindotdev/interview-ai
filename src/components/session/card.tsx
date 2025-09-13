@@ -1,47 +1,42 @@
-"use client"
-
-import type React from "react"
-import type { ReactElement } from "react"
-import { Card, CardTitle, CardContent, CardHeader } from "@/components/ui/card"
-import { motion } from "framer-motion"
+import type { ReactNode } from "react"
+import { cn } from "@/lib/utils"
 
 interface SessionCardProps {
+  avatar: ReactNode
+  role: string
   name: string
-  avatar: ReactElement
-  isSpeaking: boolean // New prop to control the wave animation
+  isSpeaking: boolean
 }
 
-const SessionCard: React.FC<SessionCardProps> = ({ avatar, name, isSpeaking }) => {
+const SessionCard = ({ avatar, role, name, isSpeaking }: SessionCardProps) => {
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle>
-          <h1 className="from-primary/70 to-primary/80 bg-gradient-to-b bg-clip-text text-xl font-bold text-transparent">
-            {name}
-          </h1>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-grow flex items-center justify-center">
-        <div className="relative flex items-center justify-center w-24 h-24">
-          {" "}
-          {/* Container for avatar and wave */}
-          {avatar}
-          {isSpeaking && (
-            <motion.div
-              className="absolute inset-0 rounded-full bg-primary/30" // Subtle blue for the wave
-              initial={{ scale: 0.5, opacity: 1 }}
-              animate={{ scale: 1.5, opacity: 0 }}
-              transition={{
-                repeat: Number.POSITIVE_INFINITY,
-                duration: 1.5,
-                ease: "easeOut",
-              }}
-              aria-hidden="true" // Decorative element for accessibility
-            />
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div
+      className={cn(
+        "flex items-center gap-4 rounded-lg border p-4 transition-all duration-200",
+        isSpeaking
+          ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
+          : "border-border bg-card hover:bg-muted/50",
+      )}
+    >
+      <div className="relative">
+        {avatar}
+        {isSpeaking && <div className="absolute -inset-1 rounded-full border-2 border-primary animate-pulse" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <h4 className="font-medium text-sm text-foreground truncate">{name}</h4>
+        <p className="text-xs text-muted-foreground capitalize">{role}</p>
+        {isSpeaking && (
+          <div className="flex items-center gap-1 mt-1">
+            <div className="flex gap-1">
+              <div className="w-1 h-1 bg-primary rounded-full animate-bounce" />
+              <div className="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:0.1s]" />
+              <div className="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
+            </div>
+            <span className="text-xs text-primary font-medium ml-1">Speaking...</span>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

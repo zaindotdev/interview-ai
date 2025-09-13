@@ -1,96 +1,107 @@
 "use client"
 
-import { ScrollArea } from "../ui/scroll-area"
 import { useEffect, useRef } from "react"
-import { Card } from "../ui/card"
-import { Bot, User, Mic } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Bot, User } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-interface Props {
-  transcripts: {
-    role: string
-    transcript: string
-  }[]
-  liveTranscription: string
+interface Message {
+  role: string
+  transcript: string
 }
 
-const Transcript = ({ transcripts, liveTranscription }: Props) => {
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+interface TranscriptProps {
+  liveTranscription: string
+  transcripts: Message[]
+}
 
-  const scrollToBottom = () => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      })
-    }
-  }
+const Transcript = ({ liveTranscription, transcripts }: TranscriptProps) => {
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    scrollToBottom()
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]")
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight
+      }
+    }
   }, [transcripts, liveTranscription])
 
+  const formatTimestamp = (index: number) => {
+    const now = new Date()
+    const time = new Date(now.getTime() - (transcripts.length - index) * 30000)
+    return time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  }
+
   return (
-    <div className="mr-auto w-full">
-      <h2 className="text-xl md:text-2xl font-semibold text-transparent bg-gradient-to-br from-primary to-orange-700 bg-clip-text">
-        Transcript
-      </h2>
-
-      <Card className="w-full rounded-xl p-4 mt-4">
-        {/* Live Transcription at the top */}
-
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-2 mb-2">
-              <Mic className="w-4 h-4 text-blue-600 animate-pulse" />
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Live Transcription</span>
-            </div>
-            {liveTranscription?<p className="text-sm text-blue-800 dark:text-blue-200 italic">{liveTranscription}</p>:<p className="text-sm text-blue-800 dark:text-blue-200 italic">No live transcription available</p>}
-          </div>
-
-        <ScrollArea className="h-[40vh]" ref={scrollAreaRef}>
-          {!transcripts.length ? (
-            <div className="h-60 flex items-center justify-center">
+    <div className="h-[600px] flex flex-col">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4">
+        <div className="space-y-4 p-4">
+          {transcripts.length === 0 && !liveTranscription && (
+            <div className="flex items-center justify-center h-32 text-muted-foreground">
               <div className="text-center">
-                <Bot className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">No transcript available</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">Start speaking to see the conversation</p>
+                <Bot className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Transcript will appear here once the conversation starts...</p>
               </div>
             </div>
-          ) : (
-            <div className="space-y-4 pb-4">
-              {transcripts.map((transcript, idx) => (
-                <div
-                  key={`transcript-${idx}`}
-                  className={`flex items-start gap-3 ${transcript.role === "user" ? "flex-row-reverse" : ""}`}
-                >
-                  {/* Avatar */}
-                  <div
-                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${transcript.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                      }`}
-                  >
-                    {transcript.role === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-                  </div>
+          )}
 
-                  {/* Message bubble */}
-                  <div
-                    className={`max-w-[80%] p-3 rounded-2xl ${transcript.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-tr-sm"
-                        : "bg-muted text-muted-foreground rounded-tl-sm"
-                      }`}
-                  >
-                    <p className="text-sm leading-relaxed">{transcript.transcript}</p>
+          {transcripts.map((message, index) => (
+            <div
+              key={index}
+              className={cn(
+                "flex gap-3 p-3 rounded-lg",
+                message.role === "assistant"
+                  ? "bg-primary/5 border border-primary/10"
+                  : "bg-muted/50 border border-border",
+              )}
+            >
+              <Avatar className="h-8 w-8 shrink-0">
+                <AvatarFallback
+                  className={cn(
+                    "text-xs",
+                    message.role === "assistant" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {message.role === "assistant" ? <Bot size={16} /> : <User size={16} />}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-foreground capitalize">
+                    {message.role === "assistant" ? "AI Assistant" : "You"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{formatTimestamp(index)}</span>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed">{message.transcript}</p>
+              </div>
+            </div>
+          ))}
+
+          {liveTranscription && (
+            <div className="flex gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800/30">
+              <Avatar className="h-8 w-8 shrink-0">
+                <AvatarFallback className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 text-xs">
+                  <User size={16} />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-foreground">You</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1 h-1 bg-yellow-500 rounded-full animate-bounce" />
+                    <div className="w-1 h-1 bg-yellow-500 rounded-full animate-bounce [animation-delay:0.1s]" />
+                    <div className="w-1 h-1 bg-yellow-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <span className="text-xs text-yellow-600 dark:text-yellow-400 ml-1">Speaking...</span>
                   </div>
                 </div>
-              ))}
-
-              {/* Invisible element to scroll to */}
-              <div ref={bottomRef} />
+                <p className="text-sm text-foreground leading-relaxed opacity-75">{liveTranscription}</p>
+              </div>
             </div>
           )}
-        </ScrollArea>
-      </Card>
+        </div>
+      </ScrollArea>
     </div>
   )
 }

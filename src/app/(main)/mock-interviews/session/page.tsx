@@ -13,7 +13,7 @@ import { Bot, Circle, Loader2, Mic, Phone, User } from "lucide-react";
 import SessionCard from "@/components/session/card";
 import Transcript from "@/components/session/transcript";
 
-import type { PracticeInterview, Message } from "@/lib/types";
+import type { MockInterviews, Message } from "@/lib/types";
 
 const SessionPage = () => {
   const { data: session } = useSession();
@@ -21,8 +21,9 @@ const SessionPage = () => {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
 
-  const [interviewConfig, setInterviewConfig] =
-    useState<PracticeInterview | null>(null);
+  const [interviewConfig, setInterviewConfig] = useState<MockInterviews | null>(
+    null,
+  );
   const [assistantId, setAssistantId] = useState<string | null>(null);
   const [callStarted, setCallStarted] = useState(false);
   const [microphoneAccess, setMicrophoneAccess] = useState(false);
@@ -31,8 +32,10 @@ const SessionPage = () => {
   const [currentTranscript, setCurrentTranscript] = useState("");
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const vapiRef = useRef<Vapi | null>(null);
+  const isUnmountedRef = useRef(false);
 
   // --- Fetch interview config ---
   const fetchInterviewConfig = useCallback(async () => {
@@ -44,8 +47,10 @@ const SessionPage = () => {
     setLoading(true);
     try {
       const res = await axios.get(`/api/mock-interview/get/id?id=${id}`);
-      if (res.status === 200) {
+      if (res.status === 200 && res.data?.data) {
         setInterviewConfig(res.data.data);
+      } else {
+        throw new Error("Invalid response data");
       }
     } catch (err) {
       console.error("Failed to fetch interview config:", err);
@@ -58,10 +63,6 @@ const SessionPage = () => {
   // --- Get assistant ID from API ---
   const getAssistantId = useCallback(async () => {
     if (!interviewConfig || !session?.user?.name) {
-      console.log("Missing config or session:", {
-        interviewConfig: !!interviewConfig,
-        userName: !!session?.user?.name,
-      });
       return;
     }
 
@@ -73,29 +74,70 @@ const SessionPage = () => {
       });
 
       if (res.status !== 200 && res.status !== 201) {
-        toast.error(res.data?.message || "Failed to get assistant ID");
-        return;
+        throw new Error(res.data?.message || "Failed to get assistant ID");
       }
 
       if (!res.data?.data?.id) {
-        toast.error("Invalid assistant response - missing ID");
-        return;
+        throw new Error("Invalid assistant response - missing ID");
       }
 
-      console.log("Assistant created:", res.data.data.id);
-      setAssistantId(res.data.data.id);
+      if (!isUnmountedRef.current) {
+        setAssistantId(res.data.data.id);
+      }
     } catch (err) {
       console.error("Assistant creation failed:", err);
-      toast.error("Failed to initialize assistant");
-      setConnectionStatus("Assistant initialization failed");
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to initialize assistant";
+      toast.error(errorMessage);
+      if (!isUnmountedRef.current) {
+        setConnectionStatus("Assistant initialization failed");
+      }
     }
   }, [interviewConfig, session]);
+
+  const generateReport = useCallback(async () => {
+    if (!id || isGeneratingReport) {
+      return;
+    }
+
+    setIsGeneratingReport(true);
+    const reportPayload = {
+      transcripts: messages,
+      conversationId: id,
+      focusedSkills: interviewConfig?.focus || [],
+      duration: interviewConfig?.estimated_time,
+      topic: interviewConfig?.topic,
+    };
+
+    console.log("GenerateReport payload:", reportPayload);
+
+    try {
+      const res = await axios.post(`/api/mock-interview/report`, reportPayload);
+
+      if (res.status !== 200) {
+        throw new Error(res?.data?.message || "Failed to generate report");
+      }
+
+      if (res.data?.data?.reportId) {
+        console.log("Report generated successfully:", res.data);
+        router.replace(`/report/?reportId=${res.data.data.reportId}`);
+      } else {
+        throw new Error("Invalid report response - missing reportId");
+      }
+    } catch (err) {
+      console.error("Failed to generate report:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to generate report";
+      toast.error(errorMessage);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  }, [id, messages, interviewConfig, router, isGeneratingReport]);
 
   // --- Request Mic Access ---
   const requestMicrophonePermission =
     useCallback(async (): Promise<boolean> => {
       try {
-        console.log("Requesting microphone permission...");
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
@@ -104,21 +146,22 @@ const SessionPage = () => {
           },
         });
 
-        // Test the stream
-        console.log("Microphone stream obtained:", stream.getAudioTracks());
+        // Stop the stream immediately since we just needed permission
+        stream.getTracks().forEach((track) => track.stop());
 
-        // Don't stop the stream immediately - keep it active
-        // stream.getTracks().forEach((t) => t.stop());
-
-        setMicrophoneAccess(true);
-        setConnectionStatus("Microphone access granted");
+        if (!isUnmountedRef.current) {
+          setMicrophoneAccess(true);
+          setConnectionStatus("Microphone access granted");
+        }
         return true;
       } catch (error) {
         console.error("Microphone permission error:", error);
-        setMicrophoneAccess(false);
-        setConnectionStatus(
-          "Microphone permission denied. Please allow mic access and refresh.",
-        );
+        if (!isUnmountedRef.current) {
+          setMicrophoneAccess(false);
+          setConnectionStatus(
+            "Microphone permission denied. Please allow mic access and refresh.",
+          );
+        }
         toast.error("Microphone access is required for the interview");
         return false;
       }
@@ -138,8 +181,12 @@ const SessionPage = () => {
       return;
     }
 
+    if (callStarted) {
+      console.warn("Call already started");
+      return;
+    }
+
     try {
-      console.log("Starting call with assistant:", assistantId);
       setConnectionStatus("Starting call...");
 
       if (!vapiRef.current) {
@@ -152,41 +199,44 @@ const SessionPage = () => {
 
       const vapi = vapiRef.current;
 
+      // Remove existing event listeners to prevent duplicates
+      vapi.removeAllListeners();
+
       // Set up event listeners
       vapi.on("call-start", () => {
-        console.log("Call started");
-        setCallStarted(true);
-        setConnectionStatus("Call active - You can speak now");
+        if (!isUnmountedRef.current) {
+          setCallStarted(true);
+          setConnectionStatus("Call active - You can speak now");
+        }
       });
 
       vapi.on("call-end", () => {
-        console.log("Call ended");
-        setCallStarted(false);
-        setCurrentRole(null);
-        setCurrentTranscript("");
-        setConnectionStatus("Call ended");
+        if (!isUnmountedRef.current) {
+          setCallStarted(false);
+          setCurrentRole(null);
+          setCurrentTranscript("");
+          setConnectionStatus("Call ended");
+        }
       });
 
       vapi.on("speech-start", () => {
-        console.log("Speech started");
-        setConnectionStatus("Listening...");
+        if (!isUnmountedRef.current) {
+          setConnectionStatus("Speaking...");
+        }
       });
 
       vapi.on("speech-end", () => {
-        console.log("Speech ended");
-        setConnectionStatus("Processing...");
+        if (!isUnmountedRef.current) {
+          setConnectionStatus("Listening...");
+        }
       });
 
       vapi.on("message", (message: Message) => {
-        console.log("Vapi message:", message);
+        if (isUnmountedRef.current) return;
 
         switch (message.type) {
           case "transcript": {
             const { role, transcriptType, transcript } = message;
-            console.log(`Transcript (${transcriptType}):`, {
-              role,
-              transcript,
-            });
 
             if (transcriptType === "partial") {
               setCurrentTranscript(transcript);
@@ -206,47 +256,61 @@ const SessionPage = () => {
           }
           case "conversation-update":
             console.log("Conversation update:", message);
+            // Handle conversation updates if needed
             break;
           default:
-            console.log("Unknown message type:", message.type);
+            console.warn("Unknown message type:", message.type);
         }
       });
 
       vapi.on("error", (error: Error) => {
         console.error("Vapi error:", error);
-        setConnectionStatus(`Error: ${error.message || "Unknown error"}`);
-        toast.error(`Call error: ${error.message || "Unknown error"}`);
+        const errorMessage = error.message || "Unknown error";
+        if (!isUnmountedRef.current) {
+          setConnectionStatus(`Error: ${errorMessage}`);
+        }
+        toast.error(`Call error: ${errorMessage}`);
       });
 
       // Start the call
       await vapi.start(assistantId);
     } catch (error) {
-      if (error instanceof Error) {
-        console.error("Call error:", error);
-        setConnectionStatus(`Error: ${error.message || "Unknown error"}`);
-        toast.error(`Call error: ${error.message || "Unknown error"}`);
+      console.error("Call start error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      if (!isUnmountedRef.current) {
+        setConnectionStatus(`Error: ${errorMessage}`);
       }
+      toast.error(`Call error: ${errorMessage}`);
     }
-  }, [assistantId, microphoneAccess]);
+  }, [assistantId, microphoneAccess, callStarted]);
 
   // --- End call ---
   const endCall = useCallback(async () => {
+    if (!callStarted) return;
+
     try {
-      if (vapiRef.current && callStarted) {
-        console.log("Ending call...");
+      if (vapiRef.current) {
         await vapiRef.current.stop();
       }
     } catch (err) {
       console.error("Error stopping call:", err);
     } finally {
-      setCallStarted(false);
-      setConnectionStatus("Call ended");
-      setCurrentRole(null);
-      setCurrentTranscript("");
-      toast.info("Call ended. Redirecting to dashboard...");
-      setTimeout(() => router.replace("/dashboard"), 1000);
+      if (!isUnmountedRef.current) {
+        setCallStarted(false);
+        setConnectionStatus("Call ended");
+        setCurrentRole(null);
+        setCurrentTranscript("");
+        toast.info("Call ended. Generating report...", {
+          icon: <Loader2 className="animate-spin" />,
+        });
+
+        setTimeout(() => {
+          generateReport();
+        }, 1000);
+      }
     }
-  }, [callStarted, router]);
+  }, [callStarted, generateReport]);
 
   // --- Effects ---
   useEffect(() => {
@@ -256,29 +320,28 @@ const SessionPage = () => {
   }, [id, fetchInterviewConfig]);
 
   useEffect(() => {
-    if (interviewConfig && session?.user?.name) {
+    if (interviewConfig && session?.user?.name && !assistantId) {
       getAssistantId();
     }
-  }, [interviewConfig, session, getAssistantId]);
+  }, [interviewConfig, session, assistantId, getAssistantId]);
 
   useEffect(() => {
-    if (assistantId && !callStarted) {
-      requestMicrophonePermission().then((hasAccess) => {
-        if (hasAccess) {
-          // Auto-start call after getting mic access
-          setTimeout(() => {
-            // startCall();
-          }, 1000);
-        }
-      });
+    if (assistantId && !callStarted && !microphoneAccess) {
+      requestMicrophonePermission();
     }
-  }, [assistantId, callStarted, requestMicrophonePermission, startCall]);
+  }, [assistantId, callStarted, microphoneAccess, requestMicrophonePermission]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      isUnmountedRef.current = true;
       if (vapiRef.current) {
-        vapiRef.current.stop();
+        try {
+          vapiRef.current.stop();
+          vapiRef.current.removeAllListeners();
+        } catch (err) {
+          console.error("Error during cleanup:", err);
+        }
       }
     };
   }, []);
@@ -338,21 +401,21 @@ const SessionPage = () => {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
-      <section className="mx-auto flex max-w-6xl flex-col rounded-xl bg-white p-6 shadow-lg md:p-8">
+    <main className="min-h-screen p-4 sm:p-6 lg:p-8">
+      <section className="mx-auto flex max-w-6xl flex-col rounded-xl md:p-8">
         <div className="mb-8 border-b pb-4">
-          <h1 className="text-2xl md:text-3xl/8 font-bold tracking-tight text-gray-900">
+          <h1 className="text-lg font-bold tracking-tight text-gray-900 md:text-xl/8">
             {interviewConfig?.topic || "Loading..."}
           </h1>
-          <p className="text-muted-foreground max-w-2xl text-sm md:text-lg">
+          <p className="text-muted-foreground max-w-2xl text-xs md:text-base">
             {interviewConfig?.description || "Loading interview details..."}
           </p>
         </div>
 
         <div className="mb-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex w-full flex-col items-start justify-start gap-2 sm:flex-row">
             <div
-              className={`flex items-center gap-2 rounded-xl p-2 ring-2 ${
+              className={`flex items-center gap-2 rounded-full border-2 border-white p-2 ring-2 ${
                 callStarted
                   ? "bg-green-500/30 ring-green-500"
                   : "bg-yellow-500/30 ring-yellow-500"
@@ -370,7 +433,7 @@ const SessionPage = () => {
               </p>
             </div>
             <div
-              className={`flex items-center gap-2 rounded-xl p-2 ring-2 ${
+              className={`flex items-center gap-2 rounded-full border-2 border-white p-2 ring-2 ${
                 microphoneAccess
                   ? "bg-green-500/30 ring-green-500"
                   : "bg-red-500/30 ring-red-500"
@@ -390,7 +453,12 @@ const SessionPage = () => {
 
           <div className="flex gap-2 self-start">
             {!callStarted && assistantId && microphoneAccess && (
-              <Button onClick={startCall} className="flex items-center gap-2">
+              <Button
+                onClick={startCall}
+                className="flex items-center gap-2"
+                variant={"outline"}
+                disabled={loading}
+              >
                 <Phone />
                 Start Interview
               </Button>
@@ -399,17 +467,22 @@ const SessionPage = () => {
               <Button
                 onClick={endCall}
                 variant="destructive"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 rounded-full"
+                disabled={isGeneratingReport}
               >
-                <Phone className="rotate-[135deg]" />
-                End Session
+                {isGeneratingReport ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Phone className="rotate-[135deg]" />
+                )}
+                {isGeneratingReport ? "Generating Report..." : "End Session"}
               </Button>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3">
+          <div className="flex flex-col gap-4">
             {sessionCardElem.map((card, i) => (
               <SessionCard key={i} {...card} />
             ))}
