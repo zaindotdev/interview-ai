@@ -25,11 +25,13 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const SignInPage = () => {
   const [loading, setLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const router = useRouter();
   const form = useForm<SignInSchemaType>({
     resolver: zodResolver(SignInSchema),
     defaultValues: {
@@ -41,20 +43,12 @@ const SignInPage = () => {
   const submitForm = async (data: SignInSchemaType) => {
     setLoading(true);
     try {
-      ;
-      const user = await signIn("credentials", {
+      await signIn("credentials", {
         redirect: true,
+        email: data.email,
+        password: data.password,
         callbackUrl: "/dashboard",
-        email: data.email,         // <-- Pass email
-        password: data.password,   // <-- Pass password
       });
-      if (user?.error) {
-        toast.error("Something went wrong", {
-          description: user.error,
-        });
-      } else {
-        toast.success("Signed in successfully");
-      }
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
@@ -111,20 +105,24 @@ const SignInPage = () => {
     }
   };
   return (
-    <section className={"w-full min-h-screen flex items-center justify-center"}>
-      <Card className={"max-w-md w-full"}>
+    <section className={"flex min-h-screen w-full items-center justify-center"}>
+      <Card
+        className={
+          "min-h-screen w-full max-w-md rounded-none sm:min-h-0 sm:rounded-xl"
+        }
+      >
         <CardHeader>
           <CardTitle>
             <h1
               className={
-                "text-lg md:text-xl font-medium italic text-pretty text-center"
+                "text-center text-lg font-medium text-pretty italic md:text-xl"
               }
             >
               Interview <span className={"text-primary"}>AI.</span>
             </h1>
           </CardTitle>
           <CardContent>
-            <h2 className={"text-2xl/8 font-semibold text-center"}>
+            <h2 className={"text-center text-2xl/8 font-semibold"}>
               Sign In to your account
             </h2>
           </CardContent>
@@ -174,15 +172,15 @@ const SignInPage = () => {
               </Button>
             </form>
           </Form>
-          <CardFooter className="w-full mt-4 flex items-center justify-center">
+          <CardFooter className="mt-4 flex w-full items-center justify-center">
             <p>
               Don&apos;t have an Account? <Link href={"/sign-up"}>Sign Up</Link>
             </p>
           </CardFooter>
         </CardContent>
         <Separator />
-        <CardFooter className="p-4 space-y-4 flex-col">
-          <p className="text-center mb-4">OR</p>
+        <CardFooter className="flex-col space-y-4 p-4">
+          <p className="mb-4 text-center">OR</p>
           <Button
             onClick={handleGithubSignIn}
             className="w-full cursor-pointer"

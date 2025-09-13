@@ -112,7 +112,7 @@ const SignUpPage = () => {
   };
   return (
     <section className={"flex min-h-screen w-full items-center justify-center"}>
-      <Card className={"w-full max-w-md"}>
+      <Card className={"w-full max-w-md min-h-screen sm:min-h-0 rounded-none sm:rounded-xl"}>
         <CardHeader>
           <CardTitle>
             <h1

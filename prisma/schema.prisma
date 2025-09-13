@@ -27,25 +27,27 @@ enum PaymentMethod {
 }
 
 model User {
-  id              String        @id @unique @default(uuid())
-  username        String?
-  name            String?
-  otp             String?       @unique
-  otpExpiry       DateTime?
-  email           String        @unique
-  emailVerified   Boolean?
-  image           String?
-  hasOnboarded    Boolean       @default(false)
-  password        String?
-  role            Role          @default(CANDIDATE)
-  resumes         Resume[]
-  subscription    Subscription?
-  mockInterviewId String?
-  subscriptionId  String?
-  Account         Account[]
-  Session         Session[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                   String                  @id @unique @default(uuid())
+  username             String?
+  name                 String?
+  otp                  String?                 @unique
+  otpExpiry            DateTime?
+  email                String                  @unique
+  emailVerified        Boolean?
+  phone_number         String?
+  image                String?
+  hasOnboarded         Boolean                 @default(false)
+  password             String?
+  role                 Role                    @default(CANDIDATE)
+  resumes              Resume[]
+  subscription         Subscription?
+  mockInterviewId      String?
+  subscriptionId       String?
+  Account              Account[]
+  Session              Session[]
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  mockInterviewHistory MockInterviewsHistory[]
 
   @@unique([email, role])
   @@index([email], map: "user_email_idx")
@@ -63,15 +65,15 @@ model Resume {
 }
 
 model MockInterviews {
-  id             String   @id @unique @default(uuid())
-  topic          String   @unique
-  description    String
-  focus          String[]
-  estimated_time Int
-  difficulty     String
-  candidateId    String
-  isCompleted    Boolean?
-  createdAt      DateTime @default(now())
+  id                    String                  @id @unique @default(uuid())
+  topic                 String                  @unique
+  description           String
+  focus                 String[]
+  estimated_time        Int
+  difficulty            String
+  candidateId           String
+  createdAt             DateTime                @default(now())
+  mockInterviewsHistory MockInterviewsHistory[]
 
   @@index([candidateId], map: "mock_interviews_candidate_id_idx")
 }
@@ -81,7 +83,31 @@ model MockInterviewsReport {
   callId      String
   candidateId String
   report      String
+  metaData    String
   createdAt   DateTime @default(now())
+
+  MockInterviewsHistory MockInterviewsHistory[]
+
+  @@index([candidateId], map: "mock_interviews_report_candidate_id_idx")
+}
+
+model MockInterviewsHistory {
+  id               String  @id @default(uuid())
+  mockInterviewId  String
+  candidateId      String
+  status           String  @default("completed") // e.g. pending, ongoing, completed, cancelled
+  duration         Int? // store duration in seconds/minutes
+  transcripts      Json? // raw transcript if you want to keep it
+  feedbackReportId String? // optional link to MockInterviewsReport
+
+  mockInterview       MockInterviews        @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
+  candidate           User                  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  mockInterviewReport MockInterviewsReport? @relation(fields: [feedbackReportId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([mockInterviewId], map: "history_mock_interview_id_idx")
+  @@index([candidateId], map: "history_candidate_id_idx")
 }
 
 model Subscription {

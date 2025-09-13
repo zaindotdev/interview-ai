@@ -2,11 +2,11 @@
 import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, Target, Clock, Award } from 'lucide-react'
-import { ResumeScore, PracticeInterview } from "@/lib/types"
+import { ResumeScore, MockInterviews } from "@/lib/types"
 
 interface StatsOverviewProps {
   resumeScore: ResumeScore | null
-  practiceInterview: PracticeInterview[] | null
+  practiceInterview: MockInterviews[] | null
 }
 
 const StatsOverview: React.FC<StatsOverviewProps> = ({ resumeScore, practiceInterview }) => {

@@ -14,8 +14,7 @@ export async function middleware(request: NextRequest) {
   console.log("Middleware - Has onboarded:", token?.hasOnboarded);
 
   // Define route categories
-  const authRoutes = ["/sign-in", "/sign-up"];
-  const verifyRoutes = ["/verify"];
+  const authRoutes = ["/sign-in", "/sign-up", "/verify"];
   const protectedRoutes = [
     "/dashboard",
     "/mock-interviews",
@@ -31,7 +30,6 @@ export async function middleware(request: NextRequest) {
 
   // Check route types with more precise matching
   const isAuthRoute = authRoutes.some((route) => pathname === route);
-  const isVerifyRoute = verifyRoutes.some((route) => pathname.startsWith(route));
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
@@ -48,7 +46,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Allow access to auth routes, verify routes, and public routes
-    if (isAuthRoute || isVerifyRoute || isPublicRoute) {
+    if (isAuthRoute || isPublicRoute) {
       return NextResponse.next();
     }
 
@@ -64,11 +62,6 @@ export async function middleware(request: NextRequest) {
 
     // If user hasn't onboarded yet
     if (!hasOnboarded) {
-      // Allow verify routes even without onboarding (for email verification)
-      if (isVerifyRoute) {
-        return NextResponse.next();
-      }
-
       // Redirect auth routes to onboarding (except during sign-up process)
       if (isAuthRoute && pathname !== "/sign-up") {
         return NextResponse.redirect(new URL("/onboarding", request.url));
@@ -102,11 +95,6 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
 
-      // Allow verify routes
-      if (isVerifyRoute) {
-        return NextResponse.next();
-      }
-
       // Redirect onboarding routes to dashboard (user already onboarded)
       if (isOnboardingRoute) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
@@ -133,7 +121,7 @@ export const config = {
   matcher: [
     "/sign-in",
     "/sign-up",
-    "/verify/:path*",
+    "/verify",
     "/",
     "/dashboard",
     "/mock-interviews",
