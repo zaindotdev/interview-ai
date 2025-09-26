@@ -3,17 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ErrorResponse, HttpResponse } from "@/utils/response";
 import { db } from "@/lib/prisma";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateAIResponse, parseAIResponse } from "@/utils/ai";
 import { z } from "zod";
-
-// Environment variable validation
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY environment variable is not set");
-}
-
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const MODEL_NAME = "gemini-2.5-flash";
-
 // Response type definitions
 interface ReportData {
   summary: string;
@@ -189,45 +180,6 @@ Return a valid JSON object with this exact structure:
 - Ensure all JSON is valid and properly formatted`;
 }
 
-// Parse and validate AI response
-function parseAIResponse(response: string): AIResponse {
-  try {
-    // Clean up response (remove any markdown formatting)
-    const cleanResponse = response
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
-
-    const parsed = JSON.parse(cleanResponse);
-
-    // Basic validation
-    if (!parsed.report || !parsed.chartConfig) {
-      throw new Error("Invalid response structure");
-    }
-
-    // Ensure required fields exist
-    const requiredReportFields = [
-      "summary",
-      "overallScore",
-      "strengths",
-      "areasForImprovement",
-      "detailedFeedback",
-    ];
-    for (const field of requiredReportFields) {
-      if (!(field in parsed.report)) {
-        throw new Error(`Missing required field: ${field}`);
-      }
-    }
-
-    return parsed as AIResponse;
-  } catch (error) {
-    console.error("AI Response parsing error:", error);
-    throw new Error(
-      `Failed to parse AI response: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession({ req, ...authOptions });
@@ -248,13 +200,7 @@ export async function POST(req: NextRequest) {
       topic,
     });
 
-    if (
-      !transcripts ||
-      !conversationId ||
-      !duration ||
-      !focusedSkills ||
-      !topic
-    ) {
+    if (!transcripts || !conversationId || !focusedSkills || !topic) {
       return NextResponse.json(new ErrorResponse("Missing required fields"), {
         status: 400,
       });
@@ -296,42 +242,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate AI report
-    const model = ai.getGenerativeModel({ model: MODEL_NAME });
     const prompt = generatePrompt(transcripts, focusedSkills, topic, duration);
 
-    console.log("Generating AI report...");
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3, // Lower temperature for more consistent output
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 4000,
-        responseMimeType: "application/json",
-      },
+    const aiRawResponse = await generateAIResponse(prompt, {
+      temperature: 0.3,
+      maxTokens: 4000,
+      userId: user.id,
     });
 
-    const aiResponse =
-      result.response.candidates?.[0]?.content.parts?.[0]?.text;
-    if (!aiResponse) {
-      return NextResponse.json(
-        new ErrorResponse("No response generated from AI"),
-        { status: 500 },
-      );
-    }
+    console.log("AI RAW RESPONSE:", aiRawResponse);
 
-    // Parse and validate AI response
-    let parsedResponse: AIResponse;
-    try {
-      parsedResponse = parseAIResponse(aiResponse);
-    } catch (error) {
-      console.error("AI response parsing failed:", error);
-      return NextResponse.json(
-        new ErrorResponse("Failed to parse AI response. Please try again."),
-        { status: 500 },
-      );
-    }
+    const parsedResponse = parseAIResponse<AIResponse>(
+      aiRawResponse,
+      "mock interview report",
+    );
 
     // Save report to database using transaction
     const report = await db.$transaction(async (prisma) => {

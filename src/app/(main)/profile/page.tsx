@@ -12,23 +12,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import axios, { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  username?: string;
-  image?: string;
-  bio?: string;
-  joinDate?: string;
-  totalInterviews?: number;
-  averageScore?: number;
-}
+import { User as UserProfile } from "@/generated/prisma";
 
 const ProfilePage: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -59,21 +50,7 @@ const ProfilePage: React.FC = () => {
 
       // Map API response to UserProfile type
       const apiUser = response.data.data;
-      setUser({
-        id: apiUser.id || "N/A",
-        name: apiUser.name || "User Name",
-        email: apiUser.email || "user@example.com",
-        username: apiUser.username || "interview_ai_user",
-        image: apiUser.image || "/placeholder.svg?height=128&width=128",
-        bio:
-          apiUser.bio ||
-          "Aspiring professional leveraging AI for interview success.",
-        joinDate: apiUser.createdAt
-          ? new Date(apiUser.createdAt).toLocaleDateString()
-          : "N/A",
-        totalInterviews: apiUser.totalInterviews || 15,
-        averageScore: apiUser.averageScore || 85,
-      });
+      setUser(apiUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       if (error instanceof AxiosError) {
@@ -183,7 +160,7 @@ const ProfilePage: React.FC = () => {
             <Avatar className="h-28 w-28 border-4 border-white shadow-lg">
               <AvatarImage
                 src={user.image || "/placeholder.svg"}
-                alt={user.name}
+                alt={user.name || "User Avatar"}
               />
               <AvatarFallback className="bg-primary text-primary-foreground text-4xl font-semibold">
                 {user.name?.charAt(0) || "U"}
@@ -193,11 +170,12 @@ const ProfilePage: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-6 px-6 pt-20 pb-6">
           <div className="space-y-1">
-            <h2 className="text-2xl font-bold">{user.name}</h2>
+            <div>
+              <h2 className="text-2xl font-bold">{user.name}</h2>
+              {user.subscriptionId && <Badge>Premium</Badge>}
+            </div>
             <p className="text-muted-foreground">@{user.username}</p>
           </div>
-
-          <p className="text-muted-foreground leading-relaxed">{user.bio}</p>
 
           <Separator />
 
@@ -208,47 +186,13 @@ const ProfilePage: React.FC = () => {
             </div>
             <div className="text-muted-foreground flex items-center gap-3">
               <Calendar className="text-primary h-5 w-5" />
-              <span>Joined: {user.joinDate}</span>
+              <span>
+                Joined: {new Date(user.createdAt).toLocaleDateString()}
+              </span>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Performance Stats Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Performance Summary</CardTitle>
-          <CardDescription>
-            Your progress and key metrics in mock interviews.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div className="flex items-center gap-4 rounded-lg border bg-blue-50 p-4">
-            <div className="rounded-full bg-blue-100 p-3">
-              <Target className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-muted-foreground text-sm">Total Interviews</p>
-              <p className="text-2xl font-bold text-blue-800">
-                {user.totalInterviews}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 rounded-lg border bg-green-50 p-4">
-            <div className="rounded-full bg-green-100 p-3">
-              <Award className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-muted-foreground text-sm">Average Score</p>
-              <p className="text-2xl font-bold text-green-800">
-                {user.averageScore}%
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Add more sections here as needed, e.g., Account Settings, Security, etc. */}
     </section>
   );
 };

@@ -14,6 +14,7 @@ import SessionCard from "@/components/session/card";
 import Transcript from "@/components/session/transcript";
 
 import type { MockInterviews, Message } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const SessionPage = () => {
   const { data: session } = useSession();
@@ -34,10 +35,12 @@ const SessionPage = () => {
   const [loading, setLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [historyId, setHistoryId] = useState<string | null>(null);
+
   const vapiRef = useRef<Vapi | null>(null);
   const isUnmountedRef = useRef(false);
 
-  // --- Fetch interview config ---
   const fetchInterviewConfig = useCallback(async () => {
     if (!id) {
       toast.error("No interview ID provided");
@@ -60,7 +63,6 @@ const SessionPage = () => {
     }
   }, [id]);
 
-  // --- Get assistant ID from API ---
   const getAssistantId = useCallback(async () => {
     if (!interviewConfig || !session?.user?.name) {
       return;
@@ -95,17 +97,89 @@ const SessionPage = () => {
     }
   }, [interviewConfig, session]);
 
+  const createHistory = useCallback(
+    async (status: string = "ongoing") => {
+      if (!id || historyId) {
+        return;
+      }
+
+      try {
+        const startTime = sessionStartTime || new Date();
+
+        const res = await axios.post(`/api/mock-interview/history`, {
+          interviewId: id,
+          status,
+          startTime: startTime.toISOString(),
+        });
+
+        if (res.status === 201 && res.data?.data?.history?.id) {
+          setHistoryId(res.data.data.history.id);
+          console.log(
+            "History created successfully:",
+            res.data.data.history.id,
+          );
+          return res.data.data.history.id;
+        } else {
+          throw new Error(res?.data?.message || "Failed to create history");
+        }
+      } catch (error) {
+        console.error("Failed to create history:", error);
+        toast.error("Failed to track interview session");
+      }
+    },
+    [id, historyId, sessionStartTime],
+  );
+
+  const updateHistory = useCallback(async () => {
+    if (!id || !sessionStartTime) {
+      return;
+    }
+
+    try {
+      const endTime = new Date();
+      const duration = Math.floor(
+        (endTime.getTime() - sessionStartTime.getTime()) / 1000,
+      );
+
+      const res = await axios.post(`/api/mock-interview/history`, {
+        interviewId: id,
+        status: "completed",
+        startTime: sessionStartTime.toISOString(),
+        duration,
+      });
+
+      if (res.status === 201) {
+        console.log(
+          "History updated successfully with duration:",
+          duration,
+          "seconds",
+        );
+      } else {
+        throw new Error(res?.data?.message || "Failed to update history");
+      }
+    } catch (error) {
+      console.error("Failed to update history:", error);
+    }
+  }, [id, sessionStartTime]);
+
   const generateReport = useCallback(async () => {
     if (!id || isGeneratingReport) {
       return;
     }
 
     setIsGeneratingReport(true);
+
+    const actualDuration = sessionStartTime
+      ? Math.floor(
+          (new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60,
+        )
+      : interviewConfig?.estimated_time || 0;
+
     const reportPayload = {
       transcripts: messages,
       conversationId: id,
       focusedSkills: interviewConfig?.focus || [],
-      duration: interviewConfig?.estimated_time,
+      duration: actualDuration,
       topic: interviewConfig?.topic,
     };
 
@@ -132,9 +206,15 @@ const SessionPage = () => {
     } finally {
       setIsGeneratingReport(false);
     }
-  }, [id, messages, interviewConfig, router, isGeneratingReport]);
+  }, [
+    id,
+    messages,
+    interviewConfig,
+    router,
+    isGeneratingReport,
+    sessionStartTime,
+  ]);
 
-  // --- Request Mic Access ---
   const requestMicrophonePermission =
     useCallback(async (): Promise<boolean> => {
       try {
@@ -146,7 +226,6 @@ const SessionPage = () => {
           },
         });
 
-        // Stop the stream immediately since we just needed permission
         stream.getTracks().forEach((track) => track.stop());
 
         if (!isUnmountedRef.current) {
@@ -167,7 +246,6 @@ const SessionPage = () => {
       }
     }, []);
 
-  // --- Start call ---
   const startCall = useCallback(async () => {
     if (!assistantId) {
       console.error("No assistant ID available");
@@ -189,6 +267,9 @@ const SessionPage = () => {
     try {
       setConnectionStatus("Starting call...");
 
+      const startTime = new Date();
+      setSessionStartTime(startTime);
+
       if (!vapiRef.current) {
         const apiKey = process.env.NEXT_PUBLIC_VAPI_AI_API_KEY;
         if (!apiKey) {
@@ -199,14 +280,14 @@ const SessionPage = () => {
 
       const vapi = vapiRef.current;
 
-      // Remove existing event listeners to prevent duplicates
       vapi.removeAllListeners();
 
-      // Set up event listeners
-      vapi.on("call-start", () => {
+      vapi.on("call-start", async () => {
         if (!isUnmountedRef.current) {
           setCallStarted(true);
           setConnectionStatus("Call active - You can speak now");
+
+          await createHistory("ongoing");
         }
       });
 
@@ -255,8 +336,7 @@ const SessionPage = () => {
             break;
           }
           case "conversation-update":
-            console.log("Conversation update:", message);
-            // Handle conversation updates if needed
+            console.warn("Conversation update:", message);
             break;
           default:
             console.warn("Unknown message type:", message.type);
@@ -272,7 +352,6 @@ const SessionPage = () => {
         toast.error(`Call error: ${errorMessage}`);
       });
 
-      // Start the call
       await vapi.start(assistantId);
     } catch (error) {
       console.error("Call start error:", error);
@@ -283,9 +362,8 @@ const SessionPage = () => {
       }
       toast.error(`Call error: ${errorMessage}`);
     }
-  }, [assistantId, microphoneAccess, callStarted]);
+  }, [assistantId, microphoneAccess, callStarted, createHistory]);
 
-  // --- End call ---
   const endCall = useCallback(async () => {
     if (!callStarted) return;
 
@@ -302,17 +380,19 @@ const SessionPage = () => {
         setCurrentRole(null);
         setCurrentTranscript("");
         toast.info("Call ended. Generating report...", {
-          icon: <Loader2 className="animate-spin" />,
+          icon: <Loader2 className="size-sm animate-spin" />,
         });
 
-        setTimeout(() => {
-          generateReport();
+        setTimeout(async () => {
+          await updateHistory();
+          if (interviewConfig && interviewConfig?.estimated_time > 300) {
+            await generateReport();
+          }
         }, 1000);
       }
     }
-  }, [callStarted, generateReport]);
+  }, [callStarted, updateHistory, generateReport]);
 
-  // --- Effects ---
   useEffect(() => {
     if (id) {
       fetchInterviewConfig();
@@ -331,7 +411,16 @@ const SessionPage = () => {
     }
   }, [assistantId, callStarted, microphoneAccess, requestMicrophonePermission]);
 
-  // Cleanup on unmount
+  useEffect(() => {
+    if (assistantId && microphoneAccess && !callStarted && !loading) {
+      const autoStartTimer = setTimeout(() => {
+        // startCall();
+      }, 1000);
+
+      return () => clearTimeout(autoStartTimer);
+    }
+  }, [assistantId, microphoneAccess, callStarted, loading, startCall]);
+
   useEffect(() => {
     return () => {
       isUnmountedRef.current = true;
@@ -346,7 +435,6 @@ const SessionPage = () => {
     };
   }, []);
 
-  // --- Memoized avatars ---
   const sessionCardElem = useMemo(
     () => [
       {
@@ -449,13 +537,25 @@ const SessionPage = () => {
                 {microphoneAccess ? "Mic Active" : "Mic Disabled"}
               </p>
             </div>
+            {sessionStartTime && callStarted && (
+              <div className="flex items-center gap-2 rounded-full border-2 border-white bg-blue-500/30 p-2 ring-2 ring-blue-500">
+                <Circle
+                  fill="currentColor"
+                  className="text-blue-500"
+                  size={16}
+                />
+                <p className="text-xs text-blue-700 md:text-sm">
+                  Started: {sessionStartTime.toLocaleTimeString()}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 self-start">
             {!callStarted && assistantId && microphoneAccess && (
               <Button
                 onClick={startCall}
-                className="flex items-center gap-2"
+                className={cn("cursor-pointer bg-green-500 text-white hover:bg-green-600/70", loading && "cursor-not-allowed opacity-50")}
                 variant={"outline"}
                 disabled={loading}
               >
@@ -497,7 +597,6 @@ const SessionPage = () => {
       </section>
     </main>
   );
-}
-
+};
 
 export default SessionPage;

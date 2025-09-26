@@ -25,13 +25,11 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 const SignInPage = () => {
   const [loading, setLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const router = useRouter();
   const form = useForm<SignInSchemaType>({
     resolver: zodResolver(SignInSchema),
     defaultValues: {
@@ -41,25 +39,32 @@ const SignInPage = () => {
   });
 
   const submitForm = async (data: SignInSchemaType) => {
-    setLoading(true);
-    try {
-      await signIn("credentials", {
-        redirect: true,
-        email: data.email,
-        password: data.password,
-        callbackUrl: "/dashboard",
+  setLoading(true);
+  try {
+    const result = await signIn("credentials", {
+      email: data.email,
+      password: data.password,
+      redirect: false,
+      callbackUrl: "/dashboard",
+    });
+
+    if (result?.error) {
+      toast.error("Invalid Credentials", {
+        description: "Please check your email and password",
       });
-    } catch (error) {
-      console.error(error);
-      if (error instanceof Error) {
-        toast.error("Something went wrong", {
-          description: error?.message,
-        });
-      }
-    } finally {
-      setLoading(false);
+    } else if (result?.url) {
+      window.location.href = result.url;
     }
-  };
+  } catch (error) {
+    console.error(error);
+    toast.error("Invalid credentials", {
+      description: error instanceof Error ? error.message : "Unknown error",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleGithubSignIn = async () => {
     setGithubLoading(true);

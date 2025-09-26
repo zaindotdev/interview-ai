@@ -1,19 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import Providers from "./_app";
 import { Toaster } from "sonner";
 import 'remixicon/fonts/remixicon.css'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSans = DM_Sans({
+  weight: ["400", "500", "700"],
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  variable: "--font-dm-sans",
+})
 
 export const metadata: Metadata = {
   title: "Interview AI",
@@ -31,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning={true}>
     <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${dmSans.variable} ${dmSans.className} antialiased`}
         suppressHydrationWarning
     >
     <Providers>

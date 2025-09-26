@@ -23,7 +23,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
@@ -55,7 +55,6 @@ const SignUpPage = () => {
       if (user.status !== 200) {
         toast.error(user?.message, {
           description: "An error occurred, please try again.",
-          icon: "🚨",
         });
         return;
       }
@@ -63,9 +62,9 @@ const SignUpPage = () => {
       router.replace(`/verify?email=${data.email}`);
     } catch (error) {
       console.error(error);
-      if (error instanceof Error) {
+      if (error instanceof AxiosError) {
         toast.error("Something went wrong", {
-          description: error?.message,
+          description: error?.response?.data?.message || "Unknown error",
         });
       }
     } finally {

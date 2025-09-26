@@ -8,16 +8,19 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const pathname = url.pathname;
 
-  // Debug logging (remove in production)
-  console.log("Middleware - Path:", pathname);
-  console.log("Middleware - Token exists:", !!token);
-  console.log("Middleware - Has onboarded:", token?.hasOnboarded);
+  if(process.env.NODE_ENV === "development") {
+    // Debug logging (remove in production)
+    console.log("Middleware - Path:", pathname);
+    console.log("Middleware - Token exists:", !!token);
+    console.log("Middleware - Has onboarded:", token?.hasOnboarded);
+  }
 
   // Define route categories
   const authRoutes = ["/sign-in", "/sign-up", "/verify"];
   const protectedRoutes = [
     "/dashboard",
-    "/mock-interviews",
+    "/mock-interviews/",
+    "/session",
     "/resume-analysis",
     "/interview-history",
     "/profile",
@@ -116,21 +119,20 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// See "Matching Paths" below to learn more
 export const config = {
   matcher: [
     "/sign-in",
     "/sign-up",
     "/verify",
     "/",
-    "/dashboard",
-    "/mock-interviews",
-    "/resume-analysis",
-    "/interview-history",
-    "/profile",
+    "/dashboard/:path*",
+    "/mock-interviews/:path*",
+    "/resume-analysis/:path*",
+    "/interview-history/:path*",
+    "/profile/:path*",
     "/report/:path*",
-    "/onboarding",
-    "/practice-questions",
-    "/analytics"
+    "/onboarding/:path*",
+    "/practice-questions/:path*",
+    "/analytics/:path*"
   ],
 };

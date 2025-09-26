@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+
+@theme{
+  --font-family-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
 @custom-variant dark (&:is(.dark *));
 :root {
   --background: #f5f5f5;
@@ -158,8 +163,13 @@
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
 }
 
+html{
+  font-family: var(--font-dm-sans), sans-serif;
+}
+
 body {
   letter-spacing: var(--tracking-normal);
+  font-family: var(--font-dm-sans), sans-serif;
 }
 
 @layer base {
