@@ -40,6 +40,7 @@ model User {
   password             String?
   role                 Role                    @default(CANDIDATE)
   resumes              Resume[]
+  isSubscribed         Boolean                 @default(false)
   subscription         Subscription?
   mockInterviewId      String?
   subscriptionId       String?
