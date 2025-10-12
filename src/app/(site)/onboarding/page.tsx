@@ -117,14 +117,14 @@ const Onboarding: React.FC = () => {
           toast.error("Resume analysis unsuccessful. Please try again.");
           return;
         }
+        
+        if (!loading) {
+          toast.success("Resume analysis successful!");
+          router.push("/dashboard");
+        }
 
-        toast.success("Resume analysis successful!");
-        return;
-
-        // Navigate to results page (adjust route as needed)
-        router.push("/dashboard");
+        console.info("Resume analysis successful!");
       } catch (err) {
-        // Error is handled by the context, just show a toast
         console.error(err);
         toast.error("Failed to analyze resume. Please try again.");
       }
