@@ -119,6 +119,7 @@ const Onboarding: React.FC = () => {
         }
 
         toast.success("Resume analysis successful!");
+        return;
 
         // Navigate to results page (adjust route as needed)
         router.push("/dashboard");
