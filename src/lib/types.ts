@@ -25,7 +25,7 @@ export interface PricingPlans {
   features: string[];
   buttonText: string;
   buttonLink: string;
-  tier?: "basic" | "pro" | "enterprise";
+  tier?: "basic" | "pro";
   popular?: boolean;
   badge?: string;
 }

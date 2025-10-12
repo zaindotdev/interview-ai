@@ -114,7 +114,7 @@ const SessionPage = () => {
 
         if (res.status === 201 && res.data?.data?.history?.id) {
           setHistoryId(res.data.data.history.id);
-          console.log(
+          console.info(
             "History created successfully:",
             res.data.data.history.id,
           );
@@ -149,11 +149,7 @@ const SessionPage = () => {
       });
 
       if (res.status === 201) {
-        console.log(
-          "History updated successfully with duration:",
-          duration,
-          "seconds",
-        );
+        console.info("History updated successfully");
       } else {
         throw new Error(res?.data?.message || "Failed to update history");
       }
@@ -183,8 +179,6 @@ const SessionPage = () => {
       topic: interviewConfig?.topic,
     };
 
-    console.log("GenerateReport payload:", reportPayload);
-
     try {
       const res = await axios.post(`/api/mock-interview/report`, reportPayload);
 
@@ -193,7 +187,6 @@ const SessionPage = () => {
       }
 
       if (res.data?.data?.reportId) {
-        console.log("Report generated successfully:", res.data);
         router.replace(`/report/?reportId=${res.data.data.reportId}`);
       } else {
         throw new Error("Invalid report response - missing reportId");

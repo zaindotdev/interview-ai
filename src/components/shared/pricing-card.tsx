@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { CheckCircle, Star, Zap, Crown } from 'lucide-react'
+import { CheckCircle, Star, Zap } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -15,7 +15,7 @@ interface PricingCardProps {
     features: string[]
     buttonText: string
     buttonLink: string
-    tier?: 'basic' | 'pro' | 'enterprise'
+    tier?: 'basic' | 'pro'
     popular?: boolean
     badge?: string
 }
@@ -47,17 +47,6 @@ const PricingCard: React.FC<PricingCardProps> = ({ title, description, price, or
                     button: 'bg-gradient-to-r from-primary to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg',
                     gradient: 'bg-gradient-to-r from-primary/10 to-red-500/10'
                 }
-            case 'enterprise':                                                                                                                                                                                                                                                                                                                                          
-                return {
-                    container: 'bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 hover:border-purple-300 ring-2 ring-purple-100',
-                    header: 'text-purple-900',                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
-                    price: 'text-purple-900',
-                    description: 'text-purple-700',
-                    feature: 'text-purple-800',
-                    icon: 'text-purple-500',
-                    button: 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg',
-                    gradient: 'bg-gradient-to-r from-purple-500/10 to-indigo-500/10'
-                }
             default:
                 return {
                     container: 'bg-white border-gray-200',
@@ -80,8 +69,6 @@ const PricingCard: React.FC<PricingCardProps> = ({ title, description, price, or
                 return <Star className="w-5 h-5" />
             case 'pro':
                 return <Zap className="w-5 h-5" />
-            case 'enterprise':
-                return <Crown className="w-5 h-5" />
             default:
                 return <Star className="w-5 h-5" />
         }
@@ -173,7 +160,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ title, description, price, or
                 <Button
                     onClick={() => router.replace(buttonLink)}
                     className={cn(
-                        'w-full py-3 font-semibold transition-all duration-200',
+                        'w-full py-3 font-semibold transition-all duration-200 cursor-pointer',
                         'transform hover:scale-105 active:scale-95',
                         styles.button
                     )}
@@ -186,12 +173,6 @@ const PricingCard: React.FC<PricingCardProps> = ({ title, description, price, or
             {tier === 'pro' && (
                 <div className="absolute top-4 right-4 opacity-10">
                     <Zap className="w-8 h-8 text-primary-500" />
-                </div>
-            )}
-
-            {tier === 'enterprise' && (
-                <div className="absolute top-4 right-4 opacity-10">
-                    <Crown className="w-8 h-8 text-purple-500" />
                 </div>
             )}
         </motion.div>

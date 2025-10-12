@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, Session } from "next-auth";
+import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { GenerativeModel, GoogleGenerativeAI } from "@google/generative-ai";
-import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import {uploadToStorage} from "@/utils/upload";
 import { db } from "@/lib/prisma";
 import { MockInterviews } from "@/lib/types";
 import { ErrorResponse, HttpResponse } from "@/utils/response";
 import { processPDF } from "@/utils/process-pdf";
 import { generateAIResponse, parseAIResponse } from "@/utils/ai";
-import { m } from "framer-motion";
 
-// Constants
-const MAX_RESUME_TEXT_LENGTH = 8000;
 const ANALYSIS_TEMPERATURE = 0.3;
 const MOCK_INTERVIEW_TEMPERATURE = 0.4;
-const MODEL_NAME = "gemini-2.0-flash-lite";
 
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-// Error response helper
 const errorResponse = (message: string, status: number, error?: Error) => {
   if (error) console.error("API Error:", error);
   return NextResponse.json(new ErrorResponse(message), { status });
@@ -215,7 +206,6 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await resume.arrayBuffer());
 
     // Prepare AI model and prompts
-    const model = ai.getGenerativeModel({ model: MODEL_NAME });
     const analysisPrompt = createAnalysisPrompt(resumeText, jobDescription);
     const mockInterviewPrompt = createMockInterviewPrompt(
       resumeText,

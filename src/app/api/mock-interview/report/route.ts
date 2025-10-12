@@ -5,7 +5,6 @@ import { ErrorResponse, HttpResponse } from "@/utils/response";
 import { db } from "@/lib/prisma";
 import { generateAIResponse, parseAIResponse } from "@/utils/ai";
 import { z } from "zod";
-// Response type definitions
 interface ReportData {
   summary: string;
   overallScore: number;
@@ -48,7 +47,6 @@ interface AIResponse {
   processingNotes: string[];
 }
 
-// Rate limiting check
 async function checkRateLimit(userId: string): Promise<boolean> {
   const recentReports = await db.mockInterviewsReport.count({
     where: {
@@ -62,7 +60,6 @@ async function checkRateLimit(userId: string): Promise<boolean> {
   return recentReports < 10; // Adjust limit as needed
 }
 
-// Generate optimized prompt
 function generatePrompt(
   transcripts: Transcripts[],
   focusedSkills?: string[],
@@ -192,13 +189,6 @@ export async function POST(req: NextRequest) {
     // Input validation
     const { transcripts, conversationId, duration, focusedSkills, topic } =
       await req.json();
-    console.log({
-      transcripts,
-      conversationId,
-      duration,
-      focusedSkills,
-      topic,
-    });
 
     if (!transcripts || !conversationId || !focusedSkills || !topic) {
       return NextResponse.json(new ErrorResponse("Missing required fields"), {
@@ -250,7 +240,6 @@ export async function POST(req: NextRequest) {
       userId: user.id,
     });
 
-    console.log("AI RAW RESPONSE:", aiRawResponse);
 
     const parsedResponse = parseAIResponse<AIResponse>(
       aiRawResponse,
@@ -276,8 +265,6 @@ export async function POST(req: NextRequest) {
         },
       });
     });
-
-    console.log(`Report created successfully for user ${user.email}`);
 
     return NextResponse.json(
       new HttpResponse("success", "Report generated successfully", {

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import {
   Card,
   CardHeader,
@@ -25,13 +25,15 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 
-const SignUpPage = () => {
+const SignUpPageContent = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const plan = searchParams.get("plan");
   const router = useRouter();
 
   const form = useForm<SignUpSchemaType>({
@@ -50,6 +52,7 @@ const SignUpPage = () => {
       const { data: user } = await axios.post("/api/user/sign-up", data, {
         headers: {
           "Content-Type": "application/json",
+          withCredentials: "true",
         },
       });
       if (user.status !== 200) {
@@ -59,7 +62,7 @@ const SignUpPage = () => {
         return;
       }
 
-      router.replace(`/verify?email=${data.email}`);
+      router.replace(`/verify?email=${data.email}&plan=${plan}`);
     } catch (error) {
       console.error(error);
       if (error instanceof AxiosError) {
@@ -111,7 +114,11 @@ const SignUpPage = () => {
   };
   return (
     <section className={"flex min-h-screen w-full items-center justify-center"}>
-      <Card className={"w-full max-w-md min-h-screen sm:min-h-0 rounded-none sm:rounded-xl"}>
+      <Card
+        className={
+          "min-h-screen w-full max-w-md rounded-none sm:min-h-0 sm:rounded-xl"
+        }
+      >
         <CardHeader>
           <CardTitle>
             <h1
@@ -239,6 +246,14 @@ const SignUpPage = () => {
         </CardFooter>
       </Card>
     </section>
+  );
+};
+
+const SignUpPage = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignUpPageContent />
+    </Suspense>
   );
 };
 

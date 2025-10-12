@@ -44,8 +44,6 @@ const Header: React.FC = () => {
     return () => unsubscribe();
   }, [scrollY]);
 
-  console.log(status);
-
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "How It Works", href: "#how-it-works" },

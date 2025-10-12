@@ -58,12 +58,9 @@ async function clearCachedAssistantId(): Promise<void> {
 
 export async function POST(req: NextRequest) {
   try {
-    console.log("Assistant API called");
-
     // Authentication check
     const session = await getServerSession(authOptions);
     if (!session) {
-      console.log("No session found");
       return NextResponse.json(
         new ErrorResponse(
           "Authentication required. Please log in to continue.",
@@ -76,7 +73,6 @@ export async function POST(req: NextRequest) {
     let requestBody;
     try {
       requestBody = await req.json();
-      console.log("Request body:", requestBody);
     } catch (parseError) {
       console.error("Failed to parse request body:", parseError);
       return NextResponse.json(
@@ -197,19 +193,15 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
 **Remember**: Every interaction must assess ${candidateName}'s expertise in ${topic}. Stay focused on this objective throughout the session.
 `;
 
-    console.log("Creating/updating assistant...");
-
     // Try to get existing assistant from Redis cache
     const cachedAssistantId = await getCachedAssistantId();
 
     if (cachedAssistantId) {
       try {
-        console.log("Checking cached assistant:", cachedAssistantId);
         const existingAssistant =
           await vapiClient.assistants.get(cachedAssistantId);
 
         if (existingAssistant && existingAssistant.id) {
-          console.log("Updating existing assistant");
           // Update existing assistant
           const updatedAssistant = await vapiClient.assistants.update(
             cachedAssistantId,
@@ -241,7 +233,6 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
           // Refresh the cache
           await setCachedAssistantId(updatedAssistant.id);
 
-          console.log("Assistant updated successfully:", updatedAssistant.id);
           return NextResponse.json(
             new HttpResponse(
               "success",
@@ -266,7 +257,6 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
       }
     }
 
-    console.log("Creating new assistant...");
     // Create new assistant
     const newAssistant = await vapiClient.assistants.create({
       name: "Nora - Technical Interviewer",
@@ -313,8 +303,6 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
         { status: 500 },
       );
     }
-
-    console.log("Assistant created successfully:", newAssistant.id);
 
     // Cache the new assistant ID
     await setCachedAssistantId(newAssistant.id);

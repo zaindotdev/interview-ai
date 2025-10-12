@@ -37,6 +37,7 @@ const VerifyPage = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const params = useSearchParams();
   const email = params.get("email");
+  const plan = params.get("plan");
   const router = useRouter();
   const form = useForm<z.infer<typeof VerifySchema>>({
     resolver: zodResolver(VerifySchema),
@@ -49,11 +50,14 @@ const VerifyPage = () => {
     async (data: z.infer<typeof VerifySchema>) => {
       setLoading(true);
       try {
-        console.log(data);
-        const response = await axios.patch("/api/user/verify", {
-          otp: data.otp,
-          email,
-        });
+        const response = await axios.patch(
+          "/api/user/verify",
+          {
+            otp: data.otp,
+            email,
+          },
+          { withCredentials: true },
+        );
         if (response.status !== 200) {
           toast.error("We cannot verify your email", {
             description: "Try again later",
@@ -62,9 +66,15 @@ const VerifyPage = () => {
           return;
         } else {
           toast.success("Email verified successfully");
-          setTimeout(() => {
-            router.replace("/onboarding");
-          }, 1500);
+          if (!plan) {
+            setTimeout(() => {
+              router.replace("/onboarding");
+            }, 1500); 
+          } else {
+            setTimeout(() => {
+              router.replace(`/subscription?plan=${plan}`);
+            }, 1500);
+          }
         }
       } catch (error) {
         console.error(error);

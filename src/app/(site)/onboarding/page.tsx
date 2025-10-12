@@ -109,12 +109,9 @@ const Onboarding: React.FC = () => {
         const formData = new FormData();
         formData.append("resume", selectedFile);
         formData.append("jobDescription", data.jobDescription);
-
-        console.log("Submitting analysis request...");
         await analyzeResume(formData);
         await update();
 
-        // Reset form on success
         form.reset();
         if (error) {
           toast.error("Resume analysis unsuccessful. Please try again.");

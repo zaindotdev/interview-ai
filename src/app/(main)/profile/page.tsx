@@ -145,9 +145,10 @@ const ProfilePage: React.FC = () => {
         <Button
           onClick={handleSignOut}
           variant="outline"
-          className="flex items-center gap-2 bg-transparent"
-          size="icon"
+          className="flex items-center gap-2 cursor-pointer"
+          size="lg"
         >
+          Logout
           <LogOut className="h-4 w-4" />
         </Button>
       </div>

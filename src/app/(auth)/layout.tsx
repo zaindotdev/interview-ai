@@ -16,7 +16,7 @@ const Layout = ({ children }: Props) => {
     useEffect(() => {
         const allowedPaths = ["/sign-in", "/sign-up", "/verify"];
 
-        if (status === "loading") return; // wait until auth is resolved
+        if (status === "loading") return;
 
         if (status === "unauthenticated" && !allowedPaths.includes(pathname)) {
             router.replace("/sign-in");
@@ -26,8 +26,8 @@ const Layout = ({ children }: Props) => {
     }, [status, pathname, router])
 
     return (
-        <main className={"container w-full min-h-screen mx-auto overflow-hidden"}>
-            <Meteors number={10} />
+        <main className={"relative container w-full min-h-screen mx-auto overflow-hidden"}>
+            <Meteors number={10} className='z-[-1]' />
             <div className={"w-full min-h-screen flex items-center justify-center"}>
                 {children}
             </div>

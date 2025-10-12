@@ -64,12 +64,11 @@ const pricingPlans: PricingPlans[] = [
       "Basic Role-Specific Interview Questions",
       "1 AI Mock Interview per Week",
       "Standard Feedback Summary",
-      "Access to Demo Video",
       "Limited Progress Tracking",
       "Email Support"
     ],
     buttonText: "Get Started",
-    buttonLink: "/signup/basic",
+    buttonLink: "/sign-up?plan=basic",
     tier: "basic" as const,
   },
   {
@@ -89,33 +88,10 @@ const pricingPlans: PricingPlans[] = [
       "Priority Support"
     ],
     buttonText: "Start Pro Trial",
-    buttonLink: "/signup/pro",
+    buttonLink: "/sign-up?plan=pro",
     tier: "pro" as const,
     popular: true,
-  },
-  {
-    title: "Enterprise",
-    description: "Comprehensive solution for large organizations.",
-    price: "$99/mo",
-    features: [
-      "Multi-user Team Access",
-      "Unlimited Resume Analysis",
-      "Unlimited AI Mock Interviews",
-      "Custom-Branded Dashboard",
-      "Company-Specific Prompts & Roles",
-      "Dedicated Account Manager",
-      "Team Performance Analytics",
-      "Exportable Feedback Reports",
-      "ATS & LMS Integrations",
-      "Role-Based Access Controls",
-      "API Access",
-      "24/7 Priority Support"
-    ],
-    buttonText: "Contact Sales",
-    buttonLink: "/contact/enterprise",
-    tier: "enterprise" as const,
-    badge: "Best Value",
-  },
+  }
 ]
 
 const Landing = () => {
@@ -274,7 +250,7 @@ const Landing = () => {
           and monitor your growth with detailed performance analytics.
         </motion.p>
       </HeadingContainer>
-      <div className={"max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 place-items-center gap-6 mt-8"}>
+      <div className={"max-w-7xl mx-auto flex items-center justify-center flex-wrap sm:flex-nowrap mt-8"}>
         {pricingPlans.map((data, index) => (
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: index * 0.2, ease: "linear" }} key={`pricing-${index}`} className={"w-full mx-auto mt-8"}>
             <PricingCard key={data.title} {...data} />
