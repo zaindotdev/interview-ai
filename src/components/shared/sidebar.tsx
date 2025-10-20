@@ -43,7 +43,10 @@ export const AppSidebar: React.FC = () => {
         withCredentials: true,
       });
 
+<<<<<<< HEAD
       console.log(response);
+=======
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
       if (response.success !== "success") {
         throw new AxiosError(
           response.data.message || "Failed to fetch user data!",

@@ -279,12 +279,37 @@ const SessionPage = () => {
         if (!isUnmountedRef.current) {
           setCallStarted(true);
           setConnectionStatus("Call active - You can speak now");
+<<<<<<< HEAD
 
           await createHistory("ongoing");
         }
       });
 
       vapi.on("call-end", () => {
+=======
+          await createHistory("ongoing");
+
+          // 🕒 Automatically end the call when estimated time is reached
+          if (interviewConfig?.estimated_time) {
+            const timeoutDuration = interviewConfig.estimated_time * 60 * 1000; // convert minutes → ms
+            setTimeout(() => {
+              if (!isUnmountedRef.current && vapiRef.current) {
+                toast.info(
+                  "Estimated interview time reached — ending session...",
+                  {
+                    icon: <Loader2 className="size-sm animate-spin" />,
+                  },
+                );
+                vapiRef.current.stop(); // stop Vapi call immediately
+                endCall(); // trigger your endCall flow
+              }
+            }, timeoutDuration);
+          }
+        }
+      });
+
+      vapi.on("call-end", async () => {
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
         if (!isUnmountedRef.current) {
           setCallStarted(false);
           setCurrentRole(null);
@@ -308,6 +333,19 @@ const SessionPage = () => {
       vapi.on("message", (message: Message) => {
         if (isUnmountedRef.current) return;
 
+<<<<<<< HEAD
+=======
+        if (
+          sessionStartTime &&
+          interviewConfig?.estimated_time &&
+          (new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60 >=
+            interviewConfig.estimated_time
+        ) {
+          console.warn("Time limit reached — ignoring further messages.");
+          return;
+        }
+
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
         switch (message.type) {
           case "transcript": {
             const { role, transcriptType, transcript } = message;
@@ -372,6 +410,7 @@ const SessionPage = () => {
         setConnectionStatus("Call ended");
         setCurrentRole(null);
         setCurrentTranscript("");
+<<<<<<< HEAD
         toast.info("Call ended. Generating report...", {
           icon: <Loader2 className="size-sm animate-spin" />,
         });
@@ -385,6 +424,43 @@ const SessionPage = () => {
       }
     }
   }, [callStarted, updateHistory, generateReport]);
+=======
+
+        if (!sessionStartTime || !interviewConfig) return;
+
+        const actualDuration =
+          (new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60;
+        if (actualDuration < interviewConfig.estimated_time) {
+          toast.info("Interview ended early — redirecting...", {
+            icon: <Loader2 className="size-sm animate-spin" />,
+          });
+
+          await updateHistory();
+          setTimeout(() => {
+            router.replace("/mock-interviews");
+          }, 1200);
+          return;
+        }
+
+        // If user completed or exceeded estimated time
+        toast.info("Interview completed — generating report...", {
+          icon: <Loader2 className="size-sm animate-spin" />,
+        });
+
+        setIsGeneratingReport(true);
+        await updateHistory();
+        await generateReport();
+      }
+    }
+  }, [
+    callStarted,
+    sessionStartTime,
+    interviewConfig,
+    updateHistory,
+    generateReport,
+    router,
+  ]);
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
 
   useEffect(() => {
     if (id) {
@@ -407,7 +483,11 @@ const SessionPage = () => {
   useEffect(() => {
     if (assistantId && microphoneAccess && !callStarted && !loading) {
       const autoStartTimer = setTimeout(() => {
+<<<<<<< HEAD
         // startCall();
+=======
+        startCall();
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
       }, 1000);
 
       return () => clearTimeout(autoStartTimer);
@@ -548,7 +628,14 @@ const SessionPage = () => {
             {!callStarted && assistantId && microphoneAccess && (
               <Button
                 onClick={startCall}
+<<<<<<< HEAD
                 className={cn("cursor-pointer bg-green-500 text-white hover:bg-green-600/70", loading && "cursor-not-allowed opacity-50")}
+=======
+                className={cn(
+                  "cursor-pointer bg-green-500 text-white hover:bg-green-600/70",
+                  loading && "cursor-not-allowed opacity-50",
+                )}
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
                 variant={"outline"}
                 disabled={loading}
               >
@@ -580,7 +667,11 @@ const SessionPage = () => {
               <SessionCard key={i} {...card} />
             ))}
           </div>
+<<<<<<< HEAD
           <div className="lg:col-span-2">
+=======
+          <div className="lg:col-span-2 max-h-[40vh] flex flex-col lg:pl-8">
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
             <Transcript
               liveTranscription={currentTranscript}
               transcripts={messages}

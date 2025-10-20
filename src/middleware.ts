@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
@@ -97,16 +98,123 @@ export async function middleware(request: NextRequest) {
   // Default: allow the request to continue
   return NextResponse.next();
 }
+=======
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
+
+export default withAuth(
+  function middleware(req) {
+    const token = req.nextauth.token;
+    const pathname = req.nextUrl.pathname;
+
+    const authRoutes = ["/sign-in", "/sign-up", "/verify"];
+    const protectedRoutes = [
+      "/dashboard",
+      "/mock-interviews",
+      "/session",
+      "/resume-analysis",
+      "/interview-history",
+      "/profile",
+      "/report",
+      "/practice-questions",
+      "/analytics"
+    ];
+    const publicRoutes = ["/", "/subscription"];
+    const onboardingRoutes = ["/onboarding"];
+
+    const isAuthRoute = authRoutes.some((route) => pathname === route);
+    const isProtectedRoute = protectedRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
+    const isPublicRoute = publicRoutes.some((route) => 
+      pathname === route || pathname.startsWith(route + "/")
+    );
+    const isOnboardingRoute = onboardingRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
+
+    if (token) {
+      const hasOnboarded = token.hasOnboarded === true;
+
+      if (!hasOnboarded) {
+        if (isPublicRoute || isOnboardingRoute) {
+          return NextResponse.next();
+        }
+
+        if (pathname === "/sign-up" || pathname.startsWith("/verify")) {
+          return NextResponse.next();
+        }
+        if (isProtectedRoute) {
+          return NextResponse.redirect(new URL("/onboarding", req.url));
+        }
+
+        if (isAuthRoute) {
+          return NextResponse.redirect(new URL("/onboarding", req.url));
+        }
+      }
+
+      if (hasOnboarded) {
+        if (isAuthRoute) {
+          return NextResponse.redirect(new URL("/dashboard", req.url));
+        }
+
+        if (isOnboardingRoute) {
+          return NextResponse.redirect(new URL("/dashboard", req.url));
+        }
+
+        if (isProtectedRoute || isPublicRoute) {
+          return NextResponse.next();
+        }
+      }
+    }
+
+    return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        const pathname = req.nextUrl.pathname;
+        
+        const publicRoutes = ["/", "/subscription"];
+        const authRoutes = ["/sign-in", "/sign-up", "/verify"];
+        
+        const isPublicRoute = publicRoutes.some((route) => 
+          pathname === route || pathname.startsWith(route + "/")
+        );
+        const isAuthRoute = authRoutes.some((route) => pathname === route);
+        
+        if (isPublicRoute || isAuthRoute) {
+          return true;
+        }
+        
+        return !!token;
+      },
+    },
+    pages: {
+      signIn: "/sign-in",
+    },
+  }
+);
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
 
 export const config = {
   matcher: [
     "/sign-in",
     "/sign-up",
+<<<<<<< HEAD
     "/verify",
     "/",
     "/subscription",
     "/dashboard/:path*",
     "/mock-interviews/:path*",
+=======
+    "/verify/:path*",
+    "/",
+    "/subscription/:path*",
+    "/dashboard/:path*",
+    "/mock-interviews/:path*",
+    "/session/:path*",
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
     "/resume-analysis/:path*",
     "/interview-history/:path*",
     "/profile/:path*",
@@ -115,4 +223,8 @@ export const config = {
     "/practice-questions/:path*",
     "/analytics/:path*"
   ],
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
