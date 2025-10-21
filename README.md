@@ -10,8 +10,8 @@
 
 * **Frontend:** Next.js
 * **Backend:** Prisma ORM, PostgreSQL
-* **Storage:** Supabase Storage
-* **AI Engine:** Gemini 2.5 Flash (Google Generative AI)
+* **Storage:** Cloudinary Storage
+* **AI Engine:** Gemini 2.5 Flash (Google Generative AI) || GPT-4 (OpenAI)
 
 ---
 
