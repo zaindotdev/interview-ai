@@ -1,11 +1,5 @@
 {
     "terminal.integrated.fontSize": 16,
-<<<<<<< HEAD
-    "editor.fontSize": 16
-=======
     "editor.fontSize": 16,
-    "cSpell.words": [
-        "Vapi"
-    ]
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
+    "editor.mouseWheelZoom": true
 }

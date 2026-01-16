@@ -41,6 +41,7 @@ model User {
   password             String?
   role                 Role                    @default(CANDIDATE)
   resumes              Resume[]
+  assistants           Assistant[]
   isSubscribed         Boolean                 @default(false)
   subscription         Subscription?
   mockInterviewId      String?
@@ -53,6 +54,25 @@ model User {
 
   @@unique([email, role])
   @@index([email], map: "user_email_idx")
+}
+
+model Assistant {
+  id               String   @id @unique @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vapiAssistantId  String   @unique // The ID from VAPI API
+  name             String   @default("Nora - Technical Interviewer")
+  topic            String
+  description      String
+  focus            String[] // Array of focus areas
+  difficulty       String
+  estimatedTime    Int      // Interview duration in minutes
+  configuration    Json     // Stores full VAPI configuration
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId], map: "assistant_user_id_idx")
+  @@index([vapiAssistantId], map: "assistant_vapi_id_idx")
 }
 
 model Resume {

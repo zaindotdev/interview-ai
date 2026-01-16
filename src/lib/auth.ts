@@ -76,11 +76,12 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         const dbUser = await db.user.findUnique({
           where: { email: user.email! },
-          select: { id: true, role: true, hasOnboarded: true }
+          select: { id: true, role: true, hasOnboarded: true, emailVerified: true }
         });
 
         token.role = dbUser?.role;
         token.hasOnboarded = dbUser?.hasOnboarded;
+        token.emailVerified = dbUser?.emailVerified;
         token.userId = dbUser?.id;
       }
 
@@ -90,12 +91,13 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await db.user.findUnique({
             where: { email: token.email! },
-            select: { id: true, role: true, hasOnboarded: true }
+            select: { id: true, role: true, hasOnboarded: true, emailVerified: true }
           });
 
           if (dbUser) {
             token.role = dbUser.role;
             token.hasOnboarded = dbUser.hasOnboarded;
+            token.emailVerified = dbUser.emailVerified;
             token.userId = dbUser.id;
           }
         } catch (error) {
@@ -110,6 +112,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user && token) {
         session.user.role = token.role as Role;
         (session.user as any).hasOnboarded = token.hasOnboarded;
+        (session.user as any).emailVerified = token.emailVerified;
         (session.user as any).userId = token.userId;
       }
       return session;

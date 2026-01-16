@@ -1,6 +1,7 @@
 import VerificationEmail from "@/components/mail/verification-email";
 import { Resend } from "resend";
 
+const fromMail = process.env.RESEND_FROM_EMAIL || "noreply@interview-ai.live";
 
 export async function sendMail({
   email,
@@ -15,7 +16,7 @@ export async function sendMail({
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { error } = await resend.emails.send({
-    from: "Interview AI <admin@netechie.com>",
+    from: `Interview AI <${fromMail}>`,
     to: [email],
     subject: "Verification Email for Interview AI",
     react: await VerificationEmail({ name, otp, otpExpiry }),

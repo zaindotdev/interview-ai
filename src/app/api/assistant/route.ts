@@ -4,57 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { vapiClient } from "@/lib/vapi";
 import { VapiError } from "@vapi-ai/server-sdk";
-import redisClient from "@/lib/redis";
 import {db} from "@/lib/prisma";
-
-// Redis cache keys
-const ASSISTANT_CACHE_KEY = "vapi:assistant:cached_id";
-const CACHE_TTL = 3600; // 1 hour in seconds
-
-// Helper function to ensure Redis connection
-async function ensureRedisConnection() {
-  try {
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
-    }
-    return redisClient;
-  } catch (error) {
-    console.error("Redis connection failed:", error);
-    throw new ErrorResponse("Cache service unavailable");
-  }
-}
-
-// Helper function to get cached assistant ID
-async function getCachedAssistantId(): Promise<string | null> {
-  try {
-    const client = await ensureRedisConnection();
-    return await client.get(ASSISTANT_CACHE_KEY);
-  } catch (error) {
-    console.warn("Failed to get cached assistant ID:", error);
-    return null; // Graceful fallback
-  }
-}
-
-// Helper function to set cached assistant ID
-async function setCachedAssistantId(assistantId: string): Promise<void> {
-  try {
-    const client = await ensureRedisConnection();
-    await client.setEx(ASSISTANT_CACHE_KEY, CACHE_TTL, assistantId);
-  } catch (error) {
-    console.warn("Failed to cache assistant ID:", error);
-    // Don't throw error, caching failure shouldn't break the flow
-  }
-}
-
-// Helper function to clear cached assistant ID
-async function clearCachedAssistantId(): Promise<void> {
-  try {
-    const client = await ensureRedisConnection();
-    await client.del(ASSISTANT_CACHE_KEY);
-  } catch (error) {
-    console.warn("Failed to clear cached assistant ID:", error);
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,7 +19,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Parse and validate request body
     let requestBody;
     try {
       requestBody = await req.json();
@@ -193,56 +142,105 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
 **Remember**: Every interaction must assess ${candidateName}'s expertise in ${topic}. Stay focused on this objective throughout the session.
 `;
 
-    // Try to get existing assistant from Redis cache
-    const cachedAssistantId = await getCachedAssistantId();
+    const assistantConfiguration = {
+      name: "Nora - Technical Interviewer",
+      firstMessage: `Hello ${candidateName}, I'm Nora, your AI technical interviewer. Today we'll focus on ${topic}. Are you ready to begin?`,
+      model: {
+        provider: "openai" as const,
+        model: "gpt-4o" as const,
+        temperature: 0.7,
+        messages: [
+          {
+            role: "system" as const,
+            content: systemPrompt,
+          },
+        ],
+      },
+      voice: {
+        provider: "vapi" as const,
+        voiceId: "Paige" as const,
+      },
+      transcriber: {
+        provider: "azure" as const,
+        language: "en-US" as "en-US",
+      },
+      observabilityPlan: {
+        provider: "langfuse" as const,
+        tags: ["interview", "technical", "assessment"],
+        metadata: {
+          candidateName,
+          topic,
+          description,
+          focus: focus?.join(", "),
+          difficulty,
+          estimated_time,
+        },
+      },
+    };
 
-    if (cachedAssistantId) {
+    // Get the user from database to ensure we have the correct ID
+    const userEmail = session.user?.email;
+    if (!userEmail) {
+      return NextResponse.json(
+        new ErrorResponse("User email not found in session."),
+        { status: 401 },
+      );
+    }
+
+    const user = await db.user.findUnique({
+      where: { email: userEmail },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        new ErrorResponse("User not found in database."),
+        { status: 404 },
+      );
+    }
+
+    // Try to get existing assistant from database
+    const existingAssistant = await db.assistant.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (existingAssistant?.vapiAssistantId) {
       try {
-        const existingAssistant =
-          await vapiClient.assistants.get(cachedAssistantId);
+        // Verify the VAPI assistant still exists
+        const vapiAssistant = await vapiClient.assistants.get(
+          existingAssistant.vapiAssistantId,
+        );
 
-        if (existingAssistant && existingAssistant.id) {
-          // Update existing assistant
-          const updatedAssistant = await vapiClient.assistants.update(
-            cachedAssistantId,
-            {
-              name: "Nora - Technical Interviewer",
-              firstMessage: `Hello ${candidateName}, I'm Nora, your AI technical interviewer. Today we'll focus on ${topic}. Are you ready to begin?`,
-              model: {
-                provider: "openai",
-                model: "gpt-4o",
-                temperature: 0.7,
-                messages: [
-                  {
-                    role: "system",
-                    content: systemPrompt,
-                  },
-                ],
-              },
-              voice: {
-                provider: "vapi",
-                voiceId: "Paige",
-              },
-              transcriber: {
-                provider: "azure",
-                language: "en-US",
-              },
-            },
+        if (vapiAssistant?.id) {
+          // Update existing VAPI assistant
+          const updatedVapiAssistant = await vapiClient.assistants.update(
+            existingAssistant.vapiAssistantId,
+            assistantConfiguration,
           );
 
-          // Refresh the cache
-          await setCachedAssistantId(updatedAssistant.id);
+          // Update database record
+          const updatedAssistant = await db.assistant.update({
+            where: { id: existingAssistant.id },
+            data: {
+              topic,
+              description,
+              focus,
+              difficulty,
+              estimatedTime: estimated_time,
+              configuration: assistantConfiguration as any,
+            },
+          });
 
           return NextResponse.json(
             new HttpResponse(
               "success",
               `Interview assistant successfully updated for ${candidateName}`,
               {
-                id: updatedAssistant.id,
+                id: updatedVapiAssistant.id,
+                assistantId: updatedAssistant.id,
                 action: "updated",
                 candidateName,
                 topic,
-                cached: true,
               },
             ),
             { status: 200 },
@@ -250,52 +248,21 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
         }
       } catch (getError) {
         console.warn(
-          "Cached assistant no longer valid, clearing cache:",
+          "Existing VAPI assistant no longer valid, will create new one:",
           getError,
         );
-        await clearCachedAssistantId();
+        // If VAPI assistant doesn't exist, delete the database record and create new one
+        await db.assistant.delete({ where: { id: existingAssistant.id } });
       }
     }
 
-    // Create new assistant
-    const newAssistant = await vapiClient.assistants.create({
-      name: "Nora - Technical Interviewer",
-      firstMessage: `Hello ${candidateName}, I'm Nora, your AI technical interviewer. Today we'll focus on ${topic}. Are you ready to begin?`,
-      model: {
-        provider: "openai",
-        model: "gpt-4o",
-        temperature: 0.7,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-        ],
-      },
-      voice: {
-        provider: "vapi",
-        voiceId: "Elliot",
-      },
-      transcriber: {
-        provider: "assembly-ai",
-        language: "en",
-      },
-      observabilityPlan: {
-        provider: "langfuse",
-        tags: ["interview", "technical", "assessment"],
-        metadata: {
-          candidateName: candidateName,
-          topic: topic,
-          description: description,
-          focus: focus?.join(", "),
-          difficulty: difficulty,
-          estimated_time: estimated_time,
-        },
-      },
-    });
+    // Create new VAPI assistant
+    const newVapiAssistant = await vapiClient.assistants.create(
+      assistantConfiguration,
+    );
 
-    if (!newAssistant || !newAssistant.id) {
-      console.error("Failed to create assistant - no ID returned");
+    if (!newVapiAssistant || !newVapiAssistant.id) {
+      console.error("Failed to create VAPI assistant - no ID returned");
       return NextResponse.json(
         new ErrorResponse(
           "Failed to create interview assistant. Please try again.",
@@ -304,21 +271,33 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
       );
     }
 
-    // Cache the new assistant ID
-    await setCachedAssistantId(newAssistant.id);
+    // Save assistant to database
+    const newAssistant = await db.assistant.create({
+      data: {
+        userId: user.id,
+        vapiAssistantId: newVapiAssistant.id,
+        name: "Nora - Technical Interviewer",
+        topic,
+        description,
+        focus,
+        difficulty,
+        estimatedTime: estimated_time,
+        configuration: assistantConfiguration as any,
+      },
+    });
 
     return NextResponse.json(
       new HttpResponse(
         "success",
         `Interview assistant successfully created for ${candidateName}`,
         {
-          id: newAssistant.id,
+          id: newVapiAssistant.id,
+          assistantId: newAssistant.id,
           action: "created",
           candidateName,
           topic,
           difficulty,
           estimatedTime: estimated_time,
-          cached: false,
         },
       ),
       { status: 201 },

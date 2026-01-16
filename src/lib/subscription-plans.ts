@@ -2,7 +2,7 @@ export const PLANS = {
   FREE: {
     name: "Free",
     price: 0,
-    priceId: "", // No Stripe price ID for free
+    productId: "", // No Stripe product ID for free
     features: [
       "5 mock interviews per month",
       "Basic feedback",
@@ -16,7 +16,7 @@ export const PLANS = {
   PRO: {
     name: "Pro",
     price: 19.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO!, // Create in Stripe Dashboard
+    productId: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_PRO || "", // Product ID from Stripe Dashboard
     features: [
       "Unlimited mock interviews",
       "Advanced AI feedback",
@@ -32,7 +32,7 @@ export const PLANS = {
   PREMIUM: {
     name: "Premium",
     price: 39.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM!,
+    productId: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_PREMIUM || "", // Product ID from Stripe Dashboard
     features: [
       "Everything in Pro",
       "Priority support",
