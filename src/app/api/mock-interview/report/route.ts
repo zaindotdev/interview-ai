@@ -5,8 +5,6 @@ import { ErrorResponse, HttpResponse } from "@/utils/response";
 import { db } from "@/lib/prisma";
 import { generateAIResponse, parseAIResponse } from "@/utils/ai";
 import { z } from "zod";
-<<<<<<< HEAD
-=======
 
 // Constants
 const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 hours
@@ -41,7 +39,6 @@ const REPORT_LIMITS = {
 } as const;
 
 // Interfaces
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
 interface ReportData {
   summary: string;
   overallScore: number;
@@ -55,11 +52,7 @@ interface ReportData {
   };
   recommendations: string[];
   nextSteps: string[];
-<<<<<<< HEAD
-  redFlags: string[];
-=======
   redFlags?: string[]; // Optional for free users
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
 }
 
 interface ChartConfig {
@@ -83,14 +76,6 @@ interface Transcripts {
 
 interface AIResponse {
   report: ReportData;
-<<<<<<< HEAD
-  chartConfig: ChartConfig;
-  confidence: number;
-  processingNotes: string[];
-}
-
-async function checkRateLimit(userId: string): Promise<boolean> {
-=======
   chartConfig?: ChartConfig; // Optional for free users
   confidence: number;
   processingNotes?: string[]; // Optional for free users
@@ -105,43 +90,15 @@ async function checkRateLimit(
     ? REPORT_LIMITS.PREMIUM.rateLimit
     : REPORT_LIMITS.FREE.rateLimit;
 
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
   const recentReports = await db.mockInterviewsReport.count({
     where: {
       candidateId: userId,
       createdAt: {
-<<<<<<< HEAD
-        gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
-=======
         gte: new Date(Date.now() - RATE_LIMIT_WINDOW),
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
       },
     },
   });
 
-<<<<<<< HEAD
-  return recentReports < 10; // Adjust limit as needed
-}
-
-function generatePrompt(
-  transcripts: Transcripts[],
-  focusedSkills?: string[],
-  topic?: string,
-  duration?: number,
-): string {
-  return `You are an expert interview analyst with 15+ years of experience in talent assessment across various industries. Your task is to analyze the following interview transcript and generate a comprehensive, actionable report.
-
-**INTERVIEW CONTEXT:**
-- Type: ${JSON.stringify(focusedSkills) || "Not specified"}
-- Position: ${JSON.stringify(topic) || "Not specified"}
-- Duration: ${duration ? `${duration} seconds` : "Not specified"}
-
-**TRANSCRIPT TO ANALYZE:**
-"""
-${JSON.stringify(transcripts)}
-"""
-
-=======
   return {
     allowed: recentReports < limit,
     remaining: Math.max(0, limit - recentReports),
@@ -164,7 +121,6 @@ function generatePrompt(
 
   const analysisRequirements = isSubscribed
     ? `
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
 **ANALYSIS REQUIREMENTS:**
 
 1. **SCORING METHODOLOGY:** Use a 1-10 scale where:
@@ -186,47 +142,6 @@ function generatePrompt(
    - Unrealistic salary expectations or demands
    - Gaps in critical knowledge areas
    - Communication barriers
-<<<<<<< HEAD
-
-**OUTPUT FORMAT:**
-Return a valid JSON object with this exact structure:
-
-{
-  "report": {
-    "summary": "2-3 sentence executive summary highlighting key performance indicators and overall impression",
-    "overallScore": <number between 1-10>,
-    "strengths": ["specific strength 1", "specific strength 2", "specific strength 3"],
-    "areasForImprovement": ["improvement area 1", "improvement area 2", "improvement area 3"],
-    "detailedFeedback": {
-      "communication": {
-        "score": <1-10>,
-        "feedback": "Specific feedback on communication skills with examples from transcript"
-      },
-      "technicalKnowledge": {
-        "score": <1-10>,
-        "feedback": "Assessment of technical competency with specific examples"
-      },
-      "problemSolving": {
-        "score": <1-10>,
-        "feedback": "Analysis of problem-solving approach and critical thinking"
-      },
-      "culturalFit": {
-        "score": <1-10>,
-        "feedback": "Evaluation of cultural alignment and soft skills"
-      }
-    },
-    "recommendations": [
-      "Actionable recommendation 1 with specific steps",
-      "Actionable recommendation 2 with timeline",
-      "Actionable recommendation 3 with resources"
-    ],
-    "nextSteps": [
-      "Immediate action item 1 (within 1 week)",
-      "Short-term goal 1 (within 1 month)",
-      "Long-term development goal (3-6 months)"
-    ],
-    "redFlags": ["Any concerning behaviors or responses identified", "Leave empty array if none"]
-=======
 `
     : `
 **ANALYSIS REQUIREMENTS:**
@@ -273,7 +188,6 @@ Return a valid JSON object with this exact structure:
       ${Array(limits.nextStepsCount).fill('"Action item with timeline"').join(",\n      ")}
     ],
     "redFlags": ["Any concerning behaviors identified", "Leave empty if none"]
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
   },
   "chartConfig": {
     "chartType": "radar",
@@ -286,27 +200,13 @@ Return a valid JSON object with this exact structure:
     "chartOptions": {
       "title": "Interview Performance Analysis",
       "scales": {
-<<<<<<< HEAD
-        "r": {
-          "beginAtZero": true,
-          "max": 10,
-          "ticks": {"stepSize": 2}
-        }
-=======
         "r": {"beginAtZero": true, "max": 10, "ticks": {"stepSize": 2}}
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
       },
       "plugins": {
         "legend": {"display": true, "position": "top"}
       }
     }
   },
-<<<<<<< HEAD
-  "confidence": <number 0-100 representing your confidence in this analysis>,
-  "processingNotes": ["Any important context or limitations in the analysis"]
-}
-
-=======
   "confidence": <number 0-100>,
   "processingNotes": ["Any important context or limitations"]
 }
@@ -345,19 +245,11 @@ Return a valid JSON object with this exact structure:
 
   const criticalInstructions = isSubscribed
     ? `
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
 **CRITICAL INSTRUCTIONS:**
 - Base all feedback on specific examples from the transcript
 - Be constructive and professional in all feedback
 - Ensure recommendations are actionable and specific
 - Consider the interview type when weighting different skills
-<<<<<<< HEAD
-- If transcript quality is poor, note this in processingNotes
-- Maintain objectivity and avoid bias
-- Focus on observable behaviors and responses
-- DO NOT include any text outside the JSON structure
-- Ensure all JSON is valid and properly formatted`;
-=======
 - Maintain objectivity and avoid bias
 - DO NOT include any text outside the JSON structure
 - Ensure all JSON is valid and properly formatted
@@ -432,7 +324,6 @@ function sanitizeReportForTier(
   }
 
   return sanitizedReport;
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
 }
 
 export async function POST(req: NextRequest) {
@@ -444,11 +335,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-<<<<<<< HEAD
-    // Input validation
-=======
     // Parse and validate input
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
     const { transcripts, conversationId, duration, focusedSkills, topic } =
       await req.json();
 
@@ -457,17 +344,11 @@ export async function POST(req: NextRequest) {
         status: 400,
       });
     }
-<<<<<<< HEAD
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, email: true },
-=======
 
     // Fetch user with subscription status
     const user = await db.user.findUnique({
       where: { email: session.user.email },
       select: { id: true, email: true, isSubscribed: true },
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
     });
 
     if (!user) {
@@ -476,14 +357,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-<<<<<<< HEAD
-    // Rate limiting check
-    const withinRateLimit = await checkRateLimit(user.id);
-    if (!withinRateLimit) {
-      return NextResponse.json(
-        new ErrorResponse("Rate limit exceeded. Please try again later."),
-        { status: 429 },
-=======
     // Get tier-specific limits
     const limits = user.isSubscribed
       ? REPORT_LIMITS.PREMIUM
@@ -503,7 +376,6 @@ export async function POST(req: NextRequest) {
             "X-RateLimit-Remaining": rateLimitStatus.remaining.toString(),
           },
         }
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
       );
     }
 
@@ -519,28 +391,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         new HttpResponse("success", "Report already exists", {
           report: existingReport,
-<<<<<<< HEAD
-        }),
-        { status: 200 },
-      );
-    }
-
-    const prompt = generatePrompt(transcripts, focusedSkills, topic, duration);
-
-    const aiRawResponse = await generateAIResponse(prompt, {
-      temperature: 0.3,
-      maxTokens: 4000,
-      userId: user.id,
-    });
-
-
-    const parsedResponse = parseAIResponse<AIResponse>(
-      aiRawResponse,
-      "mock interview report",
-    );
-
-    // Save report to database using transaction
-=======
           tier: user.isSubscribed ? "premium" : "free",
         }),
         { status: 200 }
@@ -576,33 +426,22 @@ export async function POST(req: NextRequest) {
     );
 
     // Save report to database
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
     const report = await db.$transaction(async (prisma) => {
       return await prisma.mockInterviewsReport.create({
         data: {
           candidateId: user.id,
-<<<<<<< HEAD
-          report: JSON.stringify(parsedResponse.report),
-=======
           report: JSON.stringify(sanitizedResponse.report),
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
           callId: conversationId,
           metaData: JSON.stringify({
             focusedSkills,
             topic,
             duration,
-<<<<<<< HEAD
-            confidence: parsedResponse.confidence,
-            chartConfig: parsedResponse.chartConfig,
-            processingNotes: parsedResponse.processingNotes,
-=======
             confidence: sanitizedResponse.confidence,
             tier: user.isSubscribed ? "premium" : "free",
             ...(user.isSubscribed && {
               chartConfig: sanitizedResponse.chartConfig,
               processingNotes: sanitizedResponse.processingNotes,
             }),
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
             generatedAt: new Date().toISOString(),
           }),
         },
@@ -612,10 +451,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       new HttpResponse("success", "Report generated successfully", {
         reportId: report.id,
-<<<<<<< HEAD
-      }),
-      { status: 200 },
-=======
         tier: user.isSubscribed ? "premium" : "free",
         rateLimit: {
           limit: limits.rateLimit,
@@ -623,7 +458,6 @@ export async function POST(req: NextRequest) {
         },
       }),
       { status: 200 }
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
     );
   } catch (error) {
     console.error("Report generation error:", error);
@@ -638,43 +472,22 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error && error.message.includes("quota")) {
       return NextResponse.json(
         new ErrorResponse(
-<<<<<<< HEAD
-          "Service temporarily unavailable. Please try again later.",
-        ),
-        { status: 503 },
-=======
           "Service temporarily unavailable. Please try again later."
         ),
         { status: 503 }
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
       );
     }
 
     return NextResponse.json(
       new ErrorResponse(
-<<<<<<< HEAD
-        "Internal server error occurred while generating report",
-      ),
-      { status: 500 },
-=======
         "Internal server error occurred while generating report"
       ),
       { status: 500 }
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
     );
   }
 }
 
 export async function GET(req: NextRequest) {
-<<<<<<< HEAD
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user) {
-    return NextResponse.json(new ErrorResponse("Unauthorized"), {
-      status: 401,
-    });
-  }
-  try {
-=======
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -683,61 +496,15 @@ export async function GET(req: NextRequest) {
       });
     }
 
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
     const searchParams = req.nextUrl.searchParams;
     const reportId = searchParams.get("id");
 
     if (!reportId) {
-<<<<<<< HEAD
-      return NextResponse.json(new ErrorResponse("Report not found"), {
-        status: 404,
-      });
-    }
-    const user = await db.user.findUnique({
-      where: {
-        email: session.user.email!,
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json(new ErrorResponse("User not found"), {
-=======
       return NextResponse.json(new ErrorResponse("Report ID is required"), {
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
         status: 400,
       });
     }
 
-<<<<<<< HEAD
-    const reports = await db.mockInterviewsReport.findFirst({
-      where: {
-        id: reportId,
-      },
-    });
-
-    const sanitizeReport = {
-      ...reports,
-      report: JSON.parse(reports?.report || "{}"),
-      metaData: JSON.parse(reports?.metaData || "{}"),
-    };
-
-    return NextResponse.json(
-      new HttpResponse("success", "Report fetched successfully", {
-        report: sanitizeReport,
-      }),
-      { status: 200 },
-    );
-  } catch (error) {
-    console.error("❌ Failed to get the report of mock interview:", error);
-    return NextResponse.json(
-      new ErrorResponse("Failed to get the report of mock interview"),
-      {
-        status: 500,
-      },
-    );
-  }
-}
-=======
     // Fetch user with subscription status
     const user = await db.user.findUnique({
       where: { email: session.user.email },
@@ -805,4 +572,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
->>>>>>> d062816 (Fix: the interview time and resume analysis for free and premium users.)
