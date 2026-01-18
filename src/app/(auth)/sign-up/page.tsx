@@ -78,9 +78,14 @@ const SignUpPageContent = () => {
   const handleGithubSignIn = async () => {
     setGithubLoading(true);
     try {
+      // If user has a plan, redirect to subscription page after OAuth, otherwise to dashboard
+      const callbackUrl = plan && plan !== 'free' 
+        ? `/subscription?plan=${plan}` 
+        : "/onboarding";
+      
       await signIn("github", {
         redirect: true,
-        callbackUrl: "/dashboard",
+        callbackUrl,
       });
     } catch (error) {
       console.error(error);
@@ -97,9 +102,14 @@ const SignUpPageContent = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
+      // If user has a plan, redirect to subscription page after OAuth, otherwise to dashboard
+      const callbackUrl = plan && plan !== 'free' 
+        ? `/subscription?plan=${plan}` 
+        : "/onboarding";
+      
       await signIn("google", {
         redirect: true,
-        callbackUrl: "/dashboard",
+        callbackUrl,
       });
     } catch (error) {
       console.error(error);

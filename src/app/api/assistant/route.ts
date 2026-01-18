@@ -8,7 +8,6 @@ import {db} from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    // Authentication check
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json(
@@ -39,7 +38,6 @@ export async function POST(req: NextRequest) {
       candidateName,
     } = requestBody;
 
-    // Input validation
     const validationErrors = [];
     if (!topic?.trim()) validationErrors.push("Topic is required");
     if (!description?.trim()) validationErrors.push("Description is required");
@@ -178,7 +176,6 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
       },
     };
 
-    // Get the user from database to ensure we have the correct ID
     const userEmail = session.user?.email;
     if (!userEmail) {
       return NextResponse.json(
@@ -198,7 +195,6 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
       );
     }
 
-    // Try to get existing assistant from database
     const existingAssistant = await db.assistant.findFirst({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
@@ -206,19 +202,16 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
 
     if (existingAssistant?.vapiAssistantId) {
       try {
-        // Verify the VAPI assistant still exists
         const vapiAssistant = await vapiClient.assistants.get(
           existingAssistant.vapiAssistantId,
         );
 
         if (vapiAssistant?.id) {
-          // Update existing VAPI assistant
           const updatedVapiAssistant = await vapiClient.assistants.update(
             existingAssistant.vapiAssistantId,
             assistantConfiguration,
           );
 
-          // Update database record
           const updatedAssistant = await db.assistant.update({
             where: { id: existingAssistant.id },
             data: {
@@ -251,57 +244,55 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
           "Existing VAPI assistant no longer valid, will create new one:",
           getError,
         );
-        // If VAPI assistant doesn't exist, delete the database record and create new one
         await db.assistant.delete({ where: { id: existingAssistant.id } });
       }
-    }
-
-    // Create new VAPI assistant
-    const newVapiAssistant = await vapiClient.assistants.create(
-      assistantConfiguration,
-    );
-
-    if (!newVapiAssistant || !newVapiAssistant.id) {
-      console.error("Failed to create VAPI assistant - no ID returned");
-      return NextResponse.json(
-        new ErrorResponse(
-          "Failed to create interview assistant. Please try again.",
-        ),
-        { status: 500 },
+    } else {
+      const newVapiAssistant = await vapiClient.assistants.create(
+        assistantConfiguration,
       );
-    }
 
-    // Save assistant to database
-    const newAssistant = await db.assistant.create({
-      data: {
-        userId: user.id,
-        vapiAssistantId: newVapiAssistant.id,
-        name: "Nora - Technical Interviewer",
-        topic,
-        description,
-        focus,
-        difficulty,
-        estimatedTime: estimated_time,
-        configuration: assistantConfiguration as any,
-      },
-    });
+      if (!newVapiAssistant || !newVapiAssistant.id) {
+        console.error("Failed to create VAPI assistant - no ID returned");
+        return NextResponse.json(
+          new ErrorResponse(
+            "Failed to create interview assistant. Please try again.",
+          ),
+          { status: 500 },
+        );
+      }
 
-    return NextResponse.json(
-      new HttpResponse(
-        "success",
-        `Interview assistant successfully created for ${candidateName}`,
-        {
-          id: newVapiAssistant.id,
-          assistantId: newAssistant.id,
-          action: "created",
-          candidateName,
+      // Save assistant to database
+      const newAssistant = await db.assistant.create({
+        data: {
+          userId: user.id,
+          vapiAssistantId: newVapiAssistant.id,
+          name: "Nora - Technical Interviewer",
           topic,
+          description,
+          focus,
           difficulty,
           estimatedTime: estimated_time,
+          configuration: assistantConfiguration as any,
         },
-      ),
-      { status: 201 },
-    );
+      });
+
+      return NextResponse.json(
+        new HttpResponse(
+          "success",
+          `Interview assistant successfully created for ${candidateName}`,
+          {
+            id: newVapiAssistant.id,
+            assistantId: newAssistant.id,
+            action: "created",
+            candidateName,
+            topic,
+            difficulty,
+            estimatedTime: estimated_time,
+          },
+        ),
+        { status: 201 },
+      );
+    }
   } catch (error) {
     console.error("Error in interview assistant API:", error);
 

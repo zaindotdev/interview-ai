@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
               currency: session.currency?.toUpperCase() || "USD",
               method: "STRIPE",
               status: "PAID",
+              stripePaymentId: session.id, // Store Stripe session ID
             },
           });
 
@@ -190,7 +191,7 @@ export async function POST(req: NextRequest) {
           where: { subscriptionId: invoice.customer as string },
         });
 
-        if (user && invoice.subscription) {
+        if (user && invoice.amount_paid) {
           const userSubscription = await db.subscription.findUnique({
             where: { userId: user.id },
           });

@@ -47,7 +47,8 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           username: user.username,
           role: user.role,
-          hasOnboarded: user.hasOnboarded, // Include hasOnboarded from DB
+          hasOnboarded: user.hasOnboarded,
+          emailVerified: user.emailVerified ?? false,
         };
       },
     }),
@@ -71,23 +72,22 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user, trigger }) {
-      // On sign in, set initial token data
+    async jwt({ token, user, trigger, account }) {
       if (user) {
         const dbUser = await db.user.findUnique({
           where: { email: user.email! },
           select: { id: true, role: true, hasOnboarded: true, emailVerified: true }
         });
 
-        token.role = dbUser?.role;
-        token.hasOnboarded = dbUser?.hasOnboarded;
-        token.emailVerified = dbUser?.emailVerified;
-        token.userId = dbUser?.id;
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.hasOnboarded = dbUser.hasOnboarded ?? false;
+          // Ensure emailVerified is always a boolean
+          token.emailVerified = dbUser.emailVerified === true;
+          token.userId = dbUser.id;
+        }
       }
-
-      // Handle token refresh - fetch fresh data from database
-      // This happens when the token is accessed and needs to be refreshed
-      if (trigger === "update" || (!user && token.email)) {
+      if (trigger === "update") {
         try {
           const dbUser = await db.user.findUnique({
             where: { email: token.email! },
@@ -96,8 +96,8 @@ export const authOptions: NextAuthOptions = {
 
           if (dbUser) {
             token.role = dbUser.role;
-            token.hasOnboarded = dbUser.hasOnboarded;
-            token.emailVerified = dbUser.emailVerified;
+            token.hasOnboarded = dbUser.hasOnboarded ?? false;
+            token.emailVerified = dbUser.emailVerified === true;
             token.userId = dbUser.id;
           }
         } catch (error) {
@@ -111,8 +111,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token) {
         session.user.role = token.role as Role;
-        (session.user as any).hasOnboarded = token.hasOnboarded;
-        (session.user as any).emailVerified = token.emailVerified;
+        (session.user as any).hasOnboarded = token.hasOnboarded ?? false;
+        (session.user as any).emailVerified = token.emailVerified === true;
         (session.user as any).userId = token.userId;
       }
       return session;
@@ -120,7 +120,6 @@ export const authOptions: NextAuthOptions = {
 
     async signIn({ account, profile }) {
       try {
-        // For OAuth providers (Google/GitHub)
         if (account?.provider === "google" || account?.provider === "github") {
           const existingUser = await db.user.findFirst({
             where: {
@@ -128,7 +127,6 @@ export const authOptions: NextAuthOptions = {
             },
           });
 
-          // If user doesn't exist, create them
           if (!existingUser) {
             try {
               await db.user.create({
@@ -138,24 +136,26 @@ export const authOptions: NextAuthOptions = {
                   username:
                     profile?.name?.replace(/\s/g, "").toLowerCase() || "",
                   role: "CANDIDATE",
-                  hasOnboarded: false, // Explicitly set to false for new users
+                  hasOnboarded: false,
+                  emailVerified: true, 
                 },
               });
             } catch (createError) {
               console.error("Error creating OAuth user:", createError);
               return false;
             }
+          } else if (!existingUser.emailVerified) {
+            await db.user.update({
+              where: { id: existingUser.id },
+              data: { emailVerified: true },
+            });
           }
 
           return true;
         }
-
         return true;
       } catch (error) {
-        console.error(
-          "--------------------------- Authentication Error ---------------------------",
-        );
-        console.error(error);
+        console.error("Authentication Error:", error);
         return false;
       }
     },

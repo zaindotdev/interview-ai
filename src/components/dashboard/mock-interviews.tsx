@@ -22,7 +22,6 @@ import {
   BookOpen,
   ArrowRight,
 } from "lucide-react";
-import { useEffect } from "react";
 
 interface MockInterviewsProps {
   weaknessess?: string[];
@@ -54,9 +53,9 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="grid gap-6 lg:grid-cols-2">
       {/* Improvement Areas */}
-      <Card className="lg:col-span-1">
+      <Card className="w-full overflow-hidden">
         <CardHeader className="pb-4">
           <div className="flex items-center space-x-2">
             <div className="rounded-full bg-orange-100 p-2">
@@ -108,7 +107,7 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({
       </Card>
 
       {/* Practice Interviews */}
-      <Card className="lg:col-span-2">
+      <Card className="w-full overflow-hidden">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -132,39 +131,45 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({
         <CardContent>
           {practiceInterview && practiceInterview.length > 0 ? (
             <ScrollArea className="h-[400px]">
-              <div className="space-y-4">
+              <div className="space-y-4 w-full">
                 {practiceInterview.map((interview, idx) => (
                   <div key={interview.topic + idx}>
-                    <div className="group bg-card rounded-lg border p-4 transition-all hover:shadow-md">
-                      <div className="flex items-start justify-between space-x-4">
-                        <div className="flex-1 space-y-3">
-                          <div>
-                            <h3 className="text-lg leading-tight font-semibold">
-                              {interview.topic}
-                            </h3>
-                            <p className="text-muted-foreground mt-1 text-sm">
-                              {interview.description}
-                            </p>
-                          </div>
+                    <div className="group bg-card rounded-lg border p-4 w-full transition-all hover:shadow-md">
+                      {/* Interview Info */}
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="font-semibold leading-tight line-clamp-2">
+                            {interview.topic}
+                          </h3>
+                          <p className="text-muted-foreground mt-1 text-sm line-clamp-2">
+                            {interview.description}
+                          </p>
+                        </div>
 
-                          <div className="flex flex-wrap gap-2">
-                            {interview.focus.map((focus, focusIdx) => (
-                              <Badge
-                                key={`focus-${focusIdx}`}
-                                variant="outline"
-                                className="text-xs"
-                              >
-                                {focus}
-                              </Badge>
-                            ))}
-                          </div>
+                        {/* Focus Tags */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {interview.focus.slice(0, 2).map((focus, focusIdx) => (
+                            <Badge
+                              key={`focus-${focusIdx}`}
+                              variant="outline"
+                              className="text-xs truncate"
+                            >
+                              {focus}
+                            </Badge>
+                          ))}
+                          {interview.focus.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{interview.focus.length - 2} more
+                            </Badge>
+                          )}
+                        </div>
 
-                          <div className="text-muted-foreground flex items-center space-x-4 text-sm">
-                            <div className="flex items-center space-x-1">
-                              <Clock className="h-4 w-4" />
-                              <span>
-                                {formatRemainingTime(interview.estimated_time)}
-                              </span>
+                        {/* Meta Info & CTA */}
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="text-muted-foreground flex items-center gap-3 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span>{formatRemainingTime(interview.estimated_time)}</span>
                             </div>
                             <Badge
                               className={`text-xs ${getDifficultyColor(interview.difficulty)}`}
@@ -173,20 +178,20 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({
                               {interview.difficulty}
                             </Badge>
                           </div>
-                        </div>
 
-                        <Button
-                          onClick={() =>
-                            router.push(
-                              `/mock-interviews/session?id=${interview.id}`,
-                            )
-                          }
-                          className="cursor-pointer group-hover:bg-primary group-hover:text-primary-foreground flex items-center space-x-2"
-                        >
-                          <Play className="h-4 w-4" />
-                          <span>Start</span>
-                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                        </Button>
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              router.push(
+                                `/mock-interviews/session?id=${interview.id}`,
+                              )
+                            }
+                            className="cursor-pointer shrink-0"
+                          >
+                            <Play className="h-3.5 w-3.5 mr-1" />
+                            Start
+                          </Button>
+                        </div>
                       </div>
                     </div>
                     {idx < practiceInterview.length - 1 && (

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import {
   Card,
   CardHeader,
@@ -25,11 +25,15 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
-const SignInPage = () => {
+const SignInPageContent = () => {
   const [loading, setLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const plan = searchParams.get("plan");
+  
   const form = useForm<SignInSchemaType>({
     resolver: zodResolver(SignInSchema),
     defaultValues: {
@@ -38,40 +42,48 @@ const SignInPage = () => {
     },
   });
 
-  const submitForm = async (data: SignInSchemaType) => {
-  setLoading(true);
-  try {
-    const result = await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-      callbackUrl: "/dashboard",
-    });
-
-    if (result?.error) {
-      toast.error("Invalid Credentials", {
-        description: "Please check your email and password",
-      });
-    } else if (result?.url) {
-      window.location.href = result.url;
+  // Determine the callback URL based on plan
+  const getCallbackUrl = () => {
+    if (plan && plan !== 'free') {
+      return `/subscription?plan=${plan}`;
     }
-  } catch (error) {
-    console.error(error);
-    toast.error("Invalid credentials", {
-      description: error instanceof Error ? error.message : "Unknown error",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+    return "/dashboard";
+  };
 
+  const submitForm = async (data: SignInSchemaType) => {
+    setLoading(true);
+    try {
+      const callbackUrl = getCallbackUrl();
+      const result = await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+        callbackUrl,
+      });
+
+      if (result?.error) {
+        toast.error("Invalid Credentials", {
+          description: "Please check your email and password",
+        });
+      } else if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Invalid credentials", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGithubSignIn = async () => {
     setGithubLoading(true);
     try {
       await signIn("github", {
         redirect: true,
-        callbackUrl: "/dashboard",
+        callbackUrl: getCallbackUrl(),
       });
     } catch (error) {
       console.error(error);
@@ -90,7 +102,7 @@ const SignInPage = () => {
     try {
       const user = await signIn("google", {
         redirect: true,
-        callbackUrl: "/dashboard",
+        callbackUrl: getCallbackUrl(),
       });
 
       if (user?.error) {
@@ -213,6 +225,18 @@ const SignInPage = () => {
         </CardFooter>
       </Card>
     </section>
+  );
+};
+
+const SignInPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <SignInPageContent />
+    </Suspense>
   );
 };
 

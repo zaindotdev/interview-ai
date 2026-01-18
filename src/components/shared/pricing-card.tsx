@@ -1,11 +1,13 @@
 'use client'
 
-import React from 'react'
-import { CheckCircle, Star, Zap } from 'lucide-react'
+import React, { useState } from 'react'
+import { CheckCircle, Star, Zap, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 
 interface PricingCardProps {
     title: string
@@ -18,10 +20,78 @@ interface PricingCardProps {
     tier?: 'basic' | 'pro'
     popular?: boolean
     badge?: string
+    planKey?: 'FREE' | 'PRO' | 'PREMIUM'
+    productId?: string
 }
 
-const PricingCard: React.FC<PricingCardProps> = ({ title, description, price, originalPrice, features, buttonText, buttonLink, tier = 'basic', popular = false, badge }) => {
+const PricingCard: React.FC<PricingCardProps> = ({ 
+    title, 
+    description, 
+    price, 
+    originalPrice, 
+    features, 
+    buttonText, 
+    buttonLink, 
+    tier = 'basic', 
+    popular = false, 
+    badge,
+    planKey,
+    productId 
+}) => {
     const router = useRouter()
+    const { data: session, status } = useSession()
+    const [loading, setLoading] = useState(false)
+
+    const handleSubscribe = async () => {
+        setLoading(true)
+        
+        try {
+            // Free plan - redirect to dashboard or sign-up
+            if (planKey === 'FREE' || !productId) {
+                if (session) {
+                    router.push('/dashboard')
+                } else {
+                    router.push('/sign-up?plan=free')
+                }
+                return
+            }
+
+            // Paid plan - check if user is authenticated
+            if (!session) {
+                // User not signed in - redirect to sign-up with plan info
+                router.push(`/sign-up?plan=${planKey?.toLowerCase()}`)
+                return
+            }
+
+            // User is authenticated - create Stripe checkout session
+            const response = await fetch('/api/stripe/create-checkout-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ productId }),
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to create checkout session')
+            }
+
+            if (data.url) {
+                window.location.href = data.url
+            } else {
+                throw new Error('No checkout URL returned')
+            }
+        } catch (error) {
+            console.error('Subscription error:', error)
+            toast.error('Failed to start subscription', {
+                description: error instanceof Error ? error.message : 'Please try again later'
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const getCardStyles = () => {
         switch (tier) {
@@ -158,14 +228,20 @@ const PricingCard: React.FC<PricingCardProps> = ({ title, description, price, or
             {/* Button */}
             <div className="mt-8 w-full">
                 <Button
-                    onClick={() => router.replace(buttonLink)}
+                    onClick={handleSubscribe}
+                    disabled={loading || status === 'loading'}
                     className={cn(
                         'w-full py-3 font-semibold transition-all duration-200 cursor-pointer',
                         'transform hover:scale-105 active:scale-95',
+                        'disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none',
                         styles.button
                     )}
                 >
-                    {buttonText}
+                    {loading || status === 'loading' ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                        buttonText
+                    )}
                 </Button>
             </div>
 

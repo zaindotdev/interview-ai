@@ -150,10 +150,10 @@ model Payment {
   currency     String        @default("USD")
   status       PaymentStatus @default(PENDING)
   method       PaymentMethod @default(STRIPE)
+  stripePaymentId String?    @unique 
   createdAt    DateTime      @default(now())
   subscription Subscription?
 
-  @@unique([status, method])
   @@index([status], map: "payment_status_idx")
   @@index([method], map: "payment_method_idx")
 }

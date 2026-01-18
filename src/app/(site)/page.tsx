@@ -9,7 +9,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import Container from "@/components/shared/container";
 import HeadingContainer from "@/components/shared/heading-container"
 import { HowItWorks, KeyFeaturesData, PricingPlans } from "@/lib/types";
-import PricingCard from "@/components/shared/pricing-card";
+import SubscriptionSection from "@/components/shared/subscription";
 import {useSession} from "next-auth/react"
 
 const howItWorksData: HowItWorks[] = [
@@ -53,46 +53,6 @@ const keyFeaturesData: KeyFeaturesData[] = [
     description: "Monitor your improvement over time with detailed analytics and performance metrics.",
   }
 ];
-
-const pricingPlans: PricingPlans[] = [
-  {
-    title: "Free",
-    description: "Perfect for individuals and small projects getting started.",
-    price: "$0/mo",
-    features: [
-      "1 Resume Analysis per Month",
-      "Basic Role-Specific Interview Questions",
-      "1 AI Mock Interview per Week",
-      "Standard Feedback Summary",
-      "Limited Progress Tracking",
-      "Email Support"
-    ],
-    buttonText: "Get Started",
-    buttonLink: "/sign-up?plan=basic",
-    tier: "basic" as const,
-  },
-  {
-    title: "Pro",
-    description: "Ideal for growing businesses and professional teams.",
-    price: "$29/mo",
-    originalPrice: "$39/mo",
-    features: [
-      "Unlimited Resume Analysis",
-      "Full Role-Specific Question Library",
-      "Unlimited AI Mock Interviews (WebRTC)",
-      "Detailed Interview Feedback & Reports",
-      "Video Recording & Playback",
-      "Downloadable PDF Reports",
-      "Custom Role & Company-Based Prompts",
-      "Full Progress Analytics & History",
-      "Priority Support"
-    ],
-    buttonText: "Start Pro Trial",
-    buttonLink: "/sign-up?plan=pro",
-    tier: "pro" as const,
-    popular: true,
-  }
-]
 
 const Landing = () => {
   const { status } = useSession();
@@ -236,28 +196,7 @@ const Landing = () => {
       </div>
     </section>
     {/*  Pricing Section */}
-    <section id={"pricing"} className={"w-full py-24"}>
-      <HeadingContainer>
-        <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, ease: "linear" }} className={"text-center text-orange-600 font-medium text-base/8 md:text-lg/8"}>
-          Pricing
-        </motion.h2>
-        <motion.h1 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2, ease: "linear" }} className={"text-2xl/8 md:text-5xl text-center font-semibold mt-4"}>
-          Choose the plan that works best for you
-        </motion.h1>
-        <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.4, ease: "linear" }} className={"mt-6 text-base md:text-xl/8 text-center font-medium text-gray-600"}>
-          Looking to take your interview skills to the next level? Our platform offers comprehensive tools tailored
-          for success. Experience AI-powered practice sessions with industry-specific questions, get instant feedback,
-          and monitor your growth with detailed performance analytics.
-        </motion.p>
-      </HeadingContainer>
-      <div className={"max-w-7xl mx-auto flex items-center justify-center flex-wrap sm:flex-nowrap mt-8"}>
-        {pricingPlans.map((data, index) => (
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: index * 0.2, ease: "linear" }} key={`pricing-${index}`} className={"w-full mx-auto mt-8"}>
-            <PricingCard key={data.title} {...data} />
-          </motion.div>
-        ))}
-      </div>
-    </section>
+    <SubscriptionSection />
   </Container>
 }
 

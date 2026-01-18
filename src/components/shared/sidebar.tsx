@@ -28,7 +28,6 @@ import {
   getFooterItems,
 } from "@/lib/navigation-sections";
 import { Lock } from "lucide-react";
-import Link from "next/link";
 
 export const AppSidebar: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -67,10 +66,17 @@ export const AppSidebar: React.FC = () => {
     return user?.isSubscribed === true;
   };
 
-  const handleNavClick = (href: string, requiresSubscription?: boolean) => {
-    if (isItemAccessible(requiresSubscription)) {
-      router.push(href);
+  const handleNavClick = (
+    e: React.MouseEvent,
+    href: string,
+    requiresSubscription?: boolean
+  ) => {
+    if (!isItemAccessible(requiresSubscription)) {
+      e.preventDefault();
+      router.push("/subscription");
+      return;
     }
+    router.push(href);
   };
 
   const renderNavItem = (item: {
@@ -85,28 +91,25 @@ export const AppSidebar: React.FC = () => {
 
     const button = (
       <SidebarMenuButton
-        onClick={() => handleNavClick(item.href, item.requiresSubscription)}
+        onClick={(e) => handleNavClick(e, item.href, item.requiresSubscription)}
         data-active={isActive}
         className={
           !isAccessible
-            ? "relative cursor-not-allowed opacity-60"
+            ? "relative cursor-pointer opacity-60"
             : "cursor-pointer"
         }
       >
         <Icon className="size-4" />
         <span>{item.name}</span>
         {!isAccessible && (
-          <Link
-            href="/subscription"
-            className="bg-background/80 absolute inset-0 flex items-center justify-center rounded-md backdrop-blur-[2px]"
-          >
+          <div className="bg-background/80 absolute inset-0 flex items-center justify-center rounded-md backdrop-blur-[2px]">
             <div className="flex flex-col items-center gap-1">
               <Lock className="text-muted-foreground size-4" />
               <span className="text-muted-foreground text-[10px] font-semibold">
                 Pro Only
               </span>
             </div>
-          </Link>
+          </div>
         )}
       </SidebarMenuButton>
     );

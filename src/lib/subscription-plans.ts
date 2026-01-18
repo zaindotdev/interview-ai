@@ -4,12 +4,12 @@ export const PLANS = {
     price: 0,
     productId: "", // No Stripe product ID for free
     features: [
-      "5 mock interviews per month",
+      "2 mock interviews per month",
       "Basic feedback",
       "Limited question bank"
     ],
     limits: {
-      mockInterviews: 5,
+      mockInterviews: 2,
       resumeAnalysis: 2,
     }
   },

@@ -13,9 +13,9 @@ const Layout = ({ children }: Props) => {
 
   return (
     <main className="min-h-screen w-full bg-zinc-100 dark:bg-zinc-900">
-      {pathname.includes("onboarding") || pathname.includes("subscription") ? null : <Header />}
+      {pathname.includes("onboarding") || pathname.includes("success")  ? null : <Header />}
       {children}
-      {pathname.includes("onboarding") || pathname.includes("subscription") ? null : <Footer />}
+      {pathname.includes("onboarding") || pathname.includes("success") ? null : <Footer />}
     </main>
   );
 };
