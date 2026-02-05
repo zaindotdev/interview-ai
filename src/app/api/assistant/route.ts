@@ -156,7 +156,7 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
       },
       voice: {
         provider: "vapi" as const,
-        voiceId: "Paige" as const,
+        voiceId: "Savannah" as const,
       },
       transcriber: {
         provider: "azure" as const,
