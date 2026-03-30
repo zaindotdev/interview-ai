@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
@@ -13,21 +13,19 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Bot, 
-  Clock, 
-  Loader2, 
-  Mic, 
-  MicOff, 
-  Phone, 
-  PhoneOff, 
-  User, 
-  Wifi, 
+import {
+  Bot,
+  Clock,
+  Loader2,
+  Mic,
+  MicOff,
+  Phone,
+  PhoneOff,
+  User,
+  Wifi,
   WifiOff,
   Volume2,
-  Pause,
-  Play,
-  MessageSquare
+  MessageSquare,
 } from "lucide-react";
 
 import type { MockInterviews, Message } from "@/lib/types";
@@ -44,23 +42,27 @@ const SessionPage = () => {
   const [callStarted, setCallStarted] = useState(false);
   const [microphoneAccess, setMicrophoneAccess] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected" | "error">("disconnected");
-  const [speakingStatus, setSpeakingStatus] = useState<"idle" | "ai-speaking" | "user-speaking">("idle");
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connecting" | "connected" | "disconnected" | "error"
+  >("disconnected");
+  const [speakingStatus, setSpeakingStatus] = useState<
+    "idle" | "ai-speaking" | "user-speaking"
+  >("idle");
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentTranscript, setCurrentTranscript] = useState("");
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [historyId, setHistoryId] = useState<string | null>(null);
 
   const vapiRef = useRef<Vapi | null>(null);
   const isUnmountedRef = useRef(false);
+  const isCreatingAssistantRef = useRef(false); // prevents double creation
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  // Timer effect
+  // Timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (callStarted && sessionStartTime) {
@@ -84,23 +86,32 @@ const SessionPage = () => {
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty?.toLowerCase()) {
-      case "easy":
-        return "bg-green-100 text-green-700 border-green-200";
-      case "medium":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case "hard":
-        return "bg-red-100 text-red-700 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+      case "easy": return "bg-green-100 text-green-700 border-green-200";
+      case "medium": return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "hard": return "bg-red-100 text-red-700 border-red-200";
+      default: return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
 
-  const fetchInterviewConfig = useCallback(async () => {
-    if (!id) {
-      toast.error("No interview ID provided");
-      return;
+  // ─── Mic: request immediately on mount, don't wait for assistantId ───
+  const requestMicrophonePermission = useCallback(async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 },
+      });
+      stream.getTracks().forEach((track) => track.stop());
+      if (!isUnmountedRef.current) setMicrophoneAccess(true);
+      return true;
+    } catch (error) {
+      console.error("[mic] Permission error:", error);
+      if (!isUnmountedRef.current) setMicrophoneAccess(false);
+      toast.error("Microphone access is required for the interview");
+      return false;
     }
+  }, []);
 
+  const fetchInterviewConfig = useCallback(async () => {
+    if (!id) { toast.error("No interview ID provided"); return; }
     setLoading(true);
     try {
       const res = await axios.get(`/api/mock-interview/get/id?id=${id}`);
@@ -110,7 +121,7 @@ const SessionPage = () => {
         throw new Error("Invalid response data");
       }
     } catch (err) {
-      console.error("Failed to fetch interview config:", err);
+      console.error("[session] Failed to fetch interview config:", err);
       toast.error("Failed to load interview configuration");
     } finally {
       setLoading(false);
@@ -118,9 +129,9 @@ const SessionPage = () => {
   }, [id]);
 
   const getAssistantId = useCallback(async () => {
-    if (!interviewConfig || !session?.user?.name) {
-      return;
-    }
+    if (!interviewConfig || !session?.user?.name) return;
+    if (isCreatingAssistantRef.current) return; // guard against double-fire
+    isCreatingAssistantRef.current = true;
 
     try {
       setConnectionStatus("connecting");
@@ -129,31 +140,20 @@ const SessionPage = () => {
         candidateName: session.user.name,
       });
 
-      if (res.status !== 200 && res.status !== 201) {
-        throw new Error(res.data?.message || "Failed to get assistant ID");
-      }
+      if (!res.data?.data?.id) throw new Error("Invalid assistant response - missing ID");
 
-      if (!res.data?.data?.id) {
-        throw new Error("Invalid assistant response - missing ID");
-      }
-
-      if (!isUnmountedRef.current) {
-        setAssistantId(res.data.data.id);
-      }
+      if (!isUnmountedRef.current) setAssistantId(res.data.data.id);
     } catch (err) {
-      console.error("Assistant creation failed:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to initialize assistant";
-      toast.error(errorMessage);
-      if (!isUnmountedRef.current) {
-        setConnectionStatus("error");
-      }
+      console.error("[session] Assistant creation failed:", err);
+      isCreatingAssistantRef.current = false; // allow retry on error
+      toast.error(err instanceof Error ? err.message : "Failed to initialize assistant");
+      if (!isUnmountedRef.current) setConnectionStatus("error");
     }
   }, [interviewConfig, session]);
 
   const createHistory = useCallback(
     async (status: string = "ongoing") => {
       if (!id || historyId) return;
-
       try {
         const startTime = sessionStartTime || new Date();
         const res = await axios.post(`/api/mock-interview/history`, {
@@ -161,13 +161,12 @@ const SessionPage = () => {
           status,
           startTime: startTime.toISOString(),
         });
-
         if (res.status === 201 && res.data?.data?.history?.id) {
           setHistoryId(res.data.data.history.id);
           return res.data.data.history.id;
         }
       } catch (error) {
-        console.error("Failed to create history:", error);
+        console.error("[session] Failed to create history:", error);
       }
     },
     [id, historyId, sessionStartTime],
@@ -175,11 +174,9 @@ const SessionPage = () => {
 
   const updateHistory = useCallback(async () => {
     if (!id || !sessionStartTime) return;
-
     try {
       const endTime = new Date();
       const duration = Math.floor((endTime.getTime() - sessionStartTime.getTime()) / 1000);
-
       await axios.post(`/api/mock-interview/history`, {
         interviewId: id,
         status: "completed",
@@ -187,15 +184,13 @@ const SessionPage = () => {
         duration,
       });
     } catch (error) {
-      console.error("Failed to update history:", error);
+      console.error("[session] Failed to update history:", error);
     }
   }, [id, sessionStartTime]);
 
   const generateReport = useCallback(async () => {
     if (!id || isGeneratingReport) return;
-
     setIsGeneratingReport(true);
-
     const actualDuration = sessionStartTime
       ? Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60)
       : interviewConfig?.estimated_time || 0;
@@ -208,40 +203,18 @@ const SessionPage = () => {
         duration: actualDuration,
         topic: interviewConfig?.topic,
       });
-
       if (res.status === 200 && res.data?.data?.reportId) {
         router.replace(`/report/?reportId=${res.data.data.reportId}`);
       } else {
         throw new Error("Failed to generate report");
       }
     } catch (err) {
-      console.error("Failed to generate report:", err);
+      console.error("[session] Failed to generate report:", err);
       toast.error("Failed to generate report");
     } finally {
       setIsGeneratingReport(false);
     }
   }, [id, messages, interviewConfig, router, isGeneratingReport, sessionStartTime]);
-
-  const requestMicrophonePermission = useCallback(async (): Promise<boolean> => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 },
-      });
-      stream.getTracks().forEach((track) => track.stop());
-
-      if (!isUnmountedRef.current) {
-        setMicrophoneAccess(true);
-      }
-      return true;
-    } catch (error) {
-      console.error("Microphone permission error:", error);
-      if (!isUnmountedRef.current) {
-        setMicrophoneAccess(false);
-      }
-      toast.error("Microphone access is required for the interview");
-      return false;
-    }
-  }, []);
 
   const startCall = useCallback(async () => {
     if (!assistantId || !microphoneAccess || callStarted) return;
@@ -290,26 +263,18 @@ const SessionPage = () => {
       });
 
       vapi.on("speech-start", () => {
-        if (!isUnmountedRef.current) {
-          setSpeakingStatus("ai-speaking");
-        }
+        if (!isUnmountedRef.current) setSpeakingStatus("ai-speaking");
       });
 
       vapi.on("speech-end", () => {
-        if (!isUnmountedRef.current) {
-          setSpeakingStatus("idle");
-        }
+        if (!isUnmountedRef.current) setSpeakingStatus("idle");
       });
 
       vapi.on("message", (message: Message) => {
         if (isUnmountedRef.current) return;
-
         if (message.type === "transcript") {
           const { role, transcriptType, transcript } = message;
-
-          if (role === "user") {
-            setSpeakingStatus("user-speaking");
-          }
+          if (role === "user") setSpeakingStatus("user-speaking");
 
           if (transcriptType === "partial") {
             setCurrentTranscript(transcript);
@@ -324,24 +289,20 @@ const SessionPage = () => {
             });
             setCurrentTranscript("");
             setCurrentRole(null);
-            if (role === "user") {
-              setSpeakingStatus("idle");
-            }
+            if (role === "user") setSpeakingStatus("idle");
           }
         }
       });
 
       vapi.on("error", (error: Error) => {
-        console.error("Vapi error:", error);
-        if (!isUnmountedRef.current) {
-          setConnectionStatus("error");
-        }
+        console.error("[vapi] Error:", error);
+        if (!isUnmountedRef.current) setConnectionStatus("error");
         toast.error(`Call error: ${error.message}`);
       });
 
       await vapi.start(assistantId);
     } catch (error) {
-      console.error("Call start error:", error);
+      console.error("[session] Call start error:", error);
       setConnectionStatus("error");
       toast.error("Failed to start call");
     }
@@ -349,13 +310,10 @@ const SessionPage = () => {
 
   const endCall = useCallback(async () => {
     if (!callStarted) return;
-
     try {
-      if (vapiRef.current) {
-        await vapiRef.current.stop();
-      }
+      if (vapiRef.current) await vapiRef.current.stop();
     } catch (err) {
-      console.error("Error stopping call:", err);
+      console.error("[session] Error stopping call:", err);
     } finally {
       if (!isUnmountedRef.current) {
         setCallStarted(false);
@@ -364,8 +322,9 @@ const SessionPage = () => {
 
         if (!sessionStartTime || !interviewConfig) return;
 
-        const actualDuration = (new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60;
-        
+        const actualDuration =
+          (new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60;
+
         if (actualDuration < interviewConfig.estimated_time) {
           toast.info("Interview ended early — redirecting...");
           await updateHistory();
@@ -391,30 +350,31 @@ const SessionPage = () => {
     }
   }, []);
 
-  // Effects
-  useEffect(() => {
-    if (id) fetchInterviewConfig();
-  }, [id, fetchInterviewConfig]);
+  // ─── Effects ───────────────────────────────────────────────────────────────
 
+  // Kick off mic + config fetch in parallel on mount
+  useEffect(() => {
+    if (!id) return;
+    requestMicrophonePermission();
+    fetchInterviewConfig();
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Once config is ready, create the assistant (guarded by ref)
   useEffect(() => {
     if (interviewConfig && session?.user?.name && !assistantId) {
       getAssistantId();
     }
   }, [interviewConfig, session, assistantId, getAssistantId]);
 
-  useEffect(() => {
-    if (assistantId && !callStarted && !microphoneAccess) {
-      requestMicrophonePermission();
-    }
-  }, [assistantId, callStarted, microphoneAccess, requestMicrophonePermission]);
-
+  // Auto-start call once both assistantId and mic are ready
   useEffect(() => {
     if (assistantId && microphoneAccess && !callStarted && !loading) {
-      const timer = setTimeout(() => startCall(), 1000);
+      const timer = setTimeout(() => startCall(), 500);
       return () => clearTimeout(timer);
     }
   }, [assistantId, microphoneAccess, callStarted, loading, startCall]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isUnmountedRef.current = true;
@@ -423,13 +383,14 @@ const SessionPage = () => {
           vapiRef.current.stop();
           vapiRef.current.removeAllListeners();
         } catch (err) {
-          console.error("Error during cleanup:", err);
+          console.error("[session] Cleanup error:", err);
         }
       }
     };
   }, []);
 
-  // Loading state
+  // ─── Render states ─────────────────────────────────────────────────────────
+
   if (loading && !interviewConfig) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -441,7 +402,6 @@ const SessionPage = () => {
     );
   }
 
-  // No ID state
   if (!id) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -458,14 +418,15 @@ const SessionPage = () => {
     );
   }
 
-  // Generating report state
   if (isGeneratingReport) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto h-16 w-16 animate-spin text-primary" />
           <h2 className="mt-6 text-2xl font-bold text-gray-900">Analyzing your interview...</h2>
-          <p className="mt-2 text-gray-600">Please wait while we generate your feedback report</p>
+          <p className="mt-2 text-gray-600">
+            Please wait while we generate your feedback report
+          </p>
         </div>
       </div>
     );
@@ -473,11 +434,13 @@ const SessionPage = () => {
 
   return (
     <div className="flex h-screen flex-col">
-      {/* Header Bar */}
+      {/* Header */}
       <header className="border-b bg-white px-4 py-3 shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-gray-900">{ interviewConfig?.topic || "Loading..." }</h1>
+            <h1 className="text-xl font-bold text-gray-900">
+              {interviewConfig?.topic || "Loading..."}
+            </h1>
             <Separator orientation="vertical" className="h-6" />
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="font-medium">
@@ -490,35 +453,34 @@ const SessionPage = () => {
               )}
             </div>
           </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
-              <Clock className="h-4 w-4 text-gray-600" />
-              <span className="font-mono text-lg font-semibold text-gray-900">
-                {formatTime(elapsedTime)}
+          <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
+            <Clock className="h-4 w-4 text-gray-600" />
+            <span className="font-mono text-lg font-semibold text-gray-900">
+              {formatTime(elapsedTime)}
+            </span>
+            {interviewConfig?.estimated_time && (
+              <span className="text-sm text-gray-500">
+                / {interviewConfig.estimated_time}:00
               </span>
-              {interviewConfig?.estimated_time && (
-                <span className="text-sm text-gray-500">
-                  / {interviewConfig.estimated_time}:00
-                </span>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="flex flex-1 overflow-hidden">
         <div className="mx-auto flex w-full max-w-7xl flex-1 gap-6 p-6">
-          {/* AI Interviewer Panel */}
+          {/* AI + User Panel */}
           <div className="flex w-80 flex-col">
             <Card className="flex-1">
               <CardContent className="flex h-full flex-col items-center justify-center p-6">
-                {/* AI Avatar */}
-                <div className={cn(
-                  "relative rounded-full p-1",
-                  speakingStatus === "ai-speaking" && "ring-4 ring-primary ring-offset-2 animate-pulse"
-                )}>
+                <div
+                  className={cn(
+                    "relative rounded-full p-1",
+                    speakingStatus === "ai-speaking" &&
+                      "ring-4 ring-primary ring-offset-2 animate-pulse",
+                  )}
+                >
                   <Avatar className="h-32 w-32 bg-primary">
                     <AvatarImage src="" />
                     <AvatarFallback className="bg-primary text-white">
@@ -526,49 +488,42 @@ const SessionPage = () => {
                     </AvatarFallback>
                   </Avatar>
                 </div>
-                
+
                 <h3 className="mt-4 text-lg font-semibold text-gray-900">AI Interviewer</h3>
-                
-                {/* Speaking Indicator */}
-                <div className={cn(
-                  "mt-3 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
-                  speakingStatus === "ai-speaking" && "bg-primary/10 text-primary",
-                  speakingStatus === "user-speaking" && "bg-green-100 text-green-700",
-                  speakingStatus === "idle" && "bg-gray-100 text-gray-600"
-                )}>
+
+                <div
+                  className={cn(
+                    "mt-3 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
+                    speakingStatus === "ai-speaking" && "bg-primary/10 text-primary",
+                    speakingStatus === "user-speaking" && "bg-green-100 text-green-700",
+                    speakingStatus === "idle" && "bg-gray-100 text-gray-600",
+                  )}
+                >
                   {speakingStatus === "ai-speaking" && (
-                    <>
-                      <Volume2 className="h-4 w-4 animate-pulse" />
-                      AI is speaking...
-                    </>
+                    <><Volume2 className="h-4 w-4 animate-pulse" /> AI is speaking...</>
                   )}
                   {speakingStatus === "user-speaking" && (
-                    <>
-                      <Mic className="h-4 w-4 animate-pulse" />
-                      Listening to you...
-                    </>
+                    <><Mic className="h-4 w-4 animate-pulse" /> Listening to you...</>
                   )}
                   {speakingStatus === "idle" && callStarted && (
-                    <>
-                      <MessageSquare className="h-4 w-4" />
-                      Ready to listen
-                    </>
+                    <><MessageSquare className="h-4 w-4" /> Ready to listen</>
                   )}
                   {!callStarted && (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                    <><Loader2 className="h-4 w-4 animate-spin" />
                       {connectionStatus === "connecting" ? "Connecting..." : "Waiting to start"}
                     </>
                   )}
                 </div>
 
-                {/* User Panel */}
                 <Separator className="my-6 w-full" />
-                
-                <div className={cn(
-                  "relative rounded-full p-1",
-                  speakingStatus === "user-speaking" && "ring-4 ring-green-500 ring-offset-2 animate-pulse"
-                )}>
+
+                <div
+                  className={cn(
+                    "relative rounded-full p-1",
+                    speakingStatus === "user-speaking" &&
+                      "ring-4 ring-green-500 ring-offset-2 animate-pulse",
+                  )}
+                >
                   <Avatar className="h-20 w-20">
                     <AvatarImage src={session?.user?.image || ""} />
                     <AvatarFallback className="bg-gray-200 text-gray-700">
@@ -583,7 +538,7 @@ const SessionPage = () => {
             </Card>
           </div>
 
-          {/* Live Transcript Panel */}
+          {/* Transcript Panel */}
           <div className="flex flex-1 flex-col">
             <Card className="flex flex-1 flex-col overflow-hidden">
               <div className="border-b bg-gray-50 px-4 py-3">
@@ -592,24 +547,25 @@ const SessionPage = () => {
                   Live Transcript
                 </h2>
               </div>
-              
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
                   {messages.length === 0 && !currentTranscript && (
                     <div className="flex h-48 items-center justify-center text-center text-gray-500">
                       <div>
                         <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
-                        <p className="mt-2">Transcript will appear here once the interview starts</p>
+                        <p className="mt-2">
+                          Transcript will appear here once the interview starts
+                        </p>
                       </div>
                     </div>
                   )}
-                  
+
                   {messages.map((msg, idx) => (
                     <div
                       key={idx}
                       className={cn(
                         "flex gap-3",
-                        msg.role === "user" ? "flex-row-reverse" : "flex-row"
+                        msg.role === "user" ? "flex-row-reverse" : "flex-row",
                       )}
                     >
                       <Avatar className="h-8 w-8 shrink-0">
@@ -628,20 +584,19 @@ const SessionPage = () => {
                           "max-w-[80%] rounded-2xl px-4 py-2",
                           msg.role === "user"
                             ? "bg-primary text-white"
-                            : "bg-gray-100 text-gray-900"
+                            : "bg-gray-100 text-gray-900",
                         )}
                       >
                         <p className="text-sm leading-relaxed">{msg.transcript}</p>
                       </div>
                     </div>
                   ))}
-                  
-                  {/* Current partial transcript */}
+
                   {currentTranscript && currentRole && (
                     <div
                       className={cn(
                         "flex gap-3 opacity-70",
-                        currentRole === "user" ? "flex-row-reverse" : "flex-row"
+                        currentRole === "user" ? "flex-row-reverse" : "flex-row",
                       )}
                     >
                       <Avatar className="h-8 w-8 shrink-0">
@@ -660,14 +615,14 @@ const SessionPage = () => {
                           "max-w-[80%] rounded-2xl px-4 py-2",
                           currentRole === "user"
                             ? "bg-primary/70 text-white"
-                            : "bg-gray-100/70 text-gray-700"
+                            : "bg-gray-100/70 text-gray-700",
                         )}
                       >
                         <p className="text-sm leading-relaxed italic">{currentTranscript}...</p>
                       </div>
                     </div>
                   )}
-                  
+
                   <div ref={transcriptEndRef} />
                 </div>
               </ScrollArea>
@@ -676,46 +631,47 @@ const SessionPage = () => {
         </div>
       </main>
 
-      {/* Control & Status Bar */}
+      {/* Footer Controls */}
       <footer className="border-t bg-white px-4 py-4 shadow-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
-          {/* Status Indicators */}
           <div className="flex items-center gap-4">
-            <div className={cn(
-              "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium",
-              microphoneAccess && !isMuted ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-            )}>
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium",
+                microphoneAccess && !isMuted
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700",
+              )}
+            >
               {microphoneAccess && !isMuted ? (
                 <><Mic className="h-4 w-4" /> Mic: ON</>
               ) : (
                 <><MicOff className="h-4 w-4" /> Mic: {isMuted ? "Muted" : "OFF"}</>
               )}
             </div>
-            
             <div className="flex items-center gap-2 rounded-full bg-green-100 px-3 py-1.5 text-sm font-medium text-green-700">
               <Volume2 className="h-4 w-4" /> Speaker: ON
             </div>
-            
-            <div className={cn(
-              "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium",
-              connectionStatus === "connected" ? "bg-green-100 text-green-700" :
-              connectionStatus === "connecting" ? "bg-yellow-100 text-yellow-700" :
-              connectionStatus === "error" ? "bg-red-100 text-red-700" :
-              "bg-gray-100 text-gray-700"
-            )}>
-              {connectionStatus === "connected" ? (
-                <><Wifi className="h-4 w-4" /> Connected</>
-              ) : connectionStatus === "connecting" ? (
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium",
+                connectionStatus === "connected" && "bg-green-100 text-green-700",
+                connectionStatus === "connecting" && "bg-yellow-100 text-yellow-700",
+                connectionStatus === "error" && "bg-red-100 text-red-700",
+                connectionStatus === "disconnected" && "bg-gray-100 text-gray-700",
+              )}
+            >
+              {connectionStatus === "connected" && <><Wifi className="h-4 w-4" /> Connected</>}
+              {connectionStatus === "connecting" && (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Connecting</>
-              ) : connectionStatus === "error" ? (
-                <><WifiOff className="h-4 w-4" /> Error</>
-              ) : (
+              )}
+              {connectionStatus === "error" && <><WifiOff className="h-4 w-4" /> Error</>}
+              {connectionStatus === "disconnected" && (
                 <><WifiOff className="h-4 w-4" /> Disconnected</>
               )}
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex items-center gap-3">
             {!callStarted && assistantId && microphoneAccess && (
               <Button
@@ -727,14 +683,13 @@ const SessionPage = () => {
                 Start Interview
               </Button>
             )}
-            
             {callStarted && (
               <>
                 <Button
                   variant="outline"
                   onClick={toggleMute}
                   className={cn(
-                    isMuted && "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                    isMuted && "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
                   )}
                 >
                   {isMuted ? (
@@ -743,7 +698,6 @@ const SessionPage = () => {
                     <><Mic className="mr-2 h-4 w-4" /> Mute Mic</>
                   )}
                 </Button>
-                
                 <Button
                   variant="destructive"
                   onClick={endCall}

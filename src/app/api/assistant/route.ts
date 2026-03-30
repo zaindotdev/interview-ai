@@ -4,16 +4,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { vapiClient } from "@/lib/vapi";
 import { VapiError } from "@vapi-ai/server-sdk";
-import {db} from "@/lib/prisma";
+import { db } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json(
-        new ErrorResponse(
-          "Authentication required. Please log in to continue.",
-        ),
+        new ErrorResponse("Authentication required. Please log in to continue."),
         { status: 401 },
       );
     }
@@ -21,40 +19,44 @@ export async function POST(req: NextRequest) {
     let requestBody;
     try {
       requestBody = await req.json();
-    } catch (parseError) {
-      console.error("Failed to parse request body:", parseError);
+    } catch {
       return NextResponse.json(
         new ErrorResponse("Invalid JSON format in request body."),
         { status: 400 },
       );
     }
 
-    const {
-      topic,
-      description,
-      estimated_time,
-      difficulty,
-      focus,
-      candidateName,
-    } = requestBody;
+    const { topic, description, estimated_time, difficulty, focus, candidateName } = requestBody;
 
     const validationErrors = [];
     if (!topic?.trim()) validationErrors.push("Topic is required");
     if (!description?.trim()) validationErrors.push("Description is required");
     if (!estimated_time) validationErrors.push("Estimated time is required");
-    if (!difficulty?.trim())
-      validationErrors.push("Difficulty level is required");
-    if (!candidateName?.trim())
-      validationErrors.push("Candidate name is required");
-    if (!Array.isArray(focus) || focus.length === 0) {
+    if (!difficulty?.trim()) validationErrors.push("Difficulty level is required");
+    if (!candidateName?.trim()) validationErrors.push("Candidate name is required");
+    if (!Array.isArray(focus) || focus.length === 0)
       validationErrors.push("Focus areas must be a non-empty array");
-    }
 
     if (validationErrors.length > 0) {
-      console.error("Validation errors:", validationErrors);
       return NextResponse.json(
         new ErrorResponse(`Validation failed: ${validationErrors.join(", ")}`),
         { status: 400 },
+      );
+    }
+
+    const userEmail = session.user?.email;
+    if (!userEmail) {
+      return NextResponse.json(
+        new ErrorResponse("User email not found in session."),
+        { status: 401 },
+      );
+    }
+
+    const user = await db.user.findUnique({ where: { email: userEmail } });
+    if (!user) {
+      return NextResponse.json(
+        new ErrorResponse("User not found in database."),
+        { status: 404 },
       );
     }
 
@@ -147,12 +149,7 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
         provider: "openai" as const,
         model: "gpt-4o" as const,
         temperature: 0.7,
-        messages: [
-          {
-            role: "system" as const,
-            content: systemPrompt,
-          },
-        ],
+        messages: [{ role: "system" as const, content: systemPrompt }],
       },
       voice: {
         provider: "vapi" as const,
@@ -176,25 +173,7 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
       },
     };
 
-    const userEmail = session.user?.email;
-    if (!userEmail) {
-      return NextResponse.json(
-        new ErrorResponse("User email not found in session."),
-        { status: 401 },
-      );
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: userEmail },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        new ErrorResponse("User not found in database."),
-        { status: 404 },
-      );
-    }
-
+    // Try to find and reuse existing assistant
     const existingAssistant = await db.assistant.findFirst({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
@@ -202,109 +181,83 @@ Let's start with a fundamental question: Can you explain what ${topic} means to 
 
     if (existingAssistant?.vapiAssistantId) {
       try {
-        const vapiAssistant = await vapiClient.assistants.get(
+        // Verify it still exists on VAPI, then update it
+        await vapiClient.assistants.get(existingAssistant.vapiAssistantId);
+
+        const updatedVapiAssistant = await vapiClient.assistants.update(
           existingAssistant.vapiAssistantId,
+          assistantConfiguration,
         );
 
-        if (vapiAssistant?.id) {
-          const updatedVapiAssistant = await vapiClient.assistants.update(
-            existingAssistant.vapiAssistantId,
-            assistantConfiguration,
-          );
-
-          const updatedAssistant = await db.assistant.update({
-            where: { id: existingAssistant.id },
-            data: {
-              topic,
-              description,
-              focus,
-              difficulty,
-              estimatedTime: estimated_time,
-              configuration: assistantConfiguration as any,
-            },
-          });
-
-          return NextResponse.json(
-            new HttpResponse(
-              "success",
-              `Interview assistant successfully updated for ${candidateName}`,
-              {
-                id: updatedVapiAssistant.id,
-                assistantId: updatedAssistant.id,
-                action: "updated",
-                candidateName,
-                topic,
-              },
-            ),
-            { status: 200 },
-          );
-        }
-      } catch (getError) {
-        console.warn(
-          "Existing VAPI assistant no longer valid, will create new one:",
-          getError,
-        );
-        await db.assistant.delete({ where: { id: existingAssistant.id } });
-      }
-    } else {
-      const newVapiAssistant = await vapiClient.assistants.create(
-        assistantConfiguration,
-      );
-
-      if (!newVapiAssistant || !newVapiAssistant.id) {
-        console.error("Failed to create VAPI assistant - no ID returned");
-        return NextResponse.json(
-          new ErrorResponse(
-            "Failed to create interview assistant. Please try again.",
-          ),
-          { status: 500 },
-        );
-      }
-
-      // Save assistant to database
-      const newAssistant = await db.assistant.create({
-        data: {
-          userId: user.id,
-          vapiAssistantId: newVapiAssistant.id,
-          name: "Nora - Technical Interviewer",
-          topic,
-          description,
-          focus,
-          difficulty,
-          estimatedTime: estimated_time,
-          configuration: assistantConfiguration as any,
-        },
-      });
-
-      return NextResponse.json(
-        new HttpResponse(
-          "success",
-          `Interview assistant successfully created for ${candidateName}`,
-          {
-            id: newVapiAssistant.id,
-            assistantId: newAssistant.id,
-            action: "created",
-            candidateName,
+        await db.assistant.update({
+          where: { id: existingAssistant.id },
+          data: {
             topic,
+            description,
+            focus,
             difficulty,
             estimatedTime: estimated_time,
+            configuration: assistantConfiguration as any,
           },
-        ),
-        { status: 201 },
+        });
+
+        return NextResponse.json(
+          new HttpResponse(
+            "success",
+            `Interview assistant successfully updated for ${candidateName}`,
+            { id: updatedVapiAssistant.id, assistantId: existingAssistant.id, action: "updated" },
+          ),
+          { status: 200 },
+        );
+      } catch {
+        // VAPI assistant is gone, delete the stale DB record and fall through to create
+        console.warn("[assistant] Stale VAPI assistant — deleting and recreating");
+        await db.assistant.delete({ where: { id: existingAssistant.id } });
+      }
+    }
+
+    // Create fresh assistant (first time, or after stale cleanup)
+    const newVapiAssistant = await vapiClient.assistants.create(assistantConfiguration);
+
+    if (!newVapiAssistant?.id) {
+      return NextResponse.json(
+        new ErrorResponse("Failed to create interview assistant. Please try again."),
+        { status: 500 },
       );
     }
+
+    const newAssistant = await db.assistant.create({
+      data: {
+        userId: user.id,
+        vapiAssistantId: newVapiAssistant.id,
+        name: "Nora - Technical Interviewer",
+        topic,
+        description,
+        focus,
+        difficulty,
+        estimatedTime: estimated_time,
+        configuration: assistantConfiguration as any,
+      },
+    });
+
+    return NextResponse.json(
+      new HttpResponse(
+        "success",
+        `Interview assistant successfully created for ${candidateName}`,
+        { id: newVapiAssistant.id, assistantId: newAssistant.id, action: "created" },
+      ),
+      { status: 201 },
+    );
   } catch (error) {
-    console.error("Error in interview assistant API:", error);
+    console.error("[assistant] Error:", error);
 
     if (error instanceof VapiError) {
-      console.error("VAPI Error details:", error.message, error.statusCode);
       return NextResponse.json(
         new ErrorResponse(`VAPI service error: ${error.message}`),
         { status: 502 },
       );
     }
 
-    // Generic server error
     return NextResponse.json(
       new ErrorResponse("Internal server error. Please try again later."),
       { status: 500 },

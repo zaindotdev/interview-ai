@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET_KEY || process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET_KEY!;
 
   if (!webhookSecret) {
     console.error("STRIPE_WEBHOOK_SECRET_KEY is not set");

@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
 enum Role {
@@ -114,13 +114,13 @@ model MockInterviewsReport {
 }
 
 model MockInterviewsHistory {
-  id               String  @id @default(uuid())
+  id               String  @id @default(uuid()) @unique
   mockInterviewId  String
   candidateId      String
-  status           String  @default("completed") // e.g. pending, ongoing, completed, cancelled
-  duration         Int? // store duration in seconds/minutes
-  transcripts      Json? // raw transcript if you want to keep it
-  feedbackReportId String? // optional link to MockInterviewsReport
+  status           String  @default("completed")
+  duration         Int?
+  transcripts      Json?
+  feedbackReportId String?
 
   mockInterview       MockInterviews        @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
   candidate           User                  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
@@ -128,10 +128,10 @@ model MockInterviewsHistory {
 
   createdAt DateTime @default(now())
 
+  @@unique([candidateId, mockInterviewId]) 
   @@index([mockInterviewId], map: "history_mock_interview_id_idx")
   @@index([candidateId], map: "history_candidate_id_idx")
 }
-
 model Subscription {
   id        String  @id @default(cuid())
   userId    String  @unique
