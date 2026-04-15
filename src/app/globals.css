@@ -1,46 +1,48 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@theme{
+@theme {
   --font-family-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-family-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
 @custom-variant dark (&:is(.dark *));
+
 :root {
-  --background: #f5f5f5;
-  --foreground: #212121;
+  --background: #faf7f5;
+  --foreground: #1a1008;
   --card: #ffffff;
-  --card-foreground: #424242;
+  --card-foreground: #3a2010;
   --popover: #ffffff;
-  --popover-foreground: #424242;
-  --primary: #ff5722;
-  --primary-foreground: #ffffff;
-  --secondary: #e0e0e0;
-  --secondary-foreground: #212121;
-  --muted: #e0e0e0;
-  --muted-foreground: #757575;
-  --accent: #ff8a65;
-  --accent-foreground: #ffffff;
+  --popover-foreground: #3a2010;
+  --primary: #7A3A1E;
+  --primary-foreground: #F7E8DF;
+  --secondary: #F5EAE2;
+  --secondary-foreground: #5C2B15;
+  --muted: #F0DAD0;
+  --muted-foreground: #8a5a45;
+  --accent: #D4A990;
+  --accent-foreground: #5C2B15;
   --destructive: #d32f2f;
   --destructive-foreground: #ffffff;
-  --border: #d4d4d4;
-  --input: #f5f5f5;
-  --ring: #ff5722;
-  --chart-1: #ff7043;
+  --border: #e8d5c8;
+  --input: #f5ede8;
+  --ring: #7A3A1E;
+  --chart-1: #7A3A1E;
   --chart-2: #2196f3;
   --chart-3: #4caf50;
-  --chart-4: #ff9800;
+  --chart-4: #D4A990;
   --chart-5: #e91e63;
-  --sidebar: #f5f5f5;
-  --sidebar-foreground: #424242;
-  --sidebar-primary: #ff5722;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ff7043;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #e0e0e0;
-  --sidebar-ring: #ff5722;
-  --font-sans: Inter, sans-serif;
-  --font-serif: DM Sans, serif;
+  --sidebar: #faf7f5;
+  --sidebar-foreground: #3a2010;
+  --sidebar-primary: #7A3A1E;
+  --sidebar-primary-foreground: #F7E8DF;
+  --sidebar-accent: #F5EAE2;
+  --sidebar-accent-foreground: #5C2B15;
+  --sidebar-border: #e8d5c8;
+  --sidebar-ring: #7A3A1E;
+  --font-sans: var(--font-dm-sans), sans-serif;
+  --font-serif: var(--font-fraunces), serif;
   --font-mono: Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   --radius: 0.75rem;
   --shadow-2xs: 0px 2px 8px 0px hsl(0 0% 0% / 0.05);
@@ -56,40 +58,40 @@
 }
 
 .dark {
-  --background: #121212;
-  --foreground: #ffffff;
-  --card: #1e1e1e;
-  --card-foreground: #e0e0e0;
-  --popover: #1e1e1e;
-  --popover-foreground: #e0e0e0;
-  --primary: #ff5722;
-  --primary-foreground: #000000;
-  --secondary: #424242;
-  --secondary-foreground: #ffffff;
-  --muted: #2e2e2e;
-  --muted-foreground: #9e9e9e;
-  --accent: #ff8a65;
-  --accent-foreground: #000000;
+  --background: #120a06;
+  --foreground: #F7E8DF;
+  --card: #1e1108;
+  --card-foreground: #F0DAD0;
+  --popover: #1e1108;
+  --popover-foreground: #F0DAD0;
+  --primary: #D4A990;
+  --primary-foreground: #3a2010;
+  --secondary: #2a1608;
+  --secondary-foreground: #F0DAD0;
+  --muted: #2a1608;
+  --muted-foreground: #b07a60;
+  --accent: #7A3A1E;
+  --accent-foreground: #F7E8DF;
   --destructive: #ef5350;
   --destructive-foreground: #000000;
-  --border: #2e2e2e;
-  --input: #2e2e2e;
-  --ring: #ff5722;
-  --chart-1: #ff7043;
+  --border: #2e1a0e;
+  --input: #2a1608;
+  --ring: #D4A990;
+  --chart-1: #D4A990;
   --chart-2: #90caf9;
   --chart-3: #a5d6a7;
-  --chart-4: #ffb74d;
+  --chart-4: #7A3A1E;
   --chart-5: #f06292;
-  --sidebar: #121212;
-  --sidebar-foreground: #e0e0e0;
-  --sidebar-primary: #ff5722;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #ff7043;
-  --sidebar-accent-foreground: #000000;
-  --sidebar-border: #2e2e2e;
-  --sidebar-ring: #ff5722;
-  --font-sans: Inter, sans-serif;
-  --font-serif: DM Sans, serif;
+  --sidebar: #120a06;
+  --sidebar-foreground: #F0DAD0;
+  --sidebar-primary: #D4A990;
+  --sidebar-primary-foreground: #3a2010;
+  --sidebar-accent: #2a1608;
+  --sidebar-accent-foreground: #F0DAD0;
+  --sidebar-border: #2e1a0e;
+  --sidebar-ring: #D4A990;
+  --font-sans: var(--font-dm-sans), sans-serif;
+  --font-serif: var(--font-fraunces), serif;
   --font-mono: Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   --radius: 0.75rem;
   --shadow-2xs: 0px 2px 12px 0px hsl(0 0% 0% / 0.15);
@@ -162,21 +164,21 @@
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
   --animate-meteor: meteor 5s linear infinite;
   @keyframes meteor {
-  0% {
-    transform: rotate(var(--angle)) translateX(0);
-    opacity: 1;
+    0% {
+      transform: rotate(var(--angle)) translateX(0);
+      opacity: 1;
     }
-  70% {
-    opacity: 1;
+    70% {
+      opacity: 1;
     }
-  100% {
-    transform: rotate(var(--angle)) translateX(-500px);
-    opacity: 0;
+    100% {
+      transform: rotate(var(--angle)) translateX(-500px);
+      opacity: 0;
     }
   }
 }
 
-html{
+html {
   font-family: var(--font-dm-sans), sans-serif;
 }
 

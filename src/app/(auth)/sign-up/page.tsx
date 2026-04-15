@@ -24,7 +24,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 
@@ -32,6 +32,7 @@ const SignUpPageContent = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan");
   const router = useRouter();
@@ -78,11 +79,9 @@ const SignUpPageContent = () => {
   const handleGithubSignIn = async () => {
     setGithubLoading(true);
     try {
-      // If user has a plan, redirect to subscription page after OAuth, otherwise to dashboard
-      const callbackUrl = plan && plan !== 'free' 
-        ? `/subscription?plan=${plan}` 
-        : "/onboarding";
-      
+      const callbackUrl =
+        plan && plan !== "free" ? `/subscription?plan=${plan}` : "/onboarding";
+
       await signIn("github", {
         redirect: true,
         callbackUrl,
@@ -103,10 +102,9 @@ const SignUpPageContent = () => {
     setGoogleLoading(true);
     try {
       // If user has a plan, redirect to subscription page after OAuth, otherwise to dashboard
-      const callbackUrl = plan && plan !== 'free' 
-        ? `/subscription?plan=${plan}` 
-        : "/onboarding";
-      
+      const callbackUrl =
+        plan && plan !== "free" ? `/subscription?plan=${plan}` : "/onboarding";
+
       await signIn("google", {
         redirect: true,
         callbackUrl,
@@ -123,27 +121,18 @@ const SignUpPageContent = () => {
     }
   };
   return (
-    <section className={"flex min-h-screen w-full items-center justify-center"}>
-      <Card
-        className={
-          "min-h-screen w-full max-w-md rounded-none sm:min-h-0 sm:rounded-xl"
-        }
-      >
+    <section
+      className={
+        "flex min-h-screen w-full items-center justify-center font-sans"
+      }
+    >
+      <Card className={"bg-background w-full max-w-md border-none shadow-none"}>
         <CardHeader>
           <CardTitle>
-            <h1
-              className={
-                "text-center text-lg font-medium text-pretty italic md:text-xl"
-              }
-            >
-              Interview <span className={"text-primary"}>AI.</span>
-            </h1>
-          </CardTitle>
-          <CardContent>
             <h2 className={"text-center text-2xl/8 font-semibold"}>
               Sign Up to your account
             </h2>
-          </CardContent>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -156,9 +145,14 @@ const SignUpPageContent = () => {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel className="text-lg">Full Name</FormLabel>
                     <FormControl>
-                      <Input type="name" placeholder="Your Name" {...field} />
+                      <Input
+                        className="text-lg"
+                        type="name"
+                        placeholder="Your Name"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -169,12 +163,13 @@ const SignUpPageContent = () => {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel className="text-lg">Username</FormLabel>
                     <FormControl>
                       <Input
                         type="name"
                         placeholder="Your username"
                         {...field}
+                        className="text-lg"
                       />
                     </FormControl>
                     <FormMessage />
@@ -186,12 +181,13 @@ const SignUpPageContent = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-lg">Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         placeholder="yourmail@example.com"
                         {...field}
+                        className="text-lg"
                       />
                     </FormControl>
                     <FormMessage />
@@ -203,30 +199,40 @@ const SignUpPageContent = () => {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-lg">Password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <div className="relative">
+                        <Input className="text-lg" type={showPass?'text':"password"} {...field} />
+                        <button
+                          type="button"
+                          className="absolute top-1.5 right-2"
+                        >
+                          {showPass ? (
+                            <EyeOffIcon
+                              size={20}
+                              onClick={() => setShowPass(false)}
+                              className="cursor-pointer"
+                            />
+                          ) : (
+                            <EyeIcon
+                              size={20}
+                              onClick={() => setShowPass(true)}
+                              className="cursor-pointer"
+                            />
+                          )}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button
-                className="w-full cursor-pointer"
-                type={"submit"}
-                variant={"primary"}
-              >
+              <Button className="w-full cursor-pointer" type={"submit"}>
                 {loading ? <Loader2 className="animate-spin" /> : "Sign Up"}
               </Button>
             </form>
           </Form>
-          <CardFooter className="mt-4 flex w-full items-center justify-center">
-            <p>
-              Already have an Account? <Link href={"/sign-in"}>Sign In</Link>
-            </p>
-          </CardFooter>
         </CardContent>
-        <Separator />
         <CardFooter className="flex-col space-y-4 p-4">
           <p className="mb-4 text-center">OR</p>
           <Button

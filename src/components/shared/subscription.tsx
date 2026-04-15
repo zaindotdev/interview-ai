@@ -3,7 +3,7 @@
 import React from "react";
 import { useSession } from "next-auth/react";
 import { PLANS } from "@/lib/subscription-plans";
-import PricingCard from "./pricing-card";
+import {PricingCard} from "./pricing-card";
 import { motion } from "framer-motion";
 import HeadingContainer from "./heading-container";
 
@@ -14,7 +14,6 @@ interface SubscriptionSectionProps {
 export default function SubscriptionSection({ showHeader = true }: SubscriptionSectionProps) {
   const { data: session } = useSession();
 
-  // Convert PLANS to PricingCard format with proper plan keys and product IDs
   const pricingPlans = [
     {
       title: PLANS.FREE.name,

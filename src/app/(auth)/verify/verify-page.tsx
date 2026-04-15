@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import axios from "axios";
@@ -92,17 +92,17 @@ const VerifyPage = () => {
 
   return (
     <section className="flex min-h-screen w-full items-center justify-center p-4">
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-lg border-none bg-background shadow-none">
         <CardHeader>
           <CardTitle>
-            <h1 className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-center text-2xl font-semibold text-transparent md:text-3xl/8">
-              Verify Your Email
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl text-primary text-center">
+              Confirm Your Email Address
             </h1>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <CardDescription>
-            <p className="mx-auto max-w-xs text-center text-base md:text-lg/6">
+            <p className="mx-auto max-w-md text-center text-base md:text-lg/6">
               Please enter the OTP sent to your email to verify your email
               address.
             </p>
@@ -123,14 +123,13 @@ const VerifyPage = () => {
                         value={field.value}
                         onChange={field.onChange}
                       >
-                        <InputOTPGroup>
-                          <InputOTPSlot index={0} />
-                          <InputOTPSlot index={1} />
-                          <InputOTPSlot index={2} />
-                          <InputOTPSeparator />
-                          <InputOTPSlot index={3} />
-                          <InputOTPSlot index={4} />
-                          <InputOTPSlot index={5} />
+                        <InputOTPGroup className="w-full">
+                          <InputOTPSlot index={0} className='p-6 text-xl'/>
+                          <InputOTPSlot index={1} className='p-6 text-xl'/>
+                          <InputOTPSlot index={2} className='p-6 text-xl'/>
+                          <InputOTPSlot index={3} className='p-6 text-xl'/>
+                          <InputOTPSlot index={4} className='p-6 text-xl'/>
+                          <InputOTPSlot index={5} className='p-6 text-xl'/>
                         </InputOTPGroup>
                       </InputOTP>
                     </FormControl>
@@ -139,7 +138,7 @@ const VerifyPage = () => {
                 )}
               />
               <Button
-                className="mx-auto cursor-pointer"
+                className="mx-auto w-full max-w-md py-6 text-lg mt-8"
                 type="submit"
                 disabled={loading || form.watch("otp").length !== 6}
               >

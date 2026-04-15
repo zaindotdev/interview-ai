@@ -306,7 +306,7 @@ const CardDetails = [
 
 const WhatYouGetSection = () => {
   return (
-    <section className="mb-24">
+    <section id='features' className="mb-24">
       <motion.h3
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

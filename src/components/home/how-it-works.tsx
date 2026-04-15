@@ -22,7 +22,7 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section className="mb-20 px-4">
+    <section id='how-it-works' className="mb-20 px-4">
       {/* Headings */}
       <motion.h3 className="text-center text-xl uppercase tracking-wide">
         How It Works

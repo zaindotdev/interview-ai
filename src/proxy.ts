@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = await getToken({ req: request });
   const url = request.nextUrl;
   const pathname = url.pathname;
 
-  // Define route categories
   const authRoutes = ["/sign-in", "/sign-up"];
   const verifyRoutes = ["/verify"];
   const protectedRoutes = [
@@ -24,7 +23,6 @@ export async function middleware(request: NextRequest) {
   const publicRoutes = ["/", "/subscription"];
   const onboardingRoutes = ["/onboarding"];
 
-  // Check route types with more precise matching
   const isAuthRoute = authRoutes.some((route) => pathname === route);
   const isVerifyRoute = verifyRoutes.some((route) => pathname.startsWith(route));
   const isProtectedRoute = protectedRoutes.some((route) =>
@@ -37,14 +35,11 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  // Case 1: User is not authenticated
   if (!token) {
-    // Allow access to auth routes, verify routes, and public routes
     if (isAuthRoute || isVerifyRoute || isPublicRoute) {
       return NextResponse.next();
     }
 
-    // Redirect protected routes and onboarding to sign-in
     if (isProtectedRoute || isOnboardingRoute) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
@@ -52,35 +47,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Case 2: User is authenticated
   if (token) {
     const emailVerified = token.emailVerified === true;
     const hasOnboarded = token.hasOnboarded === true;
 
-    // Priority 1: Check email verification (highest priority)
     if (!emailVerified) {
-      // Allow access to verify route and public routes
       if (isVerifyRoute || isPublicRoute) {
         return NextResponse.next();
       }
 
-      // Redirect everything else to verify
       return NextResponse.redirect(new URL("/verify", request.url));
     }
 
-    // Priority 2: Check onboarding (after email is verified)
     if (emailVerified && !hasOnboarded) {
-      // Allow access to onboarding route and public routes
       if (isOnboardingRoute || isPublicRoute) {
         return NextResponse.next();
       }
 
-      // Redirect protected routes to onboarding
       if (isProtectedRoute) {
         return NextResponse.redirect(new URL("/onboarding", request.url));
       }
 
-      // Redirect auth routes to onboarding
       if (isAuthRoute) {
         return NextResponse.redirect(new URL("/onboarding", request.url));
       }
@@ -88,31 +75,25 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Priority 3: User is fully verified and onboarded
     if (emailVerified && hasOnboarded) {
-      // Allow access to public routes
       if (isPublicRoute) {
         return NextResponse.next();
       }
 
-      // Redirect auth routes to dashboard
       if (isAuthRoute) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
 
-      // Redirect verify and onboarding routes to dashboard
       if (isVerifyRoute || isOnboardingRoute) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
 
-      // Allow access to protected routes
       if (isProtectedRoute) {
         return NextResponse.next();
       }
     }
   }
 
-  // Default: allow the request to continue
   return NextResponse.next();
 }
 

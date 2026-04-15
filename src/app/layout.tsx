@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
-import "./globals.css";
+import { DM_Sans, Fraunces } from "next/font/google";
 import Providers from "./_app";
 import { Toaster } from "sonner";
-import 'remixicon/fonts/remixicon.css'
+import "./globals.css";
+import "remixicon/fonts/remixicon.css";
 
 const dmSans = DM_Sans({
   weight: ["400", "500", "700"],
   subsets: ["latin"],
   variable: "--font-dm-sans",
+})
+
+const fraunces = Fraunces({
+  weight: ["400", "500", "700"],
+  subsets: ["latin"],
+  variable: "--font-serif",
 })
 
 export const metadata: Metadata = {
@@ -27,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning={true}>
     <body
-        className={`${dmSans.variable} ${dmSans.className} antialiased`}
+        className={`${dmSans.variable} ${fraunces.variable} antialiased`}
         suppressHydrationWarning
     >
     <Providers>
