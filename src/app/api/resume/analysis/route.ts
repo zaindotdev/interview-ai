@@ -193,8 +193,8 @@ Each mock interview session must follow this interface:
 }
 
 TIME RECOMMENDATIONS:
-- Easy: ${isSubscribed ? "600-900 seconds (10-15 minutes)" : "240-480 seconds (4-8 minutes)"}
-- Medium: ${isSubscribed ? "900-1200 seconds (15-20 minutes)" : "480-720 seconds (8-12 minutes)"}
+- Easy: ${isSubscribed ? "600-900 seconds (10-15 minutes)" : "120-300 seconds (2-5 minutes)"}
+- Medium: ${isSubscribed ? "900-1200 seconds (15-20 minutes)" : "240-480 seconds (4-8 minutes)"}
 ${isSubscribed ? "\n- Hard: 1200-1800 seconds (20-30 minutes)" : ""}
 
 Return ONLY a valid JSON array with EXACTLY ${limits.mockInterviews} sessions.

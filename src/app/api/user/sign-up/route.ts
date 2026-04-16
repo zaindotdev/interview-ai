@@ -2,7 +2,7 @@ import { db } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import { sendMail } from "@/utils/send-mail";
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 export async function POST(req: NextRequest) {
   try {
@@ -75,18 +75,17 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const otp = crypto.randomInt(100000, 999999).toString();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+    const token = jwt.sign({ email }, process.env.JWT_SECRET!, { expiresIn: "1h" });
 
+    
     const user = await db.user.create({
       data: {
         name,
         username,
         email,
         password: hashedPassword,
+        verificationToken: token, 
         role: "CANDIDATE",
-        otp: otp.toString(),
-        otpExpiry: otpExpiry.toISOString(),
         emailVerified: null,
       },
     });
@@ -102,8 +101,7 @@ export async function POST(req: NextRequest) {
       await sendMail({
         email: user.email,
         name: user.name || "User",
-        otp,
-        otpExpiry: otpExpiry.toISOString(),
+        verificationToken: token,
       });
     } catch (emailError) {
       console.error("Failed to send verification email:", emailError);

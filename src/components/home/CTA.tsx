@@ -3,8 +3,10 @@ import React from "react";
 import { Button } from "../ui/button";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
+import { useRouter } from "next/navigation";
 
 const CTA = () => {
+  const router = useRouter();
   return (
     <section className="mb-20">
       <motion.h1
@@ -37,7 +39,7 @@ const CTA = () => {
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6 }}
       >
-        <Button className="mx-auto mt-8 flex items-center" size="lg">
+        <Button onClick={()=>router.push("/sign-up")} className="mx-auto mt-8 flex items-center" size="lg">
           Get Started Free <ArrowRight className="ml-2" />
         </Button>
       </motion.div>

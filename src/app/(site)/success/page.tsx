@@ -46,7 +46,7 @@ function SuccessPageContent() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
       {status === "loading" && (
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -60,7 +60,7 @@ function SuccessPageContent() {
       )}
 
       {status === "paid" && (
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md border-none shadow-none bg-background">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <CheckCircle className="h-8 w-8 text-green-600" />

@@ -63,7 +63,7 @@ const SignUpPageContent = () => {
         return;
       }
 
-      router.replace(`/verify?email=${data.email}&plan=${plan}`);
+      router.replace(`/verify`);
     } catch (error) {
       console.error(error);
       if (error instanceof AxiosError) {
@@ -79,8 +79,7 @@ const SignUpPageContent = () => {
   const handleGithubSignIn = async () => {
     setGithubLoading(true);
     try {
-      const callbackUrl =
-        plan && plan !== "free" ? `/subscription?plan=${plan}` : "/onboarding";
+      const callbackUrl = "/onboarding";
 
       await signIn("github", {
         redirect: true,
@@ -101,9 +100,7 @@ const SignUpPageContent = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      // If user has a plan, redirect to subscription page after OAuth, otherwise to dashboard
-      const callbackUrl =
-        plan && plan !== "free" ? `/subscription?plan=${plan}` : "/onboarding";
+      const callbackUrl = "/onboarding";
 
       await signIn("google", {
         redirect: true,

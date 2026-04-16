@@ -1,16 +1,16 @@
 import React from "react";
-import { Container, Heading, Hr, Text } from "@react-email/components";
+import { Container, Heading, Hr, Link, Text } from "@react-email/components";
 
 interface VerificationEmailProps {
   name: string;
-  otp: string;
-  otpExpiry: string;
+  verificationToken: string;
 }
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const VerificationEmail: React.FC<VerificationEmailProps> = ({
   name,
-  otp,
-  otpExpiry,
+  verificationToken,
 }) => {
   const containerStyle = {
     background: "#fff",
@@ -47,10 +47,9 @@ const VerificationEmail: React.FC<VerificationEmailProps> = ({
         Thank you for signing up. Please verify your email address to activate
         your account.
       </Text>
-      <Text style={textStyle}>{otp}</Text>
-      <Text style={textStyle}>
-        This OTP will expire on <b>{new Date(otpExpiry).toDateString()}</b>.
-      </Text>
+      <Link href={`${APP_URL}/verify?token=${verificationToken}`} style={{ ...textStyle, color: "#ff6600" }}>
+        Complete your verification
+      </Link>
       <Hr />
       <Text style={secondaryTextStyle}>
         If you did not sign up for Interview AI, you can safely ignore this

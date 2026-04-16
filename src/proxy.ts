@@ -18,81 +18,47 @@ export async function proxy(request: NextRequest) {
     "/profile",
     "/report",
     "/practice-questions",
-    "/analytics"
+    "/analytics",
   ];
   const publicRoutes = ["/", "/subscription"];
   const onboardingRoutes = ["/onboarding"];
 
   const isAuthRoute = authRoutes.some((route) => pathname === route);
   const isVerifyRoute = verifyRoutes.some((route) => pathname.startsWith(route));
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some(
+    (route) => pathname === route || (route !== "/" && pathname.startsWith(route))
   );
-  const isPublicRoute = publicRoutes.some((route) => 
-    pathname === route || (route !== "/" && pathname.startsWith(route))
-  );
-  const isOnboardingRoute = onboardingRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  const isOnboardingRoute = onboardingRoutes.some((route) => pathname.startsWith(route));
 
   if (!token) {
-    if (isAuthRoute || isVerifyRoute || isPublicRoute) {
-      return NextResponse.next();
-    }
-
+    if (isAuthRoute || isVerifyRoute || isPublicRoute) return NextResponse.next();
     if (isProtectedRoute || isOnboardingRoute) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
-
     return NextResponse.next();
   }
 
-  if (token) {
-    const emailVerified = token.emailVerified === true;
-    const hasOnboarded = token.hasOnboarded === true;
+  const emailVerified = token.emailVerified === true;
+  const hasOnboarded = token.hasOnboarded === true;
 
-    if (!emailVerified) {
-      if (isVerifyRoute || isPublicRoute) {
-        return NextResponse.next();
-      }
-
-      return NextResponse.redirect(new URL("/verify", request.url));
-    }
-
-    if (emailVerified && !hasOnboarded) {
-      if (isOnboardingRoute || isPublicRoute) {
-        return NextResponse.next();
-      }
-
-      if (isProtectedRoute) {
-        return NextResponse.redirect(new URL("/onboarding", request.url));
-      }
-
-      if (isAuthRoute) {
-        return NextResponse.redirect(new URL("/onboarding", request.url));
-      }
-
-      return NextResponse.next();
-    }
-
-    if (emailVerified && hasOnboarded) {
-      if (isPublicRoute) {
-        return NextResponse.next();
-      }
-
-      if (isAuthRoute) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-
-      if (isVerifyRoute || isOnboardingRoute) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-
-      if (isProtectedRoute) {
-        return NextResponse.next();
-      }
-    }
+  if (!emailVerified) {
+    if (isVerifyRoute || isPublicRoute) return NextResponse.next();
+    return NextResponse.redirect(new URL("/verify", request.url));
   }
+
+  if (!hasOnboarded) {
+    if (isOnboardingRoute || isPublicRoute) return NextResponse.next();
+    if (isAuthRoute || isProtectedRoute) {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (isAuthRoute || isVerifyRoute || isOnboardingRoute) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+  if (isPublicRoute || isProtectedRoute) return NextResponse.next();
 
   return NextResponse.next();
 }
@@ -113,6 +79,6 @@ export const config = {
     "/report/:path*",
     "/onboarding/:path*",
     "/practice-questions/:path*",
-    "/analytics/:path*"
+    "/analytics/:path*",
   ],
 };
