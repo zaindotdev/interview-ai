@@ -23,20 +23,17 @@ import { User as UserProfile } from "@/generated/prisma";
 
 const ProfilePage: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true); // Manage loading state locally
+  const [loading, setLoading] = useState(true);
   const { status } = useSession();
   const router = useRouter();
 
   const fetchUser = useCallback(async () => {
     setLoading(true);
     try {
-      // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 800));
 
-      // Replace with your actual API call
       const response = await axios.get("/api/user/get", {
         headers: {
-          // Assuming token is stored in sessionStorage as per original code
           Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         },
       });
@@ -48,7 +45,6 @@ const ProfilePage: React.FC = () => {
         return;
       }
 
-      // Map API response to UserProfile type
       const apiUser = response.data.data;
       setUser(apiUser);
     } catch (error) {
@@ -61,7 +57,7 @@ const ProfilePage: React.FC = () => {
       } else {
         toast.error("An unexpected error occurred.");
       }
-      setUser(null); // Ensure user is null on error
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -81,12 +77,11 @@ const ProfilePage: React.FC = () => {
   }, [router]);
 
   useEffect(() => {
-    // Only fetch user data if session is loaded and authenticated
     if (status === "authenticated") {
       fetchUser();
     } else if (status === "unauthenticated") {
-      setLoading(false); // Stop loading if not authenticated
-      setUser(null); // Clear user data if not authenticated
+      setLoading(false);
+      setUser(null);
       toast.info("Please sign in to view your profile.");
     }
   }, [status, fetchUser]);
@@ -145,11 +140,11 @@ const ProfilePage: React.FC = () => {
         <Button
           onClick={handleSignOut}
           variant="outline"
-          className="flex items-center gap-2 cursor-pointer"
-          size="lg"
+          className="flex cursor-pointer items-center gap-2"
+          size="sm"
         >
-          Logout
           <LogOut className="h-4 w-4" />
+          Logout
         </Button>
       </div>
 
@@ -171,11 +166,24 @@ const ProfilePage: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-6 px-6 pt-20 pb-6">
           <div className="space-y-1">
-            <div>
-              <h2 className="text-2xl font-bold">{user.name}</h2>
-              {user.subscriptionId && <Badge>Premium</Badge>}
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div>
+                  <h2 className="text-2xl font-bold">{user.name}</h2>
+                  {user.isSubscribed ? (
+                    <Badge variant={"outline"}>Premium Subscriber</Badge>
+                  ) : (
+                    <Badge variant={"secondary"}>Free User</Badge>
+                  )}
+                </div>
+                <p className="text-muted-foreground mt-4">@{user.username}</p>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/subscription">{
+                  user.isSubscribed ? "Manage Subscription" : "Upgrade to Premium"
+                }</Link>
+              </Button>
             </div>
-            <p className="text-muted-foreground">@{user.username}</p>
           </div>
 
           <Separator />

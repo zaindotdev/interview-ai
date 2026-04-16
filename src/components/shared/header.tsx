@@ -109,15 +109,15 @@ const Header: React.FC = () => {
                     className={cn(
                       "relative rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200",
                       isActive === link.name
-                        ? "text-primary bg-primary/10"
-                        : "hover:text-primary hover:bg-primary/5 text-gray-600",
+                        ? "underline text-primary"
+                        : "",
                     )}
                   >
                     {link.name}
                     {isActive === link.name && (
                       <motion.div
                         layoutId="activeTab"
-                        className="bg-primary/10 absolute inset-0 rounded-lg"
+                        className=" absolute inset-0"
                         initial={false}
                         transition={{
                           type: "spring",

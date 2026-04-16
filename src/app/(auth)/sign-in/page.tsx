@@ -24,16 +24,17 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 const SignInPageContent = () => {
   const [loading, setLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan");
-  
+
   const form = useForm<SignInSchemaType>({
     resolver: zodResolver(SignInSchema),
     defaultValues: {
@@ -44,7 +45,7 @@ const SignInPageContent = () => {
 
   // Determine the callback URL based on plan
   const getCallbackUrl = () => {
-    if (plan && plan !== 'free') {
+    if (plan && plan !== "free") {
       return `/subscription?plan=${plan}`;
     }
     return "/dashboard";
@@ -123,26 +124,13 @@ const SignInPageContent = () => {
   };
   return (
     <section className={"flex min-h-screen w-full items-center justify-center"}>
-      <Card
-        className={
-          "min-h-screen w-full max-w-md rounded-none sm:min-h-0 sm:rounded-xl"
-        }
-      >
+      <Card className={"bg-background w-full max-w-md border-none shadow-none"}>
         <CardHeader>
           <CardTitle>
-            <h1
-              className={
-                "text-center text-lg font-medium text-pretty italic md:text-xl"
-              }
-            >
-              Interview <span className={"text-primary"}>AI.</span>
-            </h1>
-          </CardTitle>
-          <CardContent>
             <h2 className={"text-center text-2xl/8 font-semibold"}>
               Sign In to your account
             </h2>
-          </CardContent>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -155,10 +143,11 @@ const SignInPageContent = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-lg">Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
+                        className="text-lg"
                         placeholder="yourmail@example.com"
                         {...field}
                       />
@@ -172,47 +161,49 @@ const SignInPageContent = () => {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-lg">Password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <div className="relative">
+                        <Input
+                          className="text-lg"
+                          type={showPass ? "text" : "password"}
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          className="absolute top-1.5 right-2"
+                        >
+                          {showPass ? (
+                            <EyeOffIcon
+                              size={20}
+                              onClick={() => setShowPass(false)}
+                              className="cursor-pointer"
+                            />
+                          ) : (
+                            <EyeIcon
+                              size={20}
+                              onClick={() => setShowPass(true)}
+                              className="cursor-pointer"
+                            />
+                          )}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button
-                className="w-full cursor-pointer"
-                type={"submit"}
-                variant={"primary"}
-              >
+              <Button className="w-full cursor-pointer" type={"submit"}>
                 {loading ? <Loader2 className="animate-spin" /> : "Sign In"}
               </Button>
             </form>
           </Form>
-          <CardFooter className="mt-4 flex w-full items-center justify-center">
-            <p>
-              Don&apos;t have an Account? <Link href={"/sign-up"}>Sign Up</Link>
-            </p>
-          </CardFooter>
         </CardContent>
-        <Separator />
         <CardFooter className="flex-col space-y-4 p-4">
           <p className="mb-4 text-center">OR</p>
           <Button
-            onClick={handleGithubSignIn}
-            className="w-full cursor-pointer"
-            variant={"secondary"}
-          >
-            {githubLoading ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <i className="ri-github-fill"></i>
-            )}{" "}
-            Sign In With Github
-          </Button>
-          <Button
             onClick={handleGoogleSignIn}
-            className="w-full cursor-pointer"
+            className="w-full cursor-pointer border-none shadow-none hover:bg-primary/10"
             variant={"outline"}
           >
             {googleLoading ? (
@@ -222,6 +213,18 @@ const SignInPageContent = () => {
             )}{" "}
             Sign In With Google
           </Button>
+          <Button
+            onClick={handleGithubSignIn}
+            className="w-full cursor-pointer border-none shadow-none hover:bg-primary/10"
+            variant={"outline"}
+          >
+            {githubLoading ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <i className="ri-github-fill"></i>
+            )}{" "}
+            Sign In With Github
+          </Button>
         </CardFooter>
       </Card>
     </section>
@@ -230,11 +233,13 @@ const SignInPageContent = () => {
 
 const SignInPage = () => {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      }
+    >
       <SignInPageContent />
     </Suspense>
   );

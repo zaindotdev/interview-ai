@@ -61,24 +61,6 @@ export const AppSidebar: React.FC = () => {
     fetchUser();
   }, [fetchUser]);
 
-  const isItemAccessible = (requiresSubscription?: boolean) => {
-    if (!requiresSubscription) return true;
-    return user?.isSubscribed === true;
-  };
-
-  const handleNavClick = (
-    e: React.MouseEvent,
-    href: string,
-    requiresSubscription?: boolean
-  ) => {
-    if (!isItemAccessible(requiresSubscription)) {
-      e.preventDefault();
-      router.push("/subscription");
-      return;
-    }
-    router.push(href);
-  };
-
   const renderNavItem = (item: {
     name: string;
     href: string;
@@ -86,50 +68,18 @@ export const AppSidebar: React.FC = () => {
     requiresSubscription?: boolean;
   }) => {
     const Icon = item.icon;
-    const isAccessible = isItemAccessible(item.requiresSubscription);
     const isActive = pathname === item.href;
 
     const button = (
       <SidebarMenuButton
-        onClick={(e) => handleNavClick(e, item.href, item.requiresSubscription)}
+        onClick={() => router.push(item.href)}
         data-active={isActive}
-        className={
-          !isAccessible
-            ? "relative cursor-pointer opacity-60"
-            : "cursor-pointer"
-        }
+        className={"relative cursor-pointer opacity-60"}
       >
         <Icon className="size-4" />
         <span>{item.name}</span>
-        {!isAccessible && (
-          <div className="bg-background/80 absolute inset-0 flex items-center justify-center rounded-md backdrop-blur-[2px]">
-            <div className="flex flex-col items-center gap-1">
-              <Lock className="text-muted-foreground size-4" />
-              <span className="text-muted-foreground text-[10px] font-semibold">
-                Pro Only
-              </span>
-            </div>
-          </div>
-        )}
       </SidebarMenuButton>
     );
-
-    if (!isAccessible) {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>{button}</TooltipTrigger>
-            <TooltipContent side="right" className="max-w-[200px]">
-              <p className="font-medium">Upgrade to Pro</p>
-              <p className="text-[11px] opacity-90">
-                Subscribe to unlock {item.name.toLowerCase()} and all premium
-                features
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
 
     return button;
   };

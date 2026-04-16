@@ -1,80 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import jwt from "jsonwebtoken";
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { otp,email } = await req.json();
+    const { verificationToken } = await req.json();
 
-    if (!email || !otp || typeof otp !== "string") {
+    if (!verificationToken) {
       return NextResponse.json(
-        { message: "Invalid or missing OTP and email" },
-        { status: 400 }
+        { message: "Verification token is required" },
+        { status: 400 },
       );
     }
 
-    
+    const decoded = jwt.verify(verificationToken, process.env.JWT_SECRET!) as {
+      email: string;
+    };
+
     const user = await db.user.findUnique({
-      where: {
-        email
-      },
+      where: { email: decoded.email },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { message: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
     if (user.emailVerified) {
       return NextResponse.json(
-        { message: "Email already verified" },
-        { status: 400 }
+        { message: "Email is already verified" },
+        { status: 400 },
       );
     }
 
-    if (!user.otp) {
-      return NextResponse.json(
-        { message: "No verification code found. Please request a new one." },
-        { status: 400 }
-      );
-    }
-
-    if (user.otpExpiry && user.otpExpiry < new Date()) {
-      return NextResponse.json(
-        { message: "Verification code expired. Please request a new one." },
-        { status: 400 }
-      );
-    }
-
-    if (user.otp !== otp) {
-      return NextResponse.json(
-        { message: "Invalid verification code" },
-        { status: 400 }
-      );
-    }
-
-    // Update user to mark as verified and clear OTP
     await db.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        emailVerified: true,
-        otp: null,
-        otpExpiry: null,
-      },
+      where: { email: decoded.email },
+      data: { emailVerified: true, verificationToken: null },
     });
 
-    return NextResponse.json(
-      { message: "Email verified successfully" },
-      { status: 200 }
-    );
+    return NextResponse.json({ message: "Email verified successfully" });
   } catch (error) {
     console.error("Error verifying user:", error);
     return NextResponse.json(
-      { message: "Internal server error" },
-      { status: 500 }
+      { message: "An error occurred while verifying your email" },
+      { status: 500 },
     );
   }
 }

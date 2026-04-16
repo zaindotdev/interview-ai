@@ -22,12 +22,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/context/app-provider";
 import { useSession } from "next-auth/react";
 
-// Constants
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPE = "application/pdf";
 const TOTAL_STEPS = 2;
 
-// Types
 interface StepState {
   current: number;
   total: number;
@@ -35,16 +33,14 @@ interface StepState {
 
 type FormData = z.infer<typeof analyzeResumeSchema>;
 
-// Component
+
 const Onboarding: React.FC = () => {
-  // State
   const [steps, setSteps] = useState<StepState>({
     current: 1,
     total: TOTAL_STEPS,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Hooks
   const router = useRouter();
   const { analyzeResume, loading, error, clearError } = useAppContext();
 
@@ -59,12 +55,16 @@ const Onboarding: React.FC = () => {
 
   useEffect(() => {
     if (error) {
+      if(error.includes("500")){
+        toast.error("Server error occurred. Please try again later.");
+        clearError();
+        return;
+      }
       toast.error(error);
       clearError();
     }
   }, [error]);
 
-  // File validation helper
   const validateFile = useCallback((file: File): string | null => {
     if (file.size > MAX_FILE_SIZE) {
       return "File size must be less than 5MB";
@@ -77,7 +77,6 @@ const Onboarding: React.FC = () => {
     return null;
   }, []);
 
-  // File selection handler
   const handleFileSelect = useCallback(
     (file: File) => {
       console.info("Processing file upload...");
@@ -97,7 +96,6 @@ const Onboarding: React.FC = () => {
     [validateFile],
   );
 
-  // Form submission handler
   const onSubmit = useCallback(
     async (data: FormData) => {
       if (!selectedFile) {
@@ -132,10 +130,8 @@ const Onboarding: React.FC = () => {
     [selectedFile, analyzeResume, form, router, update],
   );
 
-  // Step navigation handler
   const handleStepClick = useCallback(
     (stepNum: number) => {
-      // Only allow navigation to valid steps
       if (stepNum === 1 || (stepNum === 2 && selectedFile)) {
         setSteps((prev) => ({ ...prev, current: stepNum }));
       }
@@ -143,14 +139,13 @@ const Onboarding: React.FC = () => {
     [selectedFile],
   );
 
-  // File removal handler
   const handleRemoveFile = useCallback(() => {
     setSelectedFile(null);
     setSteps((prev) => ({ ...prev, current: 1 }));
     toast.info("File removed");
   }, []);
 
-  // Step component
+
   const StepIndicator: React.FC<{ stepNum: number }> = ({ stepNum }) => {
     const isActive = steps.current === stepNum;
     const isCompleted = steps.current > stepNum;
@@ -188,9 +183,9 @@ const Onboarding: React.FC = () => {
   };
 
   return (
-    <section className="container mx-auto min-h-screen bg-gray-50 p-4">
+    <section className="container mx-auto min-h-screen p-4 bg-background">
       <div className="flex min-h-screen w-full items-center justify-center">
-        <Card className="w-full max-w-xl px-4 py-8 shadow-lg">
+        <Card className="w-full max-w-xl px-4 py-8 shadow-none border-none bg-background">
           <CardHeader>
             <CardTitle className="mx-auto">
               <h1 className="text-primary text-center text-2xl font-bold md:text-3xl/8">
@@ -201,12 +196,9 @@ const Onboarding: React.FC = () => {
                 interview practice tool
               </p>
 
-              {/* Progressive Stepper */}
               <div className="relative mb-6">
-                {/* Background Line */}
                 <div className="absolute top-6 right-6 left-6 z-0 h-0.5 bg-neutral-300" />
 
-                {/* Animated Progress Line */}
                 <motion.div
                   className="bg-primary absolute top-6 left-6 z-10 h-0.5"
                   initial={{ width: 0 }}
@@ -215,8 +207,6 @@ const Onboarding: React.FC = () => {
                   }}
                   transition={{ duration: 0.5 }}
                 />
-
-                {/* Steps Container */}
                 <div className="relative z-20 flex items-center justify-between">
                   {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(
                     (stepNum) => (
@@ -229,7 +219,6 @@ const Onboarding: React.FC = () => {
           </CardHeader>
 
           <CardContent>
-            {/* Step 1: File Upload */}
             {steps.current === 1 && (
               <div>
                 <h2 className="mb-4 text-center text-xl font-bold md:text-2xl">
@@ -274,7 +263,6 @@ const Onboarding: React.FC = () => {
               </div>
             )}
 
-            {/* Step 2: Job Description */}
             {steps.current === 2 && (
               <motion.div
                 className="text-center"
@@ -298,7 +286,7 @@ const Onboarding: React.FC = () => {
                         <FormItem className="w-full">
                           <FormControl className="w-full">
                             <Textarea
-                              className="h-[150px] w-full resize-none"
+                              className="h-[150px] w-full resize-y"
                               placeholder="Paste the job description here..."
                               disabled={loading}
                               {...field}

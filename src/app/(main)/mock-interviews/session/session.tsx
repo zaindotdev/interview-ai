@@ -460,7 +460,7 @@ const SessionPage = () => {
             </span>
             {interviewConfig?.estimated_time && (
               <span className="text-sm text-gray-500">
-                / {interviewConfig.estimated_time}:00
+                / {new Date(interviewConfig.estimated_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
           </div>

@@ -8,19 +8,16 @@ interface FooterLink {
     name: string;
     href: string;
 }
-
-/* Primary navigation (product & company) */
 export const primaryFooterLinks: FooterLink[] = [
     { name: "Home", href: "/" },
-    { name: "How It Works", href: "#how-it-works" },
-    { name: "Features", href: "#features" },
-    { name: "Pricing", href: "#pricing" },
+    { name: "How It Works", href: "/#how-it-works" },
+    { name: "Features", href: "/#features" },
+    { name: "Pricing", href: "/#pricing" },
     { name: "About Us", href: "/about" },
     { name: "Blog", href: "/blog" },
     { name: "Careers", href: "/careers" },
 ];
 
-/* Support & legal */
 export const secondaryFooterLinks: FooterLink[] = [
     { name: "Privacy Policy", href: "/privacy" },
     { name: "Terms of Service", href: "/terms" },
@@ -38,26 +35,24 @@ const Footer = () => {
             className="w-full border-t border-gray-200/70 bg-white"
         >
             <div className="container mx-auto px-6 py-10 grid gap-8 md:grid-cols-3">
-                {/* ───────── Brand / CTA ───────── */}
                 <div className="flex flex-col gap-2">
                     <Link
                         href="/"
-                        className="text-2xl font-semibold italic leading-tight"
+                        className="text-2xl font-semibold italic leading-tight font-serif"
                     >
-                        Interview <span className="text-orange-600">AI.</span>
+                        Interview <span className="text-primary">AI.</span>
                     </Link>
                     <p className="text-sm text-gray-500">
                         Made with <span role="img" aria-label="heart">❤️</span> by Zain
                     </p>
                 </div>
 
-                {/* ───────── Primary links ───────── */}
                 <ul className="grid grid-cols-2 gap-2">
                     {primaryFooterLinks.map((link, idx) => (
                         <li key={`primary-${idx}`}>
                             <Link
                                 href={link.href}
-                                className="text-sm font-medium text-gray-600 transition-colors hover:text-orange-600"
+                                className="text-base font-medium text-gray-600 transition-colors hover:text-primary"
                             >
                                 {link.name}
                             </Link>
@@ -65,7 +60,6 @@ const Footer = () => {
                     ))}
                 </ul>
 
-                {/* ───────── Secondary links ───────── */}
                 <ul className="flex flex-col gap-2">
                     {secondaryFooterLinks.map((link, idx) => (
                         <li key={`secondary-${idx}`}>
