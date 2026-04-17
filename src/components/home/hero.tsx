@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 const userAvatars = [
   { name: "Zain", initials: "ZA", colorClass: "bg-[#d2b89f] text-[#3a2c21]" },
@@ -453,7 +454,9 @@ const Home = () => {
             transition={{ delay: 0.8, duration: 0.4 }}
           >
             <Button className="rounded-xl px-5" variant="outline">
-              Get started free
+              <Link href='/sign-up' className="inline-flex items-center gap-2">
+                Get started free
+              </Link>
             </Button>
           </motion.div>
           <motion.div
@@ -462,7 +465,9 @@ const Home = () => {
             transition={{ delay: 1.0, duration: 0.4 }}
           >
             <Button className="rounded-xl px-5" variant="default">
-              Watch a demo
+              <Link href='/help' className="inline-flex items-center gap-2">
+                Learn more
+              </Link>
             </Button>
           </motion.div>
         </div>

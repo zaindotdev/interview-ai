@@ -1,9 +1,9 @@
 import VerificationEmail from "@/components/mail/verification-email";
-import {SubscriptionCompleteEmail} from "@/components/mail/subscription-mail"
+import { SubscriptionCompleteEmail } from "@/components/mail/subscription-mail";
 import { Resend } from "resend";
+import { ContactEmail } from "@/components/mail/contact-mail";
 
 const fromMail = process.env.RESEND_FROM_EMAIL || "noreply@interview-ai.live";
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function sendMail({
   email,
@@ -28,7 +28,6 @@ export async function sendMail({
   }
   return true;
 }
-
 
 export async function sendSubscriptionConfirmationEmail({
   email,
@@ -71,6 +70,41 @@ export async function sendSubscriptionConfirmationEmail({
     }),
   });
 
+  if (error) {
+    console.error({ error });
+    return false;
+  }
+  return true;
+}
+
+export async function sendContactMail({
+  name,
+  email,
+  subject,
+  message,
+  supportMail,
+}: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  supportMail: string;
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const { error } = await resend.emails.send({
+    from: `Interview AI <${fromMail}>`,
+    to: [supportMail],
+    replyTo: email,
+    subject: `[Contact] ${subject}`,
+    react: await ContactEmail({
+      name,
+      email,
+      subject,
+      message,
+      receivedAt: new Date().toUTCString(),
+    }),
+  });
   if (error) {
     console.error({ error });
     return false;

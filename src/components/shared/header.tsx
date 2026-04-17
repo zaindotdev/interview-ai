@@ -46,8 +46,8 @@ const Header: React.FC = () => {
 
   const navLinks = [
     { name: "Home", href: "/" },
-    { name: "How It Works", href: "#how-it-works" },
     { name: "Features", href: "#features" },
+    { name: "How It Works", href: "#how-it-works" },
     { name: "Pricing", href: "#pricing" },
   ];
 
@@ -79,15 +79,15 @@ const Header: React.FC = () => {
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="flex-shrink-0"
+              className="shrink-0"
             >
               <Link href="/" className="flex items-center space-x-2">
                 <div className="flex items-center space-x-1">
-                  <div className="from-primary to-primary/80 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br">
+                  <div className="from-primary to-primary/80 flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br">
                     <span className="text-sm font-bold text-white">AI</span>
                   </div>
                   <div>
-                    <h1 className="bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-xl font-bold text-transparent">
+                    <h1 className="bg-linear-to-r from-gray-900 to-gray-600 bg-clip-text text-xl font-bold text-transparent">
                       Interview <span className="text-primary">AI</span>
                     </h1>
                   </div>
@@ -141,7 +141,7 @@ const Header: React.FC = () => {
                   >
                     <Button
                       size="sm"
-                      className="from-primary to-primary/90 hover:from-primary/90 hover:to-primary bg-gradient-to-r shadow-lg"
+                      className="from-primary to-primary/90 hover:from-primary/90 hover:to-primary bg-linear-to-r shadow-lg"
                       asChild
                     >
                       <Link href="/dashboard">
@@ -167,7 +167,7 @@ const Header: React.FC = () => {
                   >
                     <Button
                       size="sm"
-                      className="from-primary to-primary/90 hover:from-primary/90 hover:to-primary bg-gradient-to-r shadow-lg"
+                      className="from-primary to-primary/90 hover:from-primary/90 hover:to-primary bg-linear-to-r shadow-lg"
                       asChild
                     >
                       <Link href="/sign-in">
@@ -246,7 +246,7 @@ const Header: React.FC = () => {
                 {/* Mobile Menu Header */}
                 <div className="flex items-center justify-between border-b border-gray-200 p-6">
                   <div className="flex items-center space-x-2">
-                    <div className="from-primary to-primary/80 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br">
+                    <div className="from-primary to-primary/80 flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br">
                       <span className="text-sm font-bold text-white">AI</span>
                     </div>
                     <span className="text-lg font-bold">Interview AI</span>
@@ -295,7 +295,7 @@ const Header: React.FC = () => {
                       </Button>
                       <Button
                         size="lg"
-                        className="from-primary to-primary/90 hover:from-primary/90 hover:to-primary w-full bg-gradient-to-r shadow-lg"
+                        className="from-primary to-primary/90 hover:from-primary/90 hover:to-primary w-full bg-linear-to-r shadow-lg"
                         asChild
                       >
                         <Link href="/sign-up">
@@ -307,7 +307,7 @@ const Header: React.FC = () => {
                   ) : (
                     <Button
                       size="lg"
-                      className="from-primary to-primary/90 hover:from-primary/90 hover:to-primary w-full bg-gradient-to-r shadow-lg"
+                      className="from-primary to-primary/90 hover:from-primary/90 hover:to-primary w-full bg-linear-to-r shadow-lg"
                       asChild
                     >
                       <Link href="/dashboard">

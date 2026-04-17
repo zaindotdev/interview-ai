@@ -5,6 +5,7 @@ import { ErrorResponse, HttpResponse } from "@/utils/response";
 import { db } from "@/lib/prisma";
 import { generateAIResponse, parseAIResponse } from "@/utils/ai";
 import { z } from "zod";
+import { PaymentStatus } from "@/generated/prisma";
 
 // Constants
 const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 hours
@@ -84,7 +85,7 @@ interface AIResponse {
 // Rate limit check based on tier
 async function checkRateLimit(
   userId: string,
-  isSubscribed: boolean
+  isSubscribed: boolean,
 ): Promise<{ allowed: boolean; remaining: number }> {
   const limit = isSubscribed
     ? REPORT_LIMITS.PREMIUM.rateLimit
@@ -111,7 +112,7 @@ function generatePrompt(
   focusedSkills: string[],
   topic: string,
   duration: number,
-  isSubscribed: boolean
+  isSubscribed: boolean,
 ): string {
   const limits = isSubscribed ? REPORT_LIMITS.PREMIUM : REPORT_LIMITS.FREE;
 
@@ -289,7 +290,7 @@ ${criticalInstructions}`;
 // Validate and sanitize report based on tier
 function sanitizeReportForTier(
   report: AIResponse,
-  isSubscribed: boolean
+  isSubscribed: boolean,
 ): AIResponse {
   const limits = isSubscribed ? REPORT_LIMITS.PREMIUM : REPORT_LIMITS.FREE;
 
@@ -300,11 +301,11 @@ function sanitizeReportForTier(
       strengths: report.report.strengths.slice(0, limits.strengthsCount),
       areasForImprovement: report.report.areasForImprovement.slice(
         0,
-        limits.improvementsCount
+        limits.improvementsCount,
       ),
       recommendations: report.report.recommendations.slice(
         0,
-        limits.recommendationsCount
+        limits.recommendationsCount,
       ),
       nextSteps: report.report.nextSteps.slice(0, limits.nextStepsCount),
     },
@@ -348,7 +349,19 @@ export async function POST(req: NextRequest) {
     // Fetch user with subscription status
     const user = await db.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, email: true, isSubscribed: true },
+      select: {
+        id: true,
+        email: true,
+        subscription: {
+          select: {
+            payment: {
+              select: {
+                status: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -357,17 +370,17 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const isSubscribed = user?.subscription?.payment?.status === PaymentStatus.PAID;
+
     // Get tier-specific limits
-    const limits = user.isSubscribed
-      ? REPORT_LIMITS.PREMIUM
-      : REPORT_LIMITS.FREE;
+    const limits = isSubscribed ? REPORT_LIMITS.PREMIUM : REPORT_LIMITS.FREE;
 
     // Check rate limit with tier-specific limits
-    const rateLimitStatus = await checkRateLimit(user.id, user.isSubscribed);
+    const rateLimitStatus = await checkRateLimit(user.id, isSubscribed);
     if (!rateLimitStatus.allowed) {
       return NextResponse.json(
         new ErrorResponse(
-          `Rate limit exceeded. ${user.isSubscribed ? "Premium users" : "Free users"} can generate ${limits.rateLimit} reports per 24 hours. Please try again later.`
+          `Rate limit exceeded. ${isSubscribed ? "Premium users" : "Free users"} can generate ${limits.rateLimit} reports per 24 hours. Please try again later.`,
         ),
         {
           status: 429,
@@ -375,7 +388,7 @@ export async function POST(req: NextRequest) {
             "X-RateLimit-Limit": limits.rateLimit.toString(),
             "X-RateLimit-Remaining": rateLimitStatus.remaining.toString(),
           },
-        }
+        },
       );
     }
 
@@ -391,9 +404,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         new HttpResponse("success", "Report already exists", {
           report: existingReport,
-          tier: user.isSubscribed ? "premium" : "free",
+          tier: isSubscribed ? "premium" : "free",
         }),
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -403,7 +416,7 @@ export async function POST(req: NextRequest) {
       focusedSkills,
       topic,
       duration,
-      user.isSubscribed
+      isSubscribed,
     );
 
     // Call AI with tier-specific token limits
@@ -416,13 +429,13 @@ export async function POST(req: NextRequest) {
     // Parse and validate response
     const parsedResponse = parseAIResponse<AIResponse>(
       aiRawResponse,
-      "mock interview report"
+      "mock interview report",
     );
 
     // Sanitize report based on tier (extra safety layer)
     const sanitizedResponse = sanitizeReportForTier(
       parsedResponse,
-      user.isSubscribed
+      isSubscribed,
     );
 
     // Save report to database
@@ -437,8 +450,8 @@ export async function POST(req: NextRequest) {
             topic,
             duration,
             confidence: sanitizedResponse.confidence,
-            tier: user.isSubscribed ? "premium" : "free",
-            ...(user.isSubscribed && {
+            tier: isSubscribed ? "premium" : "free",
+            ...(isSubscribed && {
               chartConfig: sanitizedResponse.chartConfig,
               processingNotes: sanitizedResponse.processingNotes,
             }),
@@ -451,13 +464,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       new HttpResponse("success", "Report generated successfully", {
         reportId: report.id,
-        tier: user.isSubscribed ? "premium" : "free",
+        tier: isSubscribed ? "premium" : "free",
         rateLimit: {
           limit: limits.rateLimit,
           remaining: rateLimitStatus.remaining - 1,
         },
       }),
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Report generation error:", error);
@@ -472,17 +485,17 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error && error.message.includes("quota")) {
       return NextResponse.json(
         new ErrorResponse(
-          "Service temporarily unavailable. Please try again later."
+          "Service temporarily unavailable. Please try again later.",
         ),
-        { status: 503 }
+        { status: 503 },
       );
     }
 
     return NextResponse.json(
       new ErrorResponse(
-        "Internal server error occurred while generating report"
+        "Internal server error occurred while generating report",
       ),
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -508,7 +521,7 @@ export async function GET(req: NextRequest) {
     // Fetch user with subscription status
     const user = await db.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, isSubscribed: true },
+      select: { id: true, subscription: { select: { payment: { select: { status: true } } } } },
     });
 
     if (!user) {
@@ -516,6 +529,8 @@ export async function GET(req: NextRequest) {
         status: 404,
       });
     }
+
+    const isSubscribed = user.subscription?.payment?.status === PaymentStatus.PAID;
 
     // Fetch report and verify ownership
     const report = await db.mockInterviewsReport.findFirst({
@@ -541,9 +556,9 @@ export async function GET(req: NextRequest) {
       report: parsedReport,
       metaData: {
         ...parsedMetaData,
-        tier: user.isSubscribed ? "premium" : "free",
+        tier: isSubscribed ? "premium" : "free",
         // Remove premium features if user is no longer subscribed
-        ...(user.isSubscribed
+        ...(isSubscribed
           ? {}
           : {
               chartConfig: undefined,
@@ -553,22 +568,21 @@ export async function GET(req: NextRequest) {
     };
 
     // Remove redFlags from report if not subscribed
-    if (!user.isSubscribed && sanitizedReport.report.redFlags) {
+    if (!isSubscribed && sanitizedReport.report.redFlags) {
       delete sanitizedReport.report.redFlags;
     }
 
     return NextResponse.json(
       new HttpResponse("success", "Report fetched successfully", {
         report: sanitizedReport,
-        tier: user.isSubscribed ? "premium" : "free",
+        tier: isSubscribed ? "premium" : "free",
       }),
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Failed to fetch report:", error);
-    return NextResponse.json(
-      new ErrorResponse("Failed to retrieve report"),
-      { status: 500 }
-    );
+    return NextResponse.json(new ErrorResponse("Failed to retrieve report"), {
+      status: 500,
+    });
   }
 }

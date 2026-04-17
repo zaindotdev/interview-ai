@@ -13,12 +13,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
 import Logo from "@/components/shared/logo";
 import axios, { AxiosError } from "axios";
 import type { User } from "@/generated/prisma";
@@ -27,7 +21,6 @@ import {
   getNavigationSections,
   getFooterItems,
 } from "@/lib/navigation-sections";
-import { Lock } from "lucide-react";
 
 export const AppSidebar: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -51,7 +44,13 @@ export const AppSidebar: React.FC = () => {
       setUser(response.data);
     } catch (error) {
       console.error("Error fetching user:", error);
-      setUser({ isSubscribed: false } as User);
+      if (error instanceof AxiosError) {
+        console.error("Axios error details:", {
+          message: error.message,
+          response: error.response,
+        });
+      }
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -84,7 +83,7 @@ export const AppSidebar: React.FC = () => {
     return button;
   };
 
-  const navigationSections = getNavigationSections(user?.isSubscribed ?? false);
+  const navigationSections = getNavigationSections(user !== null);
   const footerItems = getFooterItems();
 
   return (

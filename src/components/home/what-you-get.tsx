@@ -1,9 +1,8 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "../ui/card";
-import { Skeleton } from "../ui/skeleton";
 import { Bot, User } from "lucide-react";
 
 const Card1Skeleton = ({ className }: { className?: string }) => {
@@ -148,30 +147,22 @@ const Card1Skeleton = ({ className }: { className?: string }) => {
 };
 
 const Card2Skeleton = ({ className }: { className?: string }) => {
-  const barCount = 7;
-  const [heights, setHeights] = useState<string[]>([]);
-
-  useEffect(() => {
-    const generated = Array.from(
-      { length: barCount },
-      () => `${Math.floor(Math.random() * 70 + 30)}%`,
-    );
-
-    setHeights(generated);
-  }, []);
+  const bars = [98, 88, 36, 93, 65, 74, 82, 55, 69];
 
   return (
-    <div className={cn("flex h-40 items-end gap-4", className)}>
-      {heights.map((height, i) => (
+    <div className={cn("flex h-40 items-end justify-center gap-2", className)}>
+      {bars.map((height, i) => (
         <motion.div
           key={i}
-          initial={{ height: 0 }}
-          animate={{ height }}
-          transition={{ delay: i * 0.1, duration: 0.4 }}
-          className="bg-primary/50 relative w-8 rounded-t-xl"
+          initial={{ scaleY: 0 }}
+          whileInView={{ scaleY: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: i * 0.08, duration: 0.45, ease: "easeOut" }}
+          className="bg-primary/55 relative w-7 origin-bottom rounded-t-xl sm:w-8"
+          style={{ height: `${height}%` }}
         >
-          <p className="absolute top-1/2 left-0 -translate-y-1/2 rotate-90 text-center">
-            {height}
+          <p className="text-foreground/80 absolute rotate-270 top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 text-xs font-medium">
+            {height}%
           </p>
         </motion.div>
       ))}
@@ -323,11 +314,11 @@ const WhatYouGetSection = () => {
       >
         Everything to walk in ready
       </motion.h2>
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-8">
+      <div className="mt-8 flex flex-wrap items-stretch gap-8 justify-center md:flex">
         {CardDetails.map((card, index) => {
           const Skeleton = card.skeleton;
           return (
-            <Card className="max-w-sm rounded-4xl" key={index}>
+            <Card className="w-full max-w-sm rounded-4xl" key={index}>
               <CardHeader>
                 <motion.div
                   initial={{ opacity: 0 }}

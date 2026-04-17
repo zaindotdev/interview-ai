@@ -40,7 +40,7 @@ const VerifyPage = () => {
           form.reset();
         } else {
           toast.success("Your email has been verified");
-          router.push("/onboarding");
+          router.push("/subscription");
         }
       } catch (error) {
         console.error(error);
@@ -88,13 +88,13 @@ const VerifyPage = () => {
       />
 
       {/* Card */}
-      <div className="relative z-10 w-full max-w-[440px] rounded-2xl border-none bg-background p-10 shadow-none">
+      <div className="relative z-10 w-full max-w-110 rounded-2xl border-none bg-background p-10 shadow-none">
 
         {/* Icon */}
         <div className="mb-8 flex justify-center">
           <div className="relative flex h-20 w-20 items-center justify-center">
             <div className="absolute inset-0 animate-ping rounded-full bg-primary/10" />
-            <div className="absolute inset-[-8px] rounded-full border border-primary/10" />
+            <div className="absolute -inset-2 rounded-full border border-primary/10" />
             <div className="absolute inset-0 rounded-full border border-primary/20 bg-primary/8" />
             <Mail size={30} className="relative text-primary" strokeWidth={1.5} />
           </div>

@@ -7,7 +7,7 @@ import { ErrorResponse, HttpResponse } from "@/utils/response";
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
 
-  if (!session || !session.user) {
+  if (!session?.user?.email) {
     return NextResponse.json(new ErrorResponse("Unauthorized"), { status: 401 });
   }
 
@@ -22,8 +22,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const validStatuses = ["ongoing", "completed", "incomplete"];
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json(
+        new ErrorResponse(`Invalid status. Must be one of: ${validStatuses.join(", ")}`),
+        { status: 400 },
+      );
+    }
+
     const user = await db.user.findUnique({
-      where: { email: session.user.email! },
+      where: { email: session.user.email },
     });
 
     if (!user) {
@@ -41,33 +49,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ✅ Calculate duration for all terminal statuses
     let duration: number | null = null;
-    if (status === "completed" && startTime) {
+    if ((status === "completed" || status === "incomplete") && startTime) {
       duration = Math.floor((Date.now() - new Date(startTime).getTime()) / 1000);
     } else if (status === "completed") {
-      duration = mockInterview.estimated_time * 60;
+      duration = mockInterview.estimated_time; // already in seconds
     }
 
-    // Atomic upsert — safe against concurrent calls
-    const history = await db.mockInterviewsHistory.upsert({
-      where: {
-        candidateId_mockInterviewId: {
+    const history = await db.$transaction(async (tx) => {
+      const history = await tx.mockInterviewsHistory.upsert({
+        where: {
+          candidateId_mockInterviewId: {
+            candidateId: user.id,
+            mockInterviewId: interviewId,
+          },
+        },
+        update: { duration, status },
+        create: {
           candidateId: user.id,
           mockInterviewId: interviewId,
+          status,
+          duration,
         },
-      },
-      update: { duration, status },
-      create: {
-        candidateId: user.id,
-        mockInterviewId: interviewId,
-        status,
-        duration,
-      },
+      });
+
+      if (status === "completed") {
+        await tx.mockInterviews.update({
+          where: { id: interviewId },
+          data: { markAsCompleted: true },
+        });
+      }
+
+      return history;
     });
 
     return NextResponse.json(
-      new HttpResponse("Success", "Mock interview history saved", { history }),
-      { status: 200 },
+      new HttpResponse("success", "Mock interview history saved", { history }),
+      { status: 201 },
     );
   } catch (error) {
     console.error("[history] Failed to save mock interview history:", error);
@@ -78,13 +97,13 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
 
-  if (!session || !session.user) {
+  if (!session?.user?.email) {
     return NextResponse.json(new ErrorResponse("Unauthorized"), { status: 401 });
   }
 
   try {
     const user = await db.user.findUnique({
-      where: { email: session.user.email! },
+      where: { email: session.user.email },
     });
 
     if (!user) {
@@ -100,6 +119,7 @@ export async function GET(req: NextRequest) {
             description: true,
             difficulty: true,
             estimated_time: true,
+            markAsCompleted: true,
           },
         },
         mockInterviewReport: {

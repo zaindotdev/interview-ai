@@ -44,51 +44,43 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   const [loading, setLoading] = useState(false);
 
   const handleSubscribe = async () => {
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      if (planKey === "FREE" || !productId) {
-        if (session) {
-          router.push("/dashboard");
-        } else {
-          router.push("/sign-up");
-        }
-        return;
-      }
-
-      if (!session) {
-        router.push(`/sign-up`);
-        return;
-      }
-      const response = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ productId }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create checkout session");
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
-    } catch (error) {
-      console.error("Subscription error:", error);
-      toast.error("Failed to start subscription", {
-        description:
-          error instanceof Error ? error.message : "Please try again later",
-      });
-    } finally {
-      setLoading(false);
+  try {
+    if (planKey === "FREE" || !productId) {
+      router.push(session ? "/dashboard" : "/sign-up");
+      return;
     }
-  };
+
+    if (!session) {
+      router.push(`/sign-up`);
+      return;
+    }
+
+    const response = await fetch("/api/stripe/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to create checkout session");
+    }
+
+    if (!data.url) throw new Error("No checkout URL returned");
+
+    window.location.href = data.url;
+  } catch (error) {
+    console.error("Subscription error:", error);
+    toast.error("Failed to start subscription", {
+      description: error instanceof Error ? error.message : "Please try again later",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
 
   const getTierIcon = () => {

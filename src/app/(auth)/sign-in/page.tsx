@@ -20,10 +20,8 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { SignInSchema, SignInSchemaType } from "@/lib/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
 import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -33,7 +31,6 @@ const SignInPageContent = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const searchParams = useSearchParams();
-  const plan = searchParams.get("plan");
 
   const form = useForm<SignInSchemaType>({
     resolver: zodResolver(SignInSchema),
@@ -43,18 +40,10 @@ const SignInPageContent = () => {
     },
   });
 
-  // Determine the callback URL based on plan
-  const getCallbackUrl = () => {
-    if (plan && plan !== "free") {
-      return `/subscription?plan=${plan}`;
-    }
-    return "/dashboard";
-  };
-
   const submitForm = async (data: SignInSchemaType) => {
     setLoading(true);
     try {
-      const callbackUrl = getCallbackUrl();
+      const callbackUrl = "/dashboard";
       const result = await signIn("credentials", {
         email: data.email,
         password: data.password,
@@ -84,7 +73,7 @@ const SignInPageContent = () => {
     try {
       await signIn("github", {
         redirect: true,
-        callbackUrl: getCallbackUrl(),
+        callbackUrl: "/dashboard",
       });
     } catch (error) {
       console.error(error);
@@ -103,7 +92,7 @@ const SignInPageContent = () => {
     try {
       const user = await signIn("google", {
         redirect: true,
-        callbackUrl: getCallbackUrl(),
+        callbackUrl: "/dashboard",
       });
 
       if (user?.error) {

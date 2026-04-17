@@ -79,6 +79,7 @@ model Payment {
   status          PaymentStatus @default(PENDING)
   method          PaymentMethod @default(STRIPE)
   stripePaymentId String?       @unique
+  stripeCustomerId String?      
 
   subscription Subscription?
 

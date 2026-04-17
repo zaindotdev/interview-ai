@@ -1,80 +1,111 @@
 "use client";
-
 import React from "react";
-import { motion } from "framer-motion";
+import Logo from "./logo";
 import Link from "next/link";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import {useForm} from "react-hook-form";
+import {zodResolver} from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { cn } from "@/lib/utils";
+import {motion} from "motion/react"
 
 interface FooterLink {
-    name: string;
-    href: string;
+  name: string;
+  href: string;
 }
+
+const newsletterSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
+type NewsletterFormData = z.infer<typeof newsletterSchema>;
+
 export const primaryFooterLinks: FooterLink[] = [
-    { name: "Home", href: "/" },
-    { name: "How It Works", href: "/#how-it-works" },
-    { name: "Features", href: "/#features" },
-    { name: "Pricing", href: "/#pricing" },
-    { name: "About Us", href: "/about" },
-    { name: "Blog", href: "/blog" },
-    { name: "Careers", href: "/careers" },
+  { name: "Home", href: "/" },
+  { name: "How It Works", href: "#how-it-works" },
+  { name: "Features", href: "#features" },
+  { name: "Pricing", href: "#pricing" },
+  { name: "About Us", href: "/about" },
+  { name: "Blog", href: "/blog" },
 ];
 
 export const secondaryFooterLinks: FooterLink[] = [
-    { name: "Privacy Policy", href: "/privacy" },
-    { name: "Terms of Service", href: "/terms" },
-    { name: "Help Center", href: "/help" },
-    { name: "Contact Us", href: "/contact" },
+  { name: "Privacy Policy", href: "/privacy" },
+  { name: "Terms of Service", href: "/terms" },
+  { name: "Help Center", href: "/help" },
+  { name: "Contact Us", href: "/contact" },
 ];
 
 const Footer = () => {
-    return (
-        <motion.footer
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4, ease: "linear" }}
-            className="w-full border-t border-gray-200/70 bg-white"
-        >
-            <div className="container mx-auto px-6 py-10 grid gap-8 md:grid-cols-3">
-                <div className="flex flex-col gap-2">
-                    <Link
-                        href="/"
-                        className="text-2xl font-semibold italic leading-tight font-serif"
-                    >
-                        Interview <span className="text-primary">AI.</span>
-                    </Link>
-                    <p className="text-sm text-gray-500">
-                        Made with <span role="img" aria-label="heart">❤️</span> by Zain
-                    </p>
-                </div>
+    const {handleSubmit, register, formState: { errors }} = useForm<NewsletterFormData>({
+        resolver: zodResolver(newsletterSchema),
+        defaultValues:{
+            email: "",
+        }
+    });
 
-                <ul className="grid grid-cols-2 gap-2">
-                    {primaryFooterLinks.map((link, idx) => (
-                        <li key={`primary-${idx}`}>
-                            <Link
-                                href={link.href}
-                                className="text-base font-medium text-gray-600 transition-colors hover:text-primary"
-                            >
-                                {link.name}
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
+    const onSubmit = (data: NewsletterFormData) => {
+        console.log("Subscribed with email:", data.email);
+    }
 
-                <ul className="flex flex-col gap-2">
-                    {secondaryFooterLinks.map((link, idx) => (
-                        <li key={`secondary-${idx}`}>
-                            <Link
-                                href={link.href}
-                                className="text-sm font-medium text-gray-600 transition-colors hover:text-orange-600"
-                            >
-                                {link.name}
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
+  return (
+    <footer className="from-bacground via-secondary to-muted mt-16 bg-linear-to-b py-8 px-4">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 space-y-8">
+          <div className="">
+            <div className="flex items-center font-serif font-semibold">
+              <Logo /> Interview AI.
             </div>
-        </motion.footer>
-    );
+            <p className="mt-2 text-sm">
+              Build with <span>❤️</span> by Muhammad Zain
+            </p>
+            <div className="mt-8 md:mr-24">
+              <h2 className="mb-4 text-lg font-semibold">
+                Subscribe to our Newsletter
+              </h2>
+              <form className="flex items-center justify-center gap-2" onSubmit={handleSubmit(onSubmit)}>
+                <Input
+                  type="email"
+                  placeholder="Your email address"
+                  aria-invalid={!!errors.email}
+                  className={cn(
+                    "border-input flex-1 border-2",
+                    errors.email &&
+                      "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/50",
+                  )}
+                  {...register("email")}
+                />
+                <Button type="submit">Subscribe</Button>
+              </form>
+              {errors.email && (
+                <p className="mt-2 text-sm text-red-500">{errors.email.message}</p>
+              )}
+            </div>
+          </div>
+          <div className="">
+            <h1 className="text-primary text-xl font-semibold">Product</h1>
+            {primaryFooterLinks.map((link) => (
+              <Link key={link.name} href={link.href} className="text-muted-foreground block w-fit relative after:absolute after:bottom-0 after:left-0 after:content-[''] after:w-0 hover:after:w-full after:bg-primary after:h-px  after:transition-all after:duration-300 after:rounded-xl">
+                {link.name}
+              </Link>
+            ))}
+          </div>
+          <div className="">
+            <h1 className="text-primary text-xl font-semibold">Legal</h1>
+            {secondaryFooterLinks.map((link) => (
+              <Link key={link.name} href={link.href} className="text-muted-foreground block w-fit relative after:absolute after:bottom-0 after:left-0 after:content-[''] after:w-0 hover:after:w-full after:bg-primary after:h-px  after:transition-all after:duration-300 after:rounded-xl">
+                {link.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <p className="text-primary text-center text-sm">
+          &copy; {new Date().getFullYear()} Interview AI. All rights reserved.
+        </p>
+      </div>
+    </footer>
+  );
 };
 
 export default Footer;

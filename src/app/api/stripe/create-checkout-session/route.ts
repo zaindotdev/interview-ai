@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // Your NextAuth config
+import { authOptions } from "@/lib/auth";
 import { stripe } from "@/utils/stripe";
 import { PLANS, PlanType } from "@/lib/subscription-plans";
 import { db } from "@/lib/prisma";
@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
     }
 
-    // Find the plan type from productId
     let planType: PlanType | null = null;
     let plan = null;
 
@@ -35,7 +34,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid product ID" }, { status: 400 });
     }
 
-    // Fetch the active price for this product from Stripe
     const prices = await stripe.prices.list({
       product: productId,
       active: true,
@@ -51,45 +49,36 @@ export async function POST(req: NextRequest) {
 
     const priceId = prices.data[0].id;
 
-    // Get user from database
     const user = await db.user.findUnique({
-      where: {
-        email: session.user.email,
-      },
+      where: { email: session.user.email },
       select: {
         id: true,
         email: true,
-        subscriptionId: true,
-        subscription: true,
+        subscription: {
+          include: {
+            payment: true, 
+          },
+        },
       },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-
-    // Create or retrieve Stripe customer
-    let customerId = user.subscriptionId;
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: session.user.email,
-        metadata: {
-          userId: user.id,
-        },
-      });
-      customerId = customer.id;
-
-      // Update user with Stripe customer ID
-      await db.user.update({
-        where: { id: user.id },
-        data: { subscriptionId: customerId },
-      });
+    if (user.subscription) {
+      return NextResponse.json(
+        { error: "User already has an active subscription" },
+        { status: 400 }
+      );
     }
 
-    // Create checkout session
+    const customer = await stripe.customers.create({
+      email: session.user.email,
+      metadata: { userId: user.id },
+    });
+
     const checkoutSession = await stripe.checkout.sessions.create({
-      customer: customerId,
+      customer: customer.id,
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [

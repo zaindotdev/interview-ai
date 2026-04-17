@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         verificationToken: token, 
         role: "CANDIDATE",
-        emailVerified: null,
+        emailVerified: false,
       },
     });
 

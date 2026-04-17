@@ -204,6 +204,7 @@ JOB DESCRIPTION: """${jobDescription}"""
 `;
 };
 
+
 const saveAnalysisData = async (
   userId: string,
   fileUrl: string,
@@ -213,26 +214,17 @@ const saveAnalysisData = async (
   try {
     await db.$transaction(async (tx) => {
       await tx.resume.create({
-        data: {
-          userId,
-          fileUrl,
-          parsedJson: analysis,
-        },
+        data: { userId, fileUrl, parsedJson: analysis },
       });
 
       const existingTopics = mockInterviews.map((interview) => interview.topic);
       if (existingTopics.length > 0) {
         await tx.mockInterviews.deleteMany({
-          where: {
-            candidateId: userId,
-            topic: { in: existingTopics },
-          },
+          where: { candidateId: userId, topic: { in: existingTopics } },
         });
       }
 
-      await tx.mockInterviews.createMany({
-        data: mockInterviews,
-      });
+      await tx.mockInterviews.createMany({ data: mockInterviews });
 
       await tx.user.update({
         where: { id: userId },
@@ -271,38 +263,50 @@ const validateMockInterviews = (
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.email) {
       return errorResponse("Unauthorized", 401);
     }
+
     const formData = await req.formData();
     const resume = formData.get("resume") as File;
     const jobDescription = formData.get("jobDescription") as string;
     validateInput(resume, jobDescription);
+
+    // ✅ Fetch user first, null-check before anything else
     const user = await db.user.findUnique({
-      where: { email: session.user.email! },
+      where: { email: session.user.email },
       select: {
         id: true,
-        isSubscribed: true,
+        subscription: {
+          select: {
+            id: true,
+            payment: {
+              select: { status: true }, // ✅ Only PAID subscriptions count as active
+            },
+          },
+        },
       },
     });
 
     if (!user) {
       return errorResponse("User not found", 404);
     }
-    const limits = user.isSubscribed ? LIMITS.PREMIUM : LIMITS.FREE;
+
+    // ✅ A subscription is only active if the linked payment is PAID
+    const isSubscribed = user.subscription?.payment?.status === "PAID";
+
+    const limits = isSubscribed ? LIMITS.PREMIUM : LIMITS.FREE;
     const resumeText = await processPDF(resume);
     const buffer = Buffer.from(await resume.arrayBuffer());
-    const analysisPrompt = createAnalysisPrompt(
-      resumeText,
-      jobDescription,
-      user.isSubscribed,
-    );
+
+    const analysisPrompt = createAnalysisPrompt(resumeText, jobDescription, isSubscribed);
     const mockInterviewPrompt = createMockInterviewPrompt(
       resumeText,
       jobDescription,
       user.id,
-      user.isSubscribed,
+      isSubscribed,
     );
+
     const [analysisRaw, mockInterviewsRaw] = await Promise.all([
       generateAIResponse(analysisPrompt, {
         temperature: ANALYSIS_TEMPERATURE,
@@ -315,34 +319,29 @@ export async function POST(req: NextRequest) {
         maxTokens: limits.maxTokens,
       }),
     ]);
+
     const analysis = parseAIResponse<any>(analysisRaw, "resume analysis");
     const mockInterviewsParsed = parseAIResponse<MockInterviews[]>(
       mockInterviewsRaw,
       "mock interviews",
     );
-    const validatedMockInterviews = validateMockInterviews(
-      mockInterviewsParsed,
-      user.isSubscribed,
-    );
-    const mockInterviewsWithCandidateId = validatedMockInterviews.map(
-      (interview) => ({
-        ...interview,
-        candidateId: user.id,
-      }),
-    );
+
+    const validatedMockInterviews = validateMockInterviews(mockInterviewsParsed, isSubscribed);
+
+    const mockInterviewsWithCandidateId = validatedMockInterviews.map((interview) => ({
+      ...interview,
+      candidateId: user.id,
+    }));
+
     const uploadData = await uploadToStorage(buffer);
-    await saveAnalysisData(
-      user.id,
-      uploadData.url,
-      analysis,
-      mockInterviewsWithCandidateId,
-    );
+    await saveAnalysisData(user.id, uploadData.url, analysis, mockInterviewsWithCandidateId);
+
     return NextResponse.json(
       new HttpResponse("success", "Resume Analyzed Successfully", {
         shouldRefreshSession: true,
         analysis,
         mockInterviews: mockInterviewsWithCandidateId,
-        tier: user.isSubscribed ? "premium" : "free",
+        tier: isSubscribed ? "premium" : "free",
         limits: {
           mockInterviewsCount: mockInterviewsWithCandidateId.length,
           maxAllowed: limits.mockInterviews,
@@ -350,8 +349,7 @@ export async function POST(req: NextRequest) {
       }),
     );
   } catch (error: Error | any) {
-    const message =
-      error instanceof Error ? error.message : "Something went wrong";
+    const message = error instanceof Error ? error.message : "Something went wrong";
     return errorResponse(message, 500, error);
   }
 }

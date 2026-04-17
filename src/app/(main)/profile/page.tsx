@@ -170,18 +170,12 @@ const ProfilePage: React.FC = () => {
               <div>
                 <div>
                   <h2 className="text-2xl font-bold">{user.name}</h2>
-                  {user.isSubscribed ? (
-                    <Badge variant={"outline"}>Premium Subscriber</Badge>
-                  ) : (
-                    <Badge variant={"secondary"}>Free User</Badge>
-                  )}
+                  <Badge className="mt-1">{user.role}</Badge>
                 </div>
                 <p className="text-muted-foreground mt-4">@{user.username}</p>
               </div>
               <Button asChild variant="outline" size="sm">
-                <Link href="/subscription">{
-                  user.isSubscribed ? "Manage Subscription" : "Upgrade to Premium"
-                }</Link>
+                <Link href="/subscription">Manage Subscriptions</Link>
               </Button>
             </div>
           </div>
