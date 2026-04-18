@@ -1,6 +1,5 @@
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
 }
 
 generator client {
@@ -50,6 +49,8 @@ model User {
   mockInterviews       MockInterviews[]
   mockInterviewHistory MockInterviewsHistory[]
   mockInterviewReports MockInterviewsReport[]
+  comments              Comment[]
+  likes                 Like[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -174,6 +175,68 @@ model Resume {
   createdAt DateTime @default(now())
 
   @@index([userId], map: "resume_user_id_idx")
+}
+
+model BlogSection{
+  id      String @id @default(uuid())
+  blogId  String
+  heading String
+  body String
+
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([blogId], map: "blog_section_blog_id_idx")
+}
+model Blog{
+  id          String @id @default(uuid())
+  title       String
+  authorId    String?
+  tags        String[]
+  slug        String  @unique
+  excerpt     String
+  category    String
+  readTime    String
+  featured    Boolean @default(false)
+  sections    BlogSection[]
+  comments    Comment[]
+  likes       Like[]
+
+  createdAt DateTime @default(now())
+
+  @@index([authorId], map: "blog_author_id_idx")
+  @@index([id], map: "blog_id_idx")
+}
+
+model Comment{
+  id        String @id @default(uuid())
+  blogId    String
+  authorId  String
+  content   String
+
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([blogId], map: "comment_blog_id_idx")
+  @@index([authorId], map: "comment_author_id_idx")
+}
+
+model Like{
+  id        String @id @default(uuid())
+  blogId    String
+  userId    String
+
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([blogId, userId])
+  @@index([blogId], map: "like_blog_id_idx")
+  @@index([userId], map: "like_user_id_idx")
 }
 model Account {
   id                String  @id @default(cuid())

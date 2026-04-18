@@ -141,10 +141,6 @@ const InterviewHistory = () => {
             areas for growth.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <BarChart3 className="h-4 w-4" />
-          {historyData.length} interview{historyData.length !== 1 ? "s" : ""}
-        </div>
       </div>
 
       {historyData.length === 0 ? (

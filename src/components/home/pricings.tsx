@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { PricingCard } from "../shared/pricing-card";
 import { PLANS } from "@/lib/subscription-plans";
 import { useSession } from "next-auth/react";
+import { cn } from "@/lib/utils";
 
 const PricingSections = () => {
   const { data: session } = useSession();
@@ -82,10 +83,16 @@ const PricingSections = () => {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="mt-10 gap-8 flex flex-wrap items-stretch justify-center"
+        className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center items-stretch"
       >
-        {pricingPlans.map((plan) => (
-          <div key={plan.planKey} className="w-full max-w-sm">
+        {pricingPlans.map((plan, index) => (
+          <div
+            key={plan.planKey}
+            className={cn(
+              'w-full h-full shrink-0 max-w-sm',
+              index === 2 ? 'md:col-span-2 lg:col-span-1' : '',
+            )}
+          >
             <PricingCard {...plan} />
           </div>
         ))}

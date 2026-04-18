@@ -2,30 +2,78 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getBlogBySlug, seededBlogs } from "../../../../../blogs.seed";
+import { db } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import BlogEngagement from "@/components/blog/blog-engagement";
 
 type BlogPostPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-const formatDate = (isoDate: string) =>
-  new Date(isoDate).toLocaleDateString("en-US", {
+const formatDate = (value: Date | string) =>
+  new Date(value).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-export function generateStaticParams() {
-  return seededBlogs.map((blog) => ({ slug: blog.slug }));
-}
-
 const BlogPostPage = async ({ params }: BlogPostPageProps) => {
   const { slug } = await params;
-  const blog = getBlogBySlug(slug);
+
+  const session = await getServerSession(authOptions);
+
+  const currentUser = session?.user?.email
+    ? await db.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      })
+    : null;
+
+  const blog = await db.blog.findUnique({
+    where: { slug },
+    include: {
+      sections: {
+        orderBy: { createdAt: "asc" },
+      },
+      comments: {
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          author: {
+            select: {
+              name: true,
+              image: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      _count: {
+        select: {
+          likes: true,
+          comments: true,
+        },
+      },
+    },
+  });
 
   if (!blog) {
     notFound();
   }
+
+  const userLike = currentUser
+    ? await db.like.findUnique({
+        where: {
+          blogId_userId: {
+            blogId: blog.id,
+            userId: currentUser.id,
+          },
+        },
+        select: { id: true },
+      })
+    : null;
 
   return (
     <section className="bg-background relative overflow-hidden px-4 pt-28 pb-16 sm:px-6 lg:px-8">
@@ -56,7 +104,7 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
           {blog.title}
         </h1>
         <p className="text-muted-foreground mt-3 text-sm">
-          {formatDate(blog.publishedAt)} • {blog.readTime} • {blog.author}
+          {formatDate(blog.createdAt)} • {blog.readTime} • {blog.authorId || "Interview AI Team"}
         </p>
 
         <p className="text-muted-foreground mt-6 text-base leading-relaxed">
@@ -70,13 +118,28 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
                 {section.heading}
               </h2>
               <div className="text-muted-foreground space-y-3 leading-relaxed">
-                {section.body.map((paragraph, idx) => (
-                  <p key={`${section.heading}-${idx}`}>{paragraph}</p>
+                {section.body.split("\n\n").map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
                 ))}
               </div>
             </section>
           ))}
         </div>
+
+        <BlogEngagement
+          slug={blog.slug}
+          initialLikesCount={blog._count.likes}
+          initialIsLiked={Boolean(userLike)}
+          initialComments={blog.comments.map((comment) => ({
+            id: comment.id,
+            content: comment.content,
+            createdAt: comment.createdAt.toISOString(),
+            author: {
+              name: comment.author.name,
+              image: comment.author.image,
+            },
+          }))}
+        />
       </article>
     </section>
   );

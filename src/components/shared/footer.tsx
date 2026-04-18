@@ -8,7 +8,7 @@ import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { cn } from "@/lib/utils";
-import {motion} from "motion/react"
+import { toast } from "sonner";
 
 interface FooterLink {
   name: string;
@@ -46,11 +46,11 @@ const Footer = () => {
     });
 
     const onSubmit = (data: NewsletterFormData) => {
-        console.log("Subscribed with email:", data.email);
+        toast.success("You have been subscribed to our newsletter!");
     }
 
   return (
-    <footer className="from-bacground via-secondary to-muted mt-16 bg-linear-to-b py-8 px-4">
+    <footer className="from-bacground via-secondary to-muted mt-16 bg-linear-to-b py-8 px-6">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 space-y-8">
           <div className="">

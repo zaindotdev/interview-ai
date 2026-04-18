@@ -108,16 +108,14 @@ const Header: React.FC = () => {
                     onClick={() => handleClick(link.name)}
                     className={cn(
                       "relative rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200",
-                      isActive === link.name
-                        ? "underline text-primary"
-                        : "",
+                      isActive === link.name ? "text-primary underline" : "",
                     )}
                   >
                     {link.name}
                     {isActive === link.name && (
                       <motion.div
                         layoutId="activeTab"
-                        className=" absolute inset-0"
+                        className="absolute inset-0"
                         initial={false}
                         transition={{
                           type: "spring",
@@ -191,27 +189,57 @@ const Header: React.FC = () => {
                   aria-label="Toggle menu"
                 >
                   <AnimatePresence mode="wait">
-                    {isMenuOpen ? (
-                      <motion.div
-                        key="close"
-                        initial={{ rotate: -90, opacity: 0 }}
-                        animate={{ rotate: 0, opacity: 1 }}
-                        exit={{ rotate: 90, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <X className="h-5 w-5" />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="menu"
-                        initial={{ rotate: 90, opacity: 0 }}
-                        animate={{ rotate: 0, opacity: 1 }}
-                        exit={{ rotate: -90, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Menu className="h-5 w-5" />
-                      </motion.div>
-                    )}
+                    <motion.svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {/* Top line → first X diagonal */}
+                      <motion.line
+                        x1={4}
+                        y1={5}
+                        x2={20}
+                        y2={5}
+                        animate={
+                          isMenuOpen
+                            ? { x1: 18, y1: 6, x2: 6, y2: 18 }
+                            : { x1: 4, y1: 5, x2: 20, y2: 5 }
+                        }
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                      />
+                      {/* Middle line → shrinks and fades */}
+                      <motion.line
+                        x1={4}
+                        y1={12}
+                        x2={20}
+                        y2={12}
+                        animate={
+                          isMenuOpen
+                            ? { x1: 12, y1: 12, x2: 12, y2: 12, opacity: 0 }
+                            : { x1: 4, y1: 12, x2: 20, y2: 12, opacity: 1 }
+                        }
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                      />
+                      {/* Bottom line → second X diagonal */}
+                      <motion.line
+                        x1={4}
+                        y1={19}
+                        x2={20}
+                        y2={19}
+                        animate={
+                          isMenuOpen
+                            ? { x1: 6, y1: 6, x2: 18, y2: 18 }
+                            : { x1: 4, y1: 19, x2: 20, y2: 19 }
+                        }
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                      />
+                    </motion.svg>
                   </AnimatePresence>
                 </Button>
               </motion.div>
@@ -243,18 +271,8 @@ const Header: React.FC = () => {
               className="fixed top-0 right-0 z-40 h-full w-80 max-w-[85vw] border-l border-gray-200 bg-white/95 shadow-2xl backdrop-blur-xl lg:hidden"
             >
               <div className="flex h-full flex-col">
-                {/* Mobile Menu Header */}
-                <div className="flex items-center justify-between border-b border-gray-200 p-6">
-                  <div className="flex items-center space-x-2">
-                    <div className="from-primary to-primary/80 flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br">
-                      <span className="text-sm font-bold text-white">AI</span>
-                    </div>
-                    <span className="text-lg font-bold">Interview AI</span>
-                  </div>
-                </div>
-
                 {/* Mobile Navigation Links */}
-                <div className="flex-1 px-6 py-8">
+                <div className="flex-1 px-6 py-8 pt-16">
                   <nav className="space-y-2">
                     {navLinks.map((link, index) => (
                       <motion.div

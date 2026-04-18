@@ -1,3 +1,5 @@
+import { db } from "@/lib/prisma";
+
 export type BlogSection = {
   heading: string;
   body: string[];
@@ -159,6 +161,39 @@ export const seededBlogs: SeedBlog[] = [
     ],
   },
 ];
+const populateBlogs = async () => {
+  for (const blog of seededBlogs) {
+    await db.blog.upsert({
+      where: { slug: blog.slug },
+      update: {},
+      create: {
+        slug: blog.slug,
+        title: blog.title,
+        excerpt: blog.excerpt,
+        category: blog.category,
+        tags: blog.tags,
+        readTime: blog.readTime,
+        featured: blog.featured,
+        sections: {
+          createMany: {
+            data: blog.sections.map((section) => ({
+              heading: section.heading,
+              body: section.body.join("\n\n"),
+            })),
+          },
+        },
+      },
+    });
+  }
 
-export const getBlogBySlug = (slug: string): SeedBlog | undefined =>
-  seededBlogs.find((blog) => blog.slug === slug);
+  console.log(`[seed] Seeded ${seededBlogs.length} blogs`);
+};
+
+populateBlogs()
+  .catch((e) => {
+    console.error("[seed] Failed:", e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await db.$disconnect();
+  });
