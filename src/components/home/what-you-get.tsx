@@ -150,7 +150,12 @@ const Card2Skeleton = ({ className }: { className?: string }) => {
   const bars = [98, 88, 36, 93, 65, 74, 82, 55, 69];
 
   return (
-    <div className={cn("flex h-40 items-end justify-center gap-2", className)}>
+    <div
+      className={cn(
+        "flex h-32 w-full items-end justify-center gap-1 px-2 sm:gap-2",
+        className,
+      )}
+    >
       {bars.map((height, i) => (
         <motion.div
           key={i}
@@ -158,10 +163,10 @@ const Card2Skeleton = ({ className }: { className?: string }) => {
           whileInView={{ scaleY: 1 }}
           viewport={{ once: true }}
           transition={{ delay: i * 0.08, duration: 0.45, ease: "easeOut" }}
-          className="bg-primary/55 relative w-7 origin-bottom rounded-t-xl sm:w-8"
+          className="bg-primary/55 relative min-w-0 flex-1 origin-bottom rounded-t-xl"
           style={{ height: `${height}%` }}
         >
-          <p className="text-foreground/80 absolute rotate-270 top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 text-xs font-medium">
+          <p className="text-foreground/80 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-270 text-[10px] font-medium sm:text-xs">
             {height}%
           </p>
         </motion.div>
@@ -169,7 +174,6 @@ const Card2Skeleton = ({ className }: { className?: string }) => {
     </div>
   );
 };
-
 const bubbleVariants = {
   hiddenLeft: { opacity: 0, x: -40, y: 20, scale: 0.95 },
   hiddenRight: { opacity: 0, x: 40, y: 20, scale: 0.95 },
@@ -205,8 +209,8 @@ export const Card3Skeleton = ({ className }: { className?: string }) => {
   return (
     <div
       className={cn(
-        "border-border bg-card overflow-hidden flex w-full max-w-lg flex-col gap-6 rounded-xl border p-6",
-        className
+        "border-border bg-card flex w-full max-w-lg flex-col gap-6 overflow-hidden rounded-xl border p-6",
+        className,
       )}
     >
       {/* Title */}
@@ -227,7 +231,7 @@ export const Card3Skeleton = ({ className }: { className?: string }) => {
           initial="hiddenLeft"
           animate="visible"
           transition={{ delay: 0.2 }}
-          className="flex border-2 border-primary p-2 items-center justify-center rounded-full bg-primary/10 text-primary"
+          className="border-primary bg-primary/10 text-primary flex items-center justify-center rounded-full border-2 p-2"
         >
           <Bot />
         </motion.div>
@@ -238,7 +242,7 @@ export const Card3Skeleton = ({ className }: { className?: string }) => {
           initial="hiddenLeft"
           animate="visible"
           transition={{ delay: 0.3 }}
-          className="max-w-[75%] rounded-2xl rounded-bl-sm border border-primary bg-primary/5 px-3 py-2 text-sm text-primary"
+          className="border-primary bg-primary/5 text-primary max-w-[75%] rounded-2xl rounded-bl-sm border px-3 py-2 text-sm"
         >
           How do you handle tight deadlines and multiple projects at once?
         </motion.div>
@@ -252,7 +256,7 @@ export const Card3Skeleton = ({ className }: { className?: string }) => {
           initial="hiddenRight"
           animate="visible"
           transition={{ delay: 0.6 }}
-          className="max-w-[75%] rounded-2xl rounded-br-sm bg-muted px-3 py-2 text-sm text-muted-foreground"
+          className="bg-muted text-muted-foreground max-w-[75%] rounded-2xl rounded-br-sm px-3 py-2 text-sm"
         >
           I prioritize tasks based on urgency and importance, often using a task
           management tool to keep track. I also communicate proactively with
@@ -265,7 +269,7 @@ export const Card3Skeleton = ({ className }: { className?: string }) => {
           initial="hiddenRight"
           animate="visible"
           transition={{ delay: 0.5 }}
-          className="flex border-2 border-primary p-2 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0"
+          className="border-primary bg-primary/10 text-primary flex shrink-0 items-center justify-center rounded-full border-2 p-2"
         >
           <User />
         </motion.div>
@@ -297,7 +301,7 @@ const CardDetails = [
 
 const WhatYouGetSection = () => {
   return (
-    <section id='features' className="mb-24">
+    <section id="features" className="mb-24">
       <motion.h3
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -314,11 +318,13 @@ const WhatYouGetSection = () => {
       >
         Everything to walk in ready
       </motion.h2>
-      <div className="mt-8 flex flex-wrap items-stretch gap-8 justify-center md:flex">
+      <div
+        className={"gap-8 mt-10 flex flex-wrap items-center justify-center"}
+      >
         {CardDetails.map((card, index) => {
           const Skeleton = card.skeleton;
           return (
-            <Card className="w-full max-w-sm rounded-4xl" key={index}>
+            <Card className="w-full max-w-sm shrink-0 rounded-4xl" key={index}>
               <CardHeader>
                 <motion.div
                   initial={{ opacity: 0 }}

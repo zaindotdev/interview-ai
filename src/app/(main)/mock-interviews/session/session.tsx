@@ -30,6 +30,7 @@ import {
 
 import type { MockInterviews, Message } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 const SessionPage = () => {
   const { data: session } = useSession();
@@ -274,6 +275,7 @@ const SessionPage = () => {
         if (isUnmountedRef.current) return;
         if (message.type === "transcript") {
           const { role, transcriptType, transcript } = message;
+          console.log(message);
           if (role === "user") setSpeakingStatus("user-speaking");
 
           if (transcriptType === "partial") {
@@ -388,27 +390,24 @@ const SessionPage = () => {
       }
     };
   }, []);
-
-  // ─── Render states ─────────────────────────────────────────────────────────
-
   if (loading && !interviewConfig) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="text-center">
-          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-          <p className="mt-4 text-gray-600">Loading interview...</p>
+          <Loader2 className="text-primary mx-auto h-12 w-12 animate-spin" />
+          <p className="mt-4 text-muted-foreground">Loading interview...</p>
         </div>
       </div>
     );
   }
-
+ 
   if (!id) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
-            <h1 className="text-2xl font-bold text-red-600">No Interview ID</h1>
-            <p className="mt-2 text-gray-600">Please provide a valid interview ID</p>
+            <h1 className="text-2xl font-bold text-destructive">No Interview ID</h1>
+            <p className="mt-2 text-muted-foreground">Please provide a valid interview ID</p>
             <Button className="mt-4" onClick={() => router.push("/mock-interviews")}>
               Go to Interviews
             </Button>
@@ -417,302 +416,393 @@ const SessionPage = () => {
       </div>
     );
   }
-
+ 
   if (isGeneratingReport) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center">
         <div className="text-center">
-          <Loader2 className="mx-auto h-16 w-16 animate-spin text-primary" />
-          <h2 className="mt-6 text-2xl font-bold text-gray-900">Analyzing your interview...</h2>
-          <p className="mt-2 text-gray-600">
+          <Loader2 className="text-primary mx-auto h-16 w-16 animate-spin" />
+          <h2 className="mt-6 text-2xl font-bold">Analyzing your interview...</h2>
+          <p className="mt-2 text-muted-foreground">
             Please wait while we generate your feedback report
           </p>
         </div>
       </div>
     );
   }
-
+ 
+  const isAiSpeaking = speakingStatus === "ai-speaking";
+  const isUserSpeaking = speakingStatus === "user-speaking";
+ 
   return (
-    <div className="flex h-screen flex-col">
-      {/* Header */}
-      <header className="border-b bg-white px-4 py-3 shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-gray-900">
-              {interviewConfig?.topic || "Loading..."}
-            </h1>
-            <Separator orientation="vertical" className="h-6" />
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-medium">
-                {interviewConfig?.topic || "Loading..."}
+    <main className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden px-4 py-4 md:px-6 md:py-5">
+      <style>{`
+        @keyframes ring-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.18); opacity: 0; }
+        }
+        @keyframes ring-pulse-2 {
+          0%, 100% { transform: scale(1); opacity: 0.4; }
+          50% { transform: scale(1.32); opacity: 0; }
+        }
+        @keyframes wave-bar {
+          0%, 100% { transform: scaleY(0.4); }
+          50% { transform: scaleY(1); }
+        }
+        .speaking-ring-1 {
+          animation: ring-pulse 1.2s ease-out infinite;
+        }
+        .speaking-ring-2 {
+          animation: ring-pulse-2 1.2s ease-out infinite 0.2s;
+        }
+        .wave-bar {
+          animation: wave-bar 0.6s ease-in-out infinite;
+        }
+        .wave-bar:nth-child(1) { animation-delay: 0s; }
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(5) { animation-delay: 0s; }
+      `}</style>
+ 
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-primary truncate text-xl font-bold md:text-2xl">
+            {interviewConfig?.topic}
+          </h1>
+          <p className="text-muted-foreground mt-0.5 hidden max-w-xl truncate text-sm md:block">
+            {interviewConfig?.description}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Badge
+              className={cn("uppercase text-xs", getDifficultyColor(interviewConfig?.difficulty || ""))}
+            >
+              {interviewConfig?.difficulty || "Unknown"}
+            </Badge>
+            {interviewConfig?.focus?.length ? (
+              <Badge variant="outline" className="text-xs">
+                {interviewConfig.focus.join(", ")}
               </Badge>
-              {interviewConfig?.difficulty && (
-                <Badge className={getDifficultyColor(interviewConfig.difficulty)}>
-                  {interviewConfig.difficulty}
-                </Badge>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
-            <Clock className="h-4 w-4 text-gray-600" />
-            <span className="font-mono text-lg font-semibold text-gray-900">
-              {formatTime(elapsedTime)}
-            </span>
-            {interviewConfig?.estimated_time && (
-  <span className="text-sm text-gray-500">
-    / {formatTime(interviewConfig.estimated_time)}
-  </span>
-)}
+            ) : null}
           </div>
         </div>
-      </header>
-
-      {/* Main */}
-      <main className="flex flex-1 overflow-hidden">
-        <div className="mx-auto flex w-full max-w-7xl flex-1 gap-6 p-6">
-          {/* AI + User Panel */}
-          <div className="flex w-80 flex-col">
-            <Card className="flex-1">
-              <CardContent className="flex h-full flex-col items-center justify-center p-6">
-                <div
-                  className={cn(
-                    "relative rounded-full p-1",
-                    speakingStatus === "ai-speaking" &&
-                      "ring-4 ring-primary ring-offset-2 animate-pulse",
-                  )}
-                >
-                  <Avatar className="h-32 w-32 bg-primary">
-                    <AvatarImage src="" />
-                    <AvatarFallback className="bg-primary text-white">
-                      <Bot size={64} />
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-
-                <h3 className="mt-4 text-lg font-semibold text-gray-900">AI Interviewer</h3>
-
-                <div
-                  className={cn(
-                    "mt-3 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
-                    speakingStatus === "ai-speaking" && "bg-primary/10 text-primary",
-                    speakingStatus === "user-speaking" && "bg-green-100 text-green-700",
-                    speakingStatus === "idle" && "bg-gray-100 text-gray-600",
-                  )}
-                >
-                  {speakingStatus === "ai-speaking" && (
-                    <><Volume2 className="h-4 w-4 animate-pulse" /> AI is speaking...</>
-                  )}
-                  {speakingStatus === "user-speaking" && (
-                    <><Mic className="h-4 w-4 animate-pulse" /> Listening to you...</>
-                  )}
-                  {speakingStatus === "idle" && callStarted && (
-                    <><MessageSquare className="h-4 w-4" /> Ready to listen</>
-                  )}
-                  {!callStarted && (
-                    <><Loader2 className="h-4 w-4 animate-spin" />
-                      {connectionStatus === "connecting" ? "Connecting..." : "Waiting to start"}
-                    </>
-                  )}
-                </div>
-
-                <Separator className="my-6 w-full" />
-
-                <div
-                  className={cn(
-                    "relative rounded-full p-1",
-                    speakingStatus === "user-speaking" &&
-                      "ring-4 ring-green-500 ring-offset-2 animate-pulse",
-                  )}
-                >
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={session?.user?.image || ""} />
-                    <AvatarFallback className="bg-gray-200 text-gray-700">
-                      {session?.user?.name?.charAt(0).toUpperCase() || <User size={32} />}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-                <p className="mt-2 text-sm font-medium text-gray-700">
-                  {session?.user?.name || "You"}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Transcript Panel */}
-          <div className="flex flex-1 flex-col">
-            <Card className="flex flex-1 flex-col overflow-hidden">
-              <div className="border-b bg-gray-50 px-4 py-3">
-                <h2 className="flex items-center gap-2 font-semibold text-gray-900">
-                  <MessageSquare className="h-5 w-5" />
-                  Live Transcript
-                </h2>
-              </div>
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
-                  {messages.length === 0 && !currentTranscript && (
-                    <div className="flex h-48 items-center justify-center text-center text-gray-500">
-                      <div>
-                        <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
-                        <p className="mt-2">
-                          Transcript will appear here once the interview starts
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {messages.map((msg, idx) => (
-                    <div
-                      key={idx}
-                      className={cn(
-                        "flex gap-3",
-                        msg.role === "user" ? "flex-row-reverse" : "flex-row",
-                      )}
-                    >
-                      <Avatar className="h-8 w-8 shrink-0">
-                        {msg.role === "assistant" ? (
-                          <AvatarFallback className="bg-primary text-white">
-                            <Bot size={16} />
-                          </AvatarFallback>
-                        ) : (
-                          <AvatarFallback className="bg-gray-200">
-                            {session?.user?.name?.charAt(0).toUpperCase() || "U"}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div
-                        className={cn(
-                          "max-w-[80%] rounded-2xl px-4 py-2",
-                          msg.role === "user"
-                            ? "bg-primary text-white"
-                            : "bg-gray-100 text-gray-900",
-                        )}
-                      >
-                        <p className="text-sm leading-relaxed">{msg.transcript}</p>
-                      </div>
-                    </div>
-                  ))}
-
-                  {currentTranscript && currentRole && (
-                    <div
-                      className={cn(
-                        "flex gap-3 opacity-70",
-                        currentRole === "user" ? "flex-row-reverse" : "flex-row",
-                      )}
-                    >
-                      <Avatar className="h-8 w-8 shrink-0">
-                        {currentRole === "assistant" ? (
-                          <AvatarFallback className="bg-primary text-white">
-                            <Bot size={16} />
-                          </AvatarFallback>
-                        ) : (
-                          <AvatarFallback className="bg-gray-200">
-                            {session?.user?.name?.charAt(0).toUpperCase() || "U"}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div
-                        className={cn(
-                          "max-w-[80%] rounded-2xl px-4 py-2",
-                          currentRole === "user"
-                            ? "bg-primary/70 text-white"
-                            : "bg-gray-100/70 text-gray-700",
-                        )}
-                      >
-                        <p className="text-sm leading-relaxed italic">{currentTranscript}...</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div ref={transcriptEndRef} />
-                </div>
-              </ScrollArea>
-            </Card>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer Controls */}
-      <footer className="border-t bg-white px-4 py-4 shadow-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div
-              className={cn(
-                "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium",
-                microphoneAccess && !isMuted
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700",
-              )}
-            >
-              {microphoneAccess && !isMuted ? (
-                <><Mic className="h-4 w-4" /> Mic: ON</>
-              ) : (
-                <><MicOff className="h-4 w-4" /> Mic: {isMuted ? "Muted" : "OFF"}</>
-              )}
-            </div>
-            <div className="flex items-center gap-2 rounded-full bg-green-100 px-3 py-1.5 text-sm font-medium text-green-700">
-              <Volume2 className="h-4 w-4" /> Speaker: ON
-            </div>
-            <div
-              className={cn(
-                "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium",
-                connectionStatus === "connected" && "bg-green-100 text-green-700",
-                connectionStatus === "connecting" && "bg-yellow-100 text-yellow-700",
-                connectionStatus === "error" && "bg-red-100 text-red-700",
-                connectionStatus === "disconnected" && "bg-gray-100 text-gray-700",
-              )}
-            >
-              {connectionStatus === "connected" && <><Wifi className="h-4 w-4" /> Connected</>}
-              {connectionStatus === "connecting" && (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Connecting</>
-              )}
-              {connectionStatus === "error" && <><WifiOff className="h-4 w-4" /> Error</>}
-              {connectionStatus === "disconnected" && (
-                <><WifiOff className="h-4 w-4" /> Disconnected</>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {!callStarted && assistantId && microphoneAccess && (
-              <Button
-                onClick={startCall}
-                className="bg-green-600 text-white hover:bg-green-700"
-                disabled={loading}
-              >
-                <Phone className="mr-2 h-4 w-4" />
-                Start Interview
-              </Button>
+ 
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm">
+            <Clock className="h-3.5 w-3.5" />
+            {formatTime(elapsedTime)}
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1.5 px-3 py-1.5 text-sm",
+              connectionStatus === "connected" && "border-green-200 bg-green-50 text-green-700",
+              connectionStatus === "connecting" && "border-yellow-200 bg-yellow-50 text-yellow-700",
+              connectionStatus === "error" && "border-red-200 bg-red-50 text-red-700",
             )}
-            {callStarted && (
+          >
+            {connectionStatus === "connected" ? (
+              <Wifi className="h-3.5 w-3.5" />
+            ) : connectionStatus === "connecting" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : connectionStatus === "error" ? (
+              <WifiOff className="h-3.5 w-3.5" />
+            ) : (
+              <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
+            <span className="capitalize">{connectionStatus}</span>
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleMute}
+            disabled={!callStarted}
+            className="gap-1.5"
+          >
+            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            <span className="hidden sm:inline">{isMuted ? "Unmute" : "Mute"}</span>
+          </Button>
+          <Button
+            size="sm"
+            onClick={callStarted ? endCall : startCall}
+            className={cn(
+              "gap-1.5 font-semibold",
+              callStarted
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : "bg-primary text-primary-foreground hover:bg-primary/90",
+            )}
+          >
+            {callStarted ? (
               <>
-                <Button
-                  variant="outline"
-                  onClick={toggleMute}
-                  className={cn(
-                    isMuted && "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
-                  )}
-                >
-                  {isMuted ? (
-                    <><MicOff className="mr-2 h-4 w-4" /> Unmute</>
-                  ) : (
-                    <><Mic className="mr-2 h-4 w-4" /> Mute Mic</>
-                  )}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={endCall}
-                  disabled={isGeneratingReport}
-                >
-                  <PhoneOff className="mr-2 h-4 w-4" />
-                  End Interview
-                </Button>
+                <PhoneOff className="h-4 w-4" />
+                <span className="hidden sm:inline">End Call</span>
+              </>
+            ) : (
+              <>
+                <Phone className="h-4 w-4" />
+                <span className="hidden sm:inline">Start Call</span>
               </>
             )}
+          </Button>
+        </div>
+      </div>
+ 
+      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+        <div className="flex shrink-0 flex-row gap-3 lg:w-72 lg:flex-col xl:w-80">
+          <div
+            className={cn(
+              "relative flex flex-1 flex-col items-center justify-center rounded-xl border bg-card p-4 transition-all duration-300",
+              isAiSpeaking ? "border-primary/40 shadow-md" : "border-border",
+            )}
+          >
+            <div className="relative mb-3 flex items-center justify-center">
+              {isAiSpeaking && (
+                <>
+                  <span
+                    className="speaking-ring-1 absolute inset-0 rounded-full"
+                    style={{ background: "var(--primary)", opacity: 0.15 }}
+                  />
+                  <span
+                    className="speaking-ring-2 absolute inset-0 rounded-full"
+                    style={{ background: "var(--primary)", opacity: 0.08 }}
+                  />
+                </>
+              )}
+              <div
+                className={cn(
+                  "relative flex h-16 w-16 items-center justify-center rounded-full border-2 transition-all duration-300 md:h-20 md:w-20",
+                  isAiSpeaking
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-secondary",
+                )}
+              >
+                <Bot
+                  className={cn(
+                    "h-7 w-7 md:h-9 md:w-9 transition-colors duration-300",
+                    isAiSpeaking ? "text-primary" : "text-muted-foreground",
+                  )}
+                />
+              </div>
+            </div>
+ 
+            <p className="text-sm font-semibold text-foreground">AI Interviewer</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {isAiSpeaking ? "Speaking..." : "Listening"}
+            </p>
+ 
+            {isAiSpeaking && (
+              <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
+                {[...Array(5)].map((_, i) => (
+                  <span
+                    key={i}
+                    className="wave-bar inline-block w-1 rounded-full"
+                    style={{
+                      height: "100%",
+                      background: "var(--primary)",
+                      transformOrigin: "bottom",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            {!isAiSpeaking && (
+              <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
+                {[...Array(5)].map((_, i) => (
+                  <span
+                    key={i}
+                    className="inline-block w-1 rounded-full"
+                    style={{
+                      height: "30%",
+                      background: "var(--muted-foreground)",
+                      opacity: 0.3,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+ 
+          <div
+            className={cn(
+              "relative flex flex-1 flex-col items-center justify-center rounded-xl border bg-card p-4 transition-all duration-300",
+              isUserSpeaking ? "border-blue-400/40 shadow-md" : "border-border",
+            )}
+          >
+            <div className="relative mb-3 flex items-center justify-center">
+              {isUserSpeaking && (
+                <>
+                  <span
+                    className="speaking-ring-1 absolute inset-0 rounded-full"
+                    style={{ background: "#3b82f6", opacity: 0.15 }}
+                  />
+                  <span
+                    className="speaking-ring-2 absolute inset-0 rounded-full"
+                    style={{ background: "#3b82f6", opacity: 0.08 }}
+                  />
+                </>
+              )}
+              <div
+                className={cn(
+                  "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 transition-all duration-300 md:h-20 md:w-20",
+                  isUserSpeaking ? "border-blue-400 bg-blue-50" : "border-border bg-secondary",
+                )}
+              >
+                {session?.user?.image ? (
+                  <img
+                    src={session.user.image}
+                    alt={session.user.name || "You"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User
+                    className={cn(
+                      "h-7 w-7 md:h-9 md:w-9 transition-colors duration-300",
+                      isUserSpeaking ? "text-blue-500" : "text-muted-foreground",
+                    )}
+                  />
+                )}
+              </div>
+            </div>
+ 
+            <p className="text-sm font-semibold text-foreground">
+              {session?.user?.name?.split(" ")[0] ?? "You"}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {isUserSpeaking
+                ? "Speaking..."
+                : isMuted
+                  ? "Muted"
+                  : callStarted
+                    ? "Listening"
+                    : "Not in call"}
+            </p>
+ 
+            {isUserSpeaking && (
+              <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
+                {[...Array(5)].map((_, i) => (
+                  <span
+                    key={i}
+                    className="wave-bar inline-block w-1 rounded-full"
+                    style={{
+                      height: "100%",
+                      background: "#3b82f6",
+                      transformOrigin: "bottom",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            {!isUserSpeaking && (
+              <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
+                {[...Array(5)].map((_, i) => (
+                  <span
+                    key={i}
+                    className="inline-block w-1 rounded-full"
+                    style={{
+                      height: "30%",
+                      background: "var(--muted-foreground)",
+                      opacity: 0.3,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </footer>
-    </div>
+ 
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border bg-card shadow-sm">
+          <div className="flex items-center gap-2 border-b px-4 py-3">
+            <MessageSquare className="text-primary h-4 w-4 shrink-0" />
+            <h2 className="text-sm font-semibold">Conversation</h2>
+            {messages.length > 0 && (
+              <Badge variant="secondary" className="ml-auto text-xs">
+                {messages.length} messages
+              </Badge>
+            )}
+          </div>
+ 
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            {messages.length === 0 && !currentTranscript ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 py-12">
+                <div className="rounded-full bg-secondary p-4">
+                  <MessageSquare className="text-muted-foreground h-6 w-6" />
+                </div>
+                <p className="text-muted-foreground max-w-xs text-center text-sm">
+                  Start the interview to see the conversation transcript here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {messages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "flex items-end gap-2.5",
+                      msg.role === "user" ? "flex-row-reverse" : "flex-row",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border",
+                        msg.role === "user"
+                          ? "border-blue-200 bg-blue-50"
+                          : "border-primary/20 bg-primary/10",
+                      )}
+                    >
+                      {msg.role === "user" ? (
+                        session?.user?.image ? (
+                          <img
+                            src={session.user.image}
+                            alt="You"
+                            className="h-full w-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="h-3.5 w-3.5 text-blue-500" />
+                        )
+                      ) : (
+                        <Bot className="text-primary h-3.5 w-3.5" />
+                      )}
+                    </div>
+                    <div
+                      className={cn(
+                        "max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
+                        msg.role === "user"
+                          ? "rounded-br-sm bg-blue-500 text-white"
+                          : "rounded-bl-sm border border-border bg-secondary text-secondary-foreground",
+                      )}
+                    >
+                      {msg.transcript}
+                    </div>
+                  </div>
+                ))}
+ 
+                {currentTranscript && (
+                  <div className="flex flex-row-reverse items-end gap-2.5">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50">
+                      {session?.user?.image ? (
+                        <Image
+                          src={session.user.image}
+                          alt="You"
+                          fill
+                          className="h-full w-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-3.5 w-3.5 text-blue-500" />
+                      )}
+                    </div>
+                    <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-blue-400/70 px-3.5 py-2.5 text-sm leading-relaxed text-white italic">
+                      {currentTranscript}
+                    </div>
+                  </div>
+                )}
+                <div ref={transcriptEndRef} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
   );
 };
-
+ 
 export default SessionPage;

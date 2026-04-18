@@ -32,7 +32,6 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   originalPrice,
   features,
   buttonText,
-  buttonLink,
   tier = "basic",
   popular = false,
   badge,
@@ -97,9 +96,14 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   return (
     <motion.div
       className={cn(
-        "relative flex flex-col justify-between rounded-lg border p-6"
+        "relative flex flex-col justify-between rounded-lg border p-6 h-full"
       )}
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ scale: 1.01 }}
+      transition={{
+        type:"spring",
+        damping: 8,
+        stiffness: 300
+      }}
     >
       {popular && (
         <Badge variant={'default'} className="absolute top-4 right-4">

@@ -2,23 +2,33 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { seededBlogs } from "../../../../blogs.seed";
+import { db } from "@/lib/prisma";
 
-const formatDate = (isoDate: string) =>
-  new Date(isoDate).toLocaleDateString("en-US", {
+export const dynamic = 'force-dynamic';
+
+const formatDate = (value: Date | string) =>
+  new Date(value).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
 
-const blogs = [...seededBlogs].sort(
-  (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-);
+const BlogPage = async () => {
+  const blogs = await db.blog.findMany({
+    include: {
+      _count: {
+        select: {
+          likes: true,
+          comments: true,
+        },
+      },
+    },
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+  });
 
-const featured = blogs.find((blog) => blog.featured);
-const rest = blogs.filter((blog) => !blog.featured);
+  const featured = blogs.find((blog) => blog.featured);
+  const rest = blogs.filter((blog) => !blog.featured);
 
-const BlogPage = () => {
   return (
     <section className="bg-background relative overflow-hidden px-4 pt-28 pb-16 sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -51,12 +61,15 @@ const BlogPage = () => {
                 {featured.title}
               </CardTitle>
               <p className="text-muted-foreground text-sm">
-                {formatDate(featured.publishedAt)} • {featured.readTime} • {featured.author}
+                {formatDate(featured.createdAt)} • {featured.readTime} • {featured.authorId || "Interview AI Team"}
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground text-sm leading-relaxed sm:text-base">
                 {featured.excerpt}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {featured._count.likes} likes • {featured._count.comments} comments
               </p>
               <div className="flex flex-wrap gap-2">
                 {featured.tags.map((tag) => (
@@ -87,12 +100,15 @@ const BlogPage = () => {
                   {blog.title}
                 </CardTitle>
                 <p className="text-muted-foreground text-xs">
-                  {formatDate(blog.publishedAt)} • {blog.readTime}
+                  {formatDate(blog.createdAt)} • {blog.readTime}
                 </p>
               </CardHeader>
               <CardContent className="flex h-full flex-col justify-between gap-4">
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {blog.excerpt}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {blog._count.likes} likes • {blog._count.comments} comments
                 </p>
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-2">

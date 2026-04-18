@@ -137,21 +137,12 @@ const ProfilePage: React.FC = () => {
             Manage your personal information and account settings.
           </p>
         </div>
-        <Button
-          onClick={handleSignOut}
-          variant="outline"
-          className="flex cursor-pointer items-center gap-2"
-          size="sm"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Button>
       </div>
 
       {/* Profile Overview Card */}
       <Card className="overflow-hidden">
         <CardHeader className="relative p-0">
-          <div className="from-primary/20 to-primary/10 h-32 bg-gradient-to-r" />
+          <div className="from-primary/20 to-primary/10 h-32 bg-linear-to-r" />
           <div className="absolute -bottom-16 left-6">
             <Avatar className="h-28 w-28 border-4 border-white shadow-lg">
               <AvatarImage
@@ -174,9 +165,6 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <p className="text-muted-foreground mt-4">@{user.username}</p>
               </div>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/subscription">Manage Subscriptions</Link>
-              </Button>
             </div>
           </div>
 
@@ -194,6 +182,21 @@ const ProfilePage: React.FC = () => {
               </span>
             </div>
           </div>
+        </CardContent>
+
+        <CardContent className="flex items-center gap-8">
+          <Button asChild variant="outline" size="sm">
+                <Link href="/subscription">Manage Subscriptions</Link>
+              </Button>
+          <Button
+            onClick={handleSignOut}
+            variant="outline"
+            className="flex cursor-pointer items-center gap-2"
+            size="sm"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
         </CardContent>
       </Card>
     </section>
