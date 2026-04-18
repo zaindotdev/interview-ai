@@ -7,6 +7,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import BlogEngagement from "@/components/blog/blog-engagement";
 
+export const dynamic = 'force-dynamic';
+
 type BlogPostPageProps = {
   params: Promise<{ slug: string }>;
 };

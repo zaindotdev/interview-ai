@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 const formatDate = (value: Date | string) =>
   new Date(value).toLocaleDateString("en-US", {
     year: "numeric",
