@@ -10,21 +10,27 @@ type Props = {
 };
 
 const Layout = ({ children }: Props) => {
-  const { status } = useSession();
+  const { status, data:session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    const allowedPaths = ["/sign-in", "/sign-up", "/verify"];
+  const allowedPaths = ["/sign-in", "/sign-up", "/verify"];
+  if (status === "loading") return;
 
-    if (status === "loading") return;
+  if (status === "unauthenticated" && !allowedPaths.includes(pathname)) {
+    router.replace("/sign-in");
+  } else if (status === "authenticated" && allowedPaths.includes(pathname)) {
+    if (pathname.startsWith("/verify")) return; 
 
-    if (status === "unauthenticated" && !allowedPaths.includes(pathname)) {
-      router.replace("/sign-in");
-    } else if (status === "authenticated" && allowedPaths.includes(pathname)) {
+    const hasOnboarded = (session?.user as any)?.hasOnboarded;
+    if (!hasOnboarded) {
+      router.replace("/onboarding");
+    } else {
       router.replace("/dashboard");
     }
-  }, [status, pathname, router]);
+  }
+}, [status, pathname, router, session]);
 
   return (
     <main

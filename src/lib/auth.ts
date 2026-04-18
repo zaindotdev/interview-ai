@@ -6,6 +6,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import { Role } from "@/generated/prisma";
+import jwt from "jsonwebtoken";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
@@ -15,31 +16,53 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        autoLoginToken: { label: "Token", type: "text" }, // ✅ add this
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) {
-          return null;
-        }
+        if (!credentials?.email) return null;
 
         const user = await db.user.findUnique({
           where: { email: credentials.email },
         });
-        if (!user) {
-          return null;
+        if (!user) return null;
+
+        if (credentials.autoLoginToken) {
+          const payload = jwt.verify(
+            credentials.autoLoginToken,
+            process.env.AUTO_LOGIN_JWT_SECRET!,
+          ) as { email: string } | null;
+
+          if (!payload) return null;
+
+          const tokenValid =
+            user.autoLoginToken === credentials.autoLoginToken &&
+            user.autoLoginTokenExpiry !== null &&
+            user.autoLoginTokenExpiry > new Date();
+
+          if (!tokenValid) return null;
+
+          await db.user.update({
+            where: { id: user.id },
+            data: { autoLoginToken: null, autoLoginTokenExpiry: null },
+          });
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            username: user.username,
+            role: user.role,
+            hasOnboarded: user.hasOnboarded,
+            emailVerified: true,
+          };
         }
 
-        if (!user.password) {
-          return null;
-        }
-
+        if (!user.password) return null;
         const pwValid = await bcrypt.compare(
           credentials.password,
           user.password,
         );
-        if (!pwValid) {
-          console.error("Invalid password");
-          return null;
-        }
+        if (!pwValid) return null;
 
         return {
           id: user.id,
@@ -66,7 +89,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
-  session: { 
+  session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
@@ -76,7 +99,12 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         const dbUser = await db.user.findUnique({
           where: { email: user.email! },
-          select: { id: true, role: true, hasOnboarded: true, emailVerified: true }
+          select: {
+            id: true,
+            role: true,
+            hasOnboarded: true,
+            emailVerified: true,
+          },
         });
 
         if (dbUser) {
@@ -91,7 +119,12 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await db.user.findUnique({
             where: { email: token.email! },
-            select: { id: true, role: true, hasOnboarded: true, emailVerified: true }
+            select: {
+              id: true,
+              role: true,
+              hasOnboarded: true,
+              emailVerified: true,
+            },
           });
 
           if (dbUser) {
@@ -137,7 +170,7 @@ export const authOptions: NextAuthOptions = {
                     profile?.name?.replace(/\s/g, "").toLowerCase() || "",
                   role: "CANDIDATE",
                   hasOnboarded: false,
-                  emailVerified: true, 
+                  emailVerified: true,
                 },
               });
             } catch (createError) {

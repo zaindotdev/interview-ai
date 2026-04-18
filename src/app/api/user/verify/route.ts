@@ -7,15 +7,10 @@ export async function PATCH(req: NextRequest) {
     const { verificationToken } = await req.json();
 
     if (!verificationToken) {
-      return NextResponse.json(
-        { message: "Verification token is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ message: "Verification token is required" }, { status: 400 });
     }
 
-    const decoded = jwt.verify(verificationToken, process.env.JWT_SECRET!) as {
-      email: string;
-    };
+    const decoded = jwt.verify(verificationToken, process.env.JWT_SECRET!) as { email: string };
 
     const user = await db.user.findUnique({
       where: { email: decoded.email },
@@ -26,10 +21,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (user.emailVerified) {
-      return NextResponse.json(
-        { message: "Email is already verified" },
-        { status: 400 },
-      );
+      return NextResponse.json({ message: "Email is already verified" }, { status: 400 });
     }
 
     await db.user.update({
@@ -37,7 +29,11 @@ export async function PATCH(req: NextRequest) {
       data: { emailVerified: true, verificationToken: null },
     });
 
-    return NextResponse.json({ message: "Email verified successfully" });
+    return NextResponse.json({
+      message: "Email verified successfully",
+      autoLoginToken: user.autoLoginToken,
+      email: user.email,
+    });
   } catch (error) {
     console.error("Error verifying user:", error);
     return NextResponse.json(

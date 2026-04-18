@@ -76,8 +76,10 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const token = jwt.sign({ email }, process.env.JWT_SECRET!, { expiresIn: "1h" });
+    const autoLoginToken = jwt.sign({email}, process.env.AUTO_LOGIN_JWT_SECRET!, { expiresIn: "7d" });
+    const autoLoginTokenExpiry = new Date();
+    autoLoginTokenExpiry.setDate(autoLoginTokenExpiry.getDate() + 7); // 7 days from now in ISO format
 
-    
     const user = await db.user.create({
       data: {
         name,
@@ -87,6 +89,8 @@ export async function POST(req: NextRequest) {
         verificationToken: token, 
         role: "CANDIDATE",
         emailVerified: false,
+        autoLoginToken: autoLoginToken,
+        autoLoginTokenExpiry: autoLoginTokenExpiry,
       },
     });
 

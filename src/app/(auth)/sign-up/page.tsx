@@ -20,21 +20,17 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { SignUpSchema, SignUpSchemaType } from "@/lib/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
-import { Eye, EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Separator } from "@/components/ui/separator";
+import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const SignUpPageContent = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const searchParams = useSearchParams();
-  const plan = searchParams.get("plan");
   const router = useRouter();
 
   const form = useForm<SignUpSchemaType>({
