@@ -38,6 +38,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@vapi-ai/server-sdk": "^0.10.0",
     "@vapi-ai/web": "^2.3.8",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^1.2.0",
     "ai": "^5.0.54",
     "axios": "^1.10.0",
