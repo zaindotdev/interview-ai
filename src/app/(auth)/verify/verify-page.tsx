@@ -8,10 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import z from "zod";
 import { Loader2, Mail, RotateCcw, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { signIn } from "next-auth/react";
+import { Separator } from "@/components/ui/separator";
 
-const VerifySchema = z.object({
-  token: z.string(),
-});
 
 const VerifyPage = () => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -21,46 +20,45 @@ const VerifyPage = () => {
   const token = params.get("token");
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof VerifySchema>>({
-    resolver: zodResolver(VerifySchema),
-    defaultValues: { token: "" },
-  });
+  const verifyUser = useCallback(async () => {
+  if (!token) return;
+  setLoading(true);
+  try {
+    const response = await axios.patch(
+      "/api/user/verify",
+      { verificationToken: token },
+      { withCredentials: true },
+    );
 
-  const verifyUser = useCallback(
-    async (data: z.infer<typeof VerifySchema>) => {
-      setLoading(true);
-      try {
-        const response = await axios.patch(
-          "/api/user/verify",
-          { verificationToken: token },
-          { withCredentials: true },
-        );
-        if (response.status !== 200) {
-          toast.error("We cannot verify your email", { description: "Try again later" });
-          form.reset();
-        } else {
-          toast.success("Your email has been verified");
-          router.push("/subscription");
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("We cannot verify your email", {
-          description: "There was an error verifying your email. Please try again later.",
-        });
-        form.reset();
-      } finally {
-        setLoading(false);
-      }
-    },
-    [router, form, token],
-  );
+    const { autoLoginToken, email } = response.data; 
 
-  useEffect(() => {
-    if (token) {
-      form.setValue("token", token);
-      verifyUser({ token });
+    toast.success("Email verified! Signing you in…");
+
+    const result = await signIn("credentials", {
+      email,
+      autoLoginToken,
+      redirect: false,
+    });
+
+    if (result?.ok) {
+      router.push("/subscription");
+    } else {
+      toast.error("Auto sign-in failed", { description: "Please sign in manually." });
+      router.push("/sign-in");
     }
-  }, [verifyUser, token, form]);
+  } catch (error) {
+    console.error(error);
+    toast.error("Verification failed", {
+      description: "There was an error verifying your email. Please try again later.",
+    });
+  } finally {
+    setLoading(false);
+  }
+}, [token, router]);
+
+useEffect(() => {
+  if (token) verifyUser(); 
+}, [token, verifyUser]);
 
   const handleResend = async () => {
     setResending(true);
@@ -78,7 +76,6 @@ const VerifyPage = () => {
   return (
     <section className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background p-4">
 
-      {/* Dot grid */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -87,10 +84,8 @@ const VerifyPage = () => {
         }}
       />
 
-      {/* Card */}
       <div className="relative z-10 w-full max-w-110 rounded-2xl border-none bg-background p-10 shadow-none">
 
-        {/* Icon */}
         <div className="mb-8 flex justify-center">
           <div className="relative flex h-20 w-20 items-center justify-center">
             <div className="absolute inset-0 animate-ping rounded-full bg-primary/10" />
@@ -100,7 +95,6 @@ const VerifyPage = () => {
           </div>
         </div>
 
-        {/* Heading */}
         <div className="mb-8 text-center">
           <p className="mb-3 text-[11px] font-medium tracking-[0.18em] uppercase text-primary">
             Account Activation
@@ -114,10 +108,8 @@ const VerifyPage = () => {
           </p>
         </div>
 
-        {/* Divider */}
-        <div className="mb-6 h-px bg-border" />
+        <Separator className="mb-6" />
 
-        {/* Loading state while auto-verifying */}
         {loading && (
           <div className="mb-6 flex items-center justify-center gap-2 rounded-xl border border-primary/15 bg-primary/6 py-3 text-sm text-primary">
             <Loader2 size={15} className="animate-spin" />
@@ -125,7 +117,6 @@ const VerifyPage = () => {
           </div>
         )}
 
-        {/* Spam notice */}
         <div className="mb-6 flex gap-3 rounded-xl border border-primary/15 bg-primary/6 p-4">
           <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-primary/40">
             <div className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -137,7 +128,6 @@ const VerifyPage = () => {
           </p>
         </div>
 
-        {/* Resend */}
         {resent ? (
           <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-500/20 bg-green-500/8 py-3 text-sm text-green-600 dark:text-green-400">
             <CheckCircle2 size={15} />
@@ -164,14 +154,13 @@ const VerifyPage = () => {
           </Button>
         )}
 
-        {/* Footer */}
         <p className="mt-6 text-center text-[11px] text-muted-foreground">
-          Wrong account?{" "}
+          Wrong Email?{" "}
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push("/sign-up")}
             className="text-primary/70 transition-colors hover:text-primary"
           >
-            Sign in with a different email
+            Sign up with a different email
           </button>
         </p>
       </div>

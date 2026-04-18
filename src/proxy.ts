@@ -24,15 +24,23 @@ export async function proxy(request: NextRequest) {
   const onboardingRoutes = ["/onboarding"];
 
   const isAuthRoute = authRoutes.some((route) => pathname === route);
-  const isVerifyRoute = verifyRoutes.some((route) => pathname.startsWith(route));
-  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || (route !== "/" && pathname.startsWith(route))
+  const isVerifyRoute = verifyRoutes.some((route) =>
+    pathname.startsWith(route),
   );
-  const isOnboardingRoute = onboardingRoutes.some((route) => pathname.startsWith(route));
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route),
+  );
+  const isPublicRoute = publicRoutes.some(
+    (route) =>
+      pathname === route || (route !== "/" && pathname.startsWith(route)),
+  );
+  const isOnboardingRoute = onboardingRoutes.some((route) =>
+    pathname.startsWith(route),
+  );
 
   if (!token) {
-    if (isAuthRoute || isVerifyRoute || isPublicRoute) return NextResponse.next();
+    if (isAuthRoute || isVerifyRoute || isPublicRoute)
+      return NextResponse.next();
     if (isProtectedRoute || isOnboardingRoute) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
@@ -48,11 +56,11 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!hasOnboarded) {
-    if (isOnboardingRoute || isPublicRoute) return NextResponse.next();
-    if (isAuthRoute || isProtectedRoute) {
-      return NextResponse.redirect(new URL("/onboarding", request.url));
-    }
-    return NextResponse.next();
+    if (isOnboardingRoute) return NextResponse.next();
+    if (isPublicRoute) return NextResponse.next(); // /subscription is safe here
+    if (isVerifyRoute) return NextResponse.next();
+    // ✅ Everything else — force onboarding, no fallthrough
+    return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
   if (isAuthRoute || isVerifyRoute || isOnboardingRoute) {

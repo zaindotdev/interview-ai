@@ -39,6 +39,8 @@ model User {
   role              Role    @default(CANDIDATE)
   hasOnboarded      Boolean @default(false)
   verificationToken String? @unique
+  autoLoginToken    String? @unique
+  autoLoginTokenExpiry  DateTime?
 
   // Relations
   resumes              Resume[]
