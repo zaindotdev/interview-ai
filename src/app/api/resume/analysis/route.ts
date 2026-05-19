@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { uploadToStorage } from "@/utils/upload";
 import { db } from "@/lib/prisma";
-import { MockInterviews } from "@/lib/types";
+import { MockInterviews, ResumeScore } from "@/lib/types";
 import { ErrorResponse, HttpResponse } from "@/utils/response";
 import { processPDF } from "@/utils/process-pdf";
 import { generateAIResponse, parseAIResponse } from "@/utils/ai";
@@ -54,8 +54,6 @@ const createAnalysisPrompt = (
   jobDescription: string,
   isSubscribed: boolean,
 ) => {
-  const limits = isSubscribed ? LIMITS.PREMIUM : LIMITS.FREE;
-
   const baseInstructions = isSubscribed
     ? `You are a senior technical recruiter with 10+ years of experience. Conduct a COMPREHENSIVE and IN-DEPTH analysis.`
     : `You are a technical recruiter. Provide a BASIC, HIGH-LEVEL analysis suitable for initial screening.`;
@@ -208,21 +206,20 @@ JOB DESCRIPTION: """${jobDescription}"""
 const saveAnalysisData = async (
   userId: string,
   fileUrl: string,
-  analysis: any,
+  analysis: ResumeScore,
   mockInterviews: MockInterviews[],
 ) => {
   try {
     await db.$transaction(async (tx) => {
-      await tx.resume.create({
-        data: { userId, fileUrl, parsedJson: analysis },
+      await tx.resume.upsert({
+        where: { userId },
+        update: { fileUrl, parsedJson: analysis as any },
+        create: { userId, fileUrl, parsedJson: analysis as any},
       });
 
-      const existingTopics = mockInterviews.map((interview) => interview.topic);
-      if (existingTopics.length > 0) {
-        await tx.mockInterviews.deleteMany({
-          where: { candidateId: userId, topic: { in: existingTopics } },
-        });
-      }
+      await tx.mockInterviews.deleteMany({
+        where: { candidateId: userId },
+      });
 
       await tx.mockInterviews.createMany({ data: mockInterviews });
 
@@ -237,7 +234,6 @@ const saveAnalysisData = async (
     );
   }
 };
-
 const validateMockInterviews = (
   mockInterviews: MockInterviews[],
   isSubscribed: boolean,
@@ -320,7 +316,7 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    const analysis = parseAIResponse<any>(analysisRaw, "resume analysis");
+    const analysis = parseAIResponse<ResumeScore>(analysisRaw, "resume analysis");
     const mockInterviewsParsed = parseAIResponse<MockInterviews[]>(
       mockInterviewsRaw,
       "mock interviews",
@@ -348,8 +344,8 @@ export async function POST(req: NextRequest) {
         },
       }),
     );
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Something went wrong";
-    return errorResponse(message, 500, error);
+    return errorResponse(message, 500, error instanceof Error ? error : undefined);
   }
 }

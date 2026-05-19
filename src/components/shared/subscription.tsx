@@ -4,7 +4,7 @@ import React from "react";
 import { useSession } from "next-auth/react";
 import { PLANS } from "@/lib/subscription-plans";
 import {PricingCard} from "./pricing-card";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import HeadingContainer from "./heading-container";
 
 interface SubscriptionSectionProps {

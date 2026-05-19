@@ -6,13 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import Vapi from "@vapi-ai/web";
+import Image from "next/image";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   Bot,
   Clock,
@@ -24,21 +22,162 @@ import {
   User,
   Wifi,
   WifiOff,
-  Volume2,
   MessageSquare,
+  Globe,
+  ChevronRight,
 } from "lucide-react";
 
 import type { MockInterviews, Message } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
+
+// ─── Language types ────────────────────────────────────────────────────────
+
+type SupportedLanguage = "english" | "urdu" | "hindi";
+
+interface LanguageOption {
+  id: SupportedLanguage;
+  label: string;
+  nativeLabel: string;
+  description: string;
+  flag: string;
+}
+
+const LANGUAGE_OPTIONS: LanguageOption[] = [
+  {
+    id: "english",
+    label: "English",
+    nativeLabel: "English",
+    description: "Interview conducted fully in English",
+    flag: "🇬🇧",
+  },
+  {
+    id: "urdu",
+    label: "Urdu",
+    nativeLabel: "اردو",
+    description: "انٹرویو مکمل طور پر اردو میں ہوگا",
+    flag: "🇵🇰",
+  },
+  {
+    id: "hindi",
+    label: "Hindi",
+    nativeLabel: "हिंदी",
+    description: "इंटरव्यू पूरी तरह हिंदी में होगा",
+    flag: "🇮🇳",
+  },
+];
+
+// ─── Language picker screen ────────────────────────────────────────────────
+
+const LanguagePicker = ({
+  topic,
+  onSelect,
+}: {
+  topic: string;
+  onSelect: (lang: SupportedLanguage) => void;
+}) => {
+  const [hovered, setHovered] = useState<SupportedLanguage | null>(null);
+
+  return (
+    <div className="bg-background flex min-h-screen w-full flex-col items-center justify-center px-4">
+      <div className="w-full max-w-lg">
+        <div className="mb-10 text-center">
+          <div className="border-border bg-secondary mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border">
+            <Globe className="text-primary h-6 w-6" />
+          </div>
+          <h1 className="text-foreground font-serif text-3xl font-black tracking-tight">
+            Choose your language
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">
+            {topic ? (
+              <>
+                Your interview on{" "}
+                <span className="text-foreground font-medium">{topic}</span>{" "}
+                will be conducted in the language you select.
+              </>
+            ) : (
+              <>Your interview will be conducted in the language you select.</>
+            )}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {LANGUAGE_OPTIONS.map((lang) => (
+            <button
+              key={lang.id}
+              onClick={() => onSelect(lang.id)}
+              onMouseEnter={() => setHovered(lang.id)}
+              onMouseLeave={() => setHovered(null)}
+              className={cn(
+                "group relative flex w-full items-center gap-4 overflow-hidden rounded-xl border px-5 py-4 text-left transition-all duration-200",
+                hovered === lang.id
+                  ? "border-primary/40 bg-primary/5 shadow-sm"
+                  : "border-border bg-card hover:border-primary/20",
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none absolute inset-0 rounded-xl transition-opacity duration-300",
+                  hovered === lang.id ? "opacity-100" : "opacity-0",
+                )}
+                style={{
+                  background:
+                    "radial-gradient(ellipse at 0% 50%, var(--primary) 0%, transparent 60%)",
+                  opacity: hovered === lang.id ? 0.04 : 0,
+                }}
+              />
+              <span className="shrink-0 text-2xl">{lang.flag}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-foreground font-semibold">
+                    {lang.label}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-mono text-sm",
+                      lang.id === "urdu" || lang.id === "hindi"
+                        ? "text-base"
+                        : "",
+                      "text-muted-foreground",
+                    )}
+                  >
+                    {lang.nativeLabel}
+                  </span>
+                </div>
+                <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                  {lang.description}
+                </p>
+              </div>
+              <ChevronRight
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-all duration-200",
+                  hovered === lang.id
+                    ? "text-primary translate-x-0.5"
+                    : "text-muted-foreground/40",
+                )}
+              />
+            </button>
+          ))}
+        </div>
+
+        <p className="text-muted-foreground mt-6 text-center font-mono text-[10px] tracking-wider uppercase">
+          Language cannot be changed once the interview begins
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main session page ─────────────────────────────────────────────────────
 
 const SessionPage = () => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
 
-  const [interviewConfig, setInterviewConfig] = useState<MockInterviews | null>(null);
+  const [interviewConfig, setInterviewConfig] = useState<MockInterviews | null>(
+    null,
+  );
   const [assistantId, setAssistantId] = useState<string | null>(null);
   const [callStarted, setCallStarted] = useState(false);
   const [microphoneAccess, setMicrophoneAccess] = useState(false);
@@ -51,34 +190,75 @@ const SessionPage = () => {
   >("idle");
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentTranscript, setCurrentTranscript] = useState("");
-  const [currentRole, setCurrentRole] = useState<string | null>(null);
+  const [currentRole, setCurrentRole] = useState<"user" | "assistant" | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [historyId, setHistoryId] = useState<string | null>(null);
-
+  const [selectedLanguage, setSelectedLanguage] =
+    useState<SupportedLanguage | null>(null);
   const vapiRef = useRef<Vapi | null>(null);
   const isUnmountedRef = useRef(false);
-  const isCreatingAssistantRef = useRef(false); // prevents double creation
+  const isBootstrappedRef = useRef(false);
+  const messagesRef = useRef<Message[]>([]);
+  const sessionStartTimeRef = useRef<Date | null>(null);
+  const interviewConfigRef = useRef<MockInterviews | null>(null);
+
+  const isEndingCallRef = useRef(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  // Timer
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  useEffect(() => {
+    sessionStartTimeRef.current = sessionStartTime;
+  }, [sessionStartTime]);
+  useEffect(() => {
+    interviewConfigRef.current = interviewConfig;
+  }, [interviewConfig]);
+
+  // ─── Timer ──────────────────────────────────────────────────────────────
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (callStarted && sessionStartTime) {
       interval = setInterval(() => {
-        setElapsedTime(Math.floor((Date.now() - sessionStartTime.getTime()) / 1000));
+        setElapsedTime(
+          Math.floor((Date.now() - sessionStartTime.getTime()) / 1000),
+        );
       }, 1000);
     }
     return () => clearInterval(interval);
   }, [callStarted, sessionStartTime]);
 
-  // Auto-scroll transcript
+  // ─── Auto-scroll ────────────────────────────────────────────────────────
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, currentTranscript]);
 
+  const fetchFullConfig = useCallback(async () => {
+    if (!id) return null;
+    try {
+      const { data: response } = await axios.get(
+        `/api/mock-interview/get/${id}`,
+      );
+      const interview = response?.data ?? null;
+      if (!interview) throw new Error("Invalid interview response");
+      setInterviewConfig(interview);
+      console.log(interview);
+      return interview;
+    } catch (error) {
+      console.error("Error fetching the interview config", error);
+      return null;
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchFullConfig();
+  }, [fetchFullConfig]);
+
+  // ─── Helpers ────────────────────────────────────────────────────────────
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -87,328 +267,406 @@ const SessionPage = () => {
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty?.toLowerCase()) {
-      case "easy": return "bg-green-100 text-green-700 border-green-200";
-      case "medium": return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case "hard": return "bg-red-100 text-red-700 border-red-200";
-      default: return "bg-gray-100 text-gray-700 border-gray-200";
+      case "easy":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "medium":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "hard":
+        return "bg-red-100 text-red-700 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
 
-  // ─── Mic: request immediately on mount, don't wait for assistantId ───
-  const requestMicrophonePermission = useCallback(async (): Promise<boolean> => {
+  // ─── History helpers ─────────────────────────────────────────────────────
+  const createHistory = useCallback(
+    async (startTime: Date) => {
+      if (!id) return;
+      try {
+        await axios.post(`/api/mock-interview/history`, {
+          interviewId: id,
+          status: "ongoing",
+          startTime: startTime.toISOString(),
+        });
+      } catch (err) {
+        console.error("[session] Failed to create history:", err);
+      }
+    },
+    [id],
+  );
+
+  const updateHistory = useCallback(
+    async (startTime: Date) => {
+      if (!id) return;
+      try {
+        const duration = Math.floor((Date.now() - startTime.getTime()) / 1000);
+        await axios.post(`/api/mock-interview/history`, {
+          interviewId: id,
+          status: "completed",
+          startTime: startTime.toISOString(),
+          duration,
+        });
+      } catch (err) {
+        console.error("[session] Failed to update history:", err);
+      }
+    },
+    [id],
+  );
+
+  // ─── End call ───────────────────────────────────────────────────────────
+  const endCall = useCallback(async () => {
+    if (isEndingCallRef.current) return;
+    isEndingCallRef.current = true;
+
+    const startTime = sessionStartTimeRef.current;
+    const msgs = messagesRef.current;
+    const config = interviewConfigRef.current;
+
+    try {
+      if (vapiRef.current) await vapiRef.current.stop();
+    } catch (err) {
+      console.error("[session] Error stopping call:", err);
+    }
+
+    if (!isUnmountedRef.current) return;
+
+    setCallStarted(false);
+    setConnectionStatus("disconnected");
+    setSpeakingStatus("idle");
+    setCurrentTranscript("");
+    setCurrentRole(null);
+
+    if (!startTime || !config) return;
+
+    const actualDurationSecs = (Date.now() - startTime.getTime()) / 1000;
+    await updateHistory(startTime);
+
+    if (msgs.length === 0) {
+      toast.info("No conversation recorded — redirecting...");
+      setTimeout(() => router.replace("/mock-interviews"), 1200);
+      return;
+    }
+
+    toast.info("Interview completed — generating your report...");
+    setIsGeneratingReport(true);
+
+    try {
+      const duration = Math.floor(actualDurationSecs / 60);
+      const res = await axios.post(`/api/mock-interview/report`, {
+        transcripts: msgs.map((m) => ({ role: m.role, content: m.transcript })),
+        conversationId: id,
+        focusedSkills: config.focus || [],
+        duration,
+        topic: config.topic,
+      });
+
+      if (res.status === 200 && res.data?.data?.reportId) {
+        await axios
+          .patch(`/api/mock-interview/${id}/complete`)
+          .catch((err) =>
+            console.error("[session] Failed to mark complete:", err),
+          );
+        router.replace(`/report/?reportId=${res.data.data.reportId}`);
+      } else {
+        throw new Error("Invalid report response");
+      }
+    } catch (err) {
+      console.error("[session] Failed to generate report:", err);
+      toast.error("Failed to generate report — please try again");
+      setIsGeneratingReport(false);
+      isEndingCallRef.current = false;
+    }
+  }, [id, router, updateHistory]);
+
+  // ─── Check microphone access ─────────────────────────────────────────────────────────
+
+  const checkMic = useCallback(async (): Promise<boolean> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 16000,
+        },
       });
-      stream.getTracks().forEach((track) => track.stop());
-      if (!isUnmountedRef.current) setMicrophoneAccess(true);
+      stream.getTracks().forEach((t) => t.stop());
+      if (isUnmountedRef.current) setMicrophoneAccess(true);
       return true;
-    } catch (error) {
-      console.error("[mic] Permission error:", error);
-      if (!isUnmountedRef.current) setMicrophoneAccess(false);
+    } catch {
+      if (isUnmountedRef.current) setMicrophoneAccess(false);
       toast.error("Microphone access is required for the interview");
       return false;
     }
   }, []);
 
-  const fetchInterviewConfig = useCallback(async () => {
-    if (!id) { toast.error("No interview ID provided"); return; }
-    setLoading(true);
-    try {
-      const res = await axios.get(`/api/mock-interview/get/id?id=${id}`);
-      if (res.status === 200 && res.data?.data) {
-        setInterviewConfig(res.data.data);
-      } else {
-        throw new Error("Invalid response data");
-      }
-    } catch (err) {
-      console.error("[session] Failed to fetch interview config:", err);
-      toast.error("Failed to load interview configuration");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  // ─── Start call ─────────────────────────────────────────────────────────
+  const startCallWithId = useCallback(
+    async (aid: string, config: MockInterviews) => {
+      if (!aid) return;
 
-  const getAssistantId = useCallback(async () => {
-    if (!interviewConfig || !session?.user?.name) return;
-    if (isCreatingAssistantRef.current) return; // guard against double-fire
-    isCreatingAssistantRef.current = true;
-
-    try {
-      setConnectionStatus("connecting");
-      const res = await axios.post(`/api/assistant/`, {
-        ...interviewConfig,
-        candidateName: session.user.name,
-      });
-
-      if (!res.data?.data?.id) throw new Error("Invalid assistant response - missing ID");
-
-      if (!isUnmountedRef.current) setAssistantId(res.data.data.id);
-    } catch (err) {
-      console.error("[session] Assistant creation failed:", err);
-      isCreatingAssistantRef.current = false; // allow retry on error
-      toast.error(err instanceof Error ? err.message : "Failed to initialize assistant");
-      if (!isUnmountedRef.current) setConnectionStatus("error");
-    }
-  }, [interviewConfig, session]);
-
-  const createHistory = useCallback(
-    async (status: string = "ongoing") => {
-      if (!id || historyId) return;
       try {
-        const startTime = sessionStartTime || new Date();
-        const res = await axios.post(`/api/mock-interview/history`, {
-          interviewId: id,
-          status,
-          startTime: startTime.toISOString(),
-        });
-        if (res.status === 201 && res.data?.data?.history?.id) {
-          setHistoryId(res.data.data.history.id);
-          return res.data.data.history.id;
+        setConnectionStatus("connecting");
+        const startTime = new Date();
+        setSessionStartTime(startTime);
+        sessionStartTimeRef.current = startTime;
+
+        if (!vapiRef.current) {
+          const apiKey = process.env.NEXT_PUBLIC_VAPI_AI_API_KEY;
+          if (!apiKey) throw new Error("VAPI API key not configured");
+          vapiRef.current = new Vapi(apiKey);
         }
-      } catch (error) {
-        console.error("[session] Failed to create history:", error);
-      }
-    },
-    [id, historyId, sessionStartTime],
-  );
 
-  const updateHistory = useCallback(async () => {
-    if (!id || !sessionStartTime) return;
-    try {
-      const endTime = new Date();
-      const duration = Math.floor((endTime.getTime() - sessionStartTime.getTime()) / 1000);
-      await axios.post(`/api/mock-interview/history`, {
-        interviewId: id,
-        status: "completed",
-        startTime: sessionStartTime.toISOString(),
-        duration,
-      });
-    } catch (error) {
-      console.error("[session] Failed to update history:", error);
-    }
-  }, [id, sessionStartTime]);
+        const vapi = vapiRef.current;
+        vapi.removeAllListeners();
 
-  const generateReport = useCallback(async () => {
-    if (!id || isGeneratingReport) return;
-    setIsGeneratingReport(true);
-    const actualDuration = sessionStartTime
-      ? Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60)
-      : interviewConfig?.estimated_time || 0;
-
-    try {
-      const res = await axios.post(`/api/mock-interview/report`, {
-        transcripts: messages,
-        conversationId: id,
-        focusedSkills: interviewConfig?.focus || [],
-        duration: actualDuration,
-        topic: interviewConfig?.topic,
-      });
-      if (res.status === 200 && res.data?.data?.reportId) {
-        router.replace(`/report/?reportId=${res.data.data.reportId}`);
-      } else {
-        throw new Error("Failed to generate report");
-      }
-    } catch (err) {
-      console.error("[session] Failed to generate report:", err);
-      toast.error("Failed to generate report");
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  }, [id, messages, interviewConfig, router, isGeneratingReport, sessionStartTime]);
-
-  const startCall = useCallback(async () => {
-    if (!assistantId || !microphoneAccess || callStarted) return;
-
-    try {
-      setConnectionStatus("connecting");
-      const startTime = new Date();
-      setSessionStartTime(startTime);
-
-      if (!vapiRef.current) {
-        const apiKey = process.env.NEXT_PUBLIC_VAPI_AI_API_KEY;
-        if (!apiKey) throw new Error("VAPI API key not configured");
-        vapiRef.current = new Vapi(apiKey);
-      }
-
-      const vapi = vapiRef.current;
-      vapi.removeAllListeners();
-
-      vapi.on("call-start", async () => {
-        if (!isUnmountedRef.current) {
+        vapi.on("call-start", async () => {
+          if (!isUnmountedRef.current) return;
           setCallStarted(true);
           setConnectionStatus("connected");
-          await createHistory("ongoing");
+          await createHistory(startTime);
 
-          if (interviewConfig?.estimated_time) {
-            const timeoutDuration = interviewConfig.estimated_time * 60 * 1000;
-            setTimeout(() => {
-              if (!isUnmountedRef.current && vapiRef.current) {
-                toast.info("Interview time reached — ending session...");
-                vapiRef.current.stop();
-                endCall();
-              }
-            }, timeoutDuration);
+          if (config.estimated_time) {
+            setTimeout(
+              () => {
+                if (!isUnmountedRef.current) endCall();
+              },
+              config.estimated_time * 60 * 1000,
+            );
           }
-        }
-      });
+        });
 
-      vapi.on("call-end", () => {
-        if (!isUnmountedRef.current) {
+        vapi.on("call-end", () => {
+          if (!isUnmountedRef.current) return;
           setCallStarted(false);
-          setCurrentRole(null);
-          setCurrentTranscript("");
           setConnectionStatus("disconnected");
           setSpeakingStatus("idle");
-        }
-      });
+          setCurrentTranscript("");
+          setCurrentRole(null);
+        });
 
-      vapi.on("speech-start", () => {
-        if (!isUnmountedRef.current) setSpeakingStatus("ai-speaking");
-      });
+        vapi.on("speech-start", () => {
+          if (isUnmountedRef.current) setSpeakingStatus("ai-speaking");
+        });
 
-      vapi.on("speech-end", () => {
-        if (!isUnmountedRef.current) setSpeakingStatus("idle");
-      });
+        vapi.on("speech-end", () => {
+          if (isUnmountedRef.current) setSpeakingStatus("idle");
+        });
 
-      vapi.on("message", (message: Message) => {
-        if (isUnmountedRef.current) return;
-        if (message.type === "transcript") {
+        vapi.on("message", (message: Message) => {
+          if (!isUnmountedRef.current) return;
+          if (message.type !== "transcript") return;
+
           const { role, transcriptType, transcript } = message;
-          console.log(message);
+
           if (role === "user") setSpeakingStatus("user-speaking");
 
           if (transcriptType === "partial") {
             setCurrentTranscript(transcript);
-            setCurrentRole(role);
+            setCurrentRole(role as "user" | "assistant");
           } else if (transcriptType === "final") {
             setMessages((prev) => {
-              const isDuplicate = prev.some(
-                (msg) => msg.role === role && msg.transcript === transcript,
-              );
-              if (isDuplicate) return prev;
-              return [...prev, { role, transcript }];
+              if (
+                prev.some((m) => m.role === role && m.transcript === transcript)
+              )
+                return prev;
+              const next = [...prev, { role, transcript }];
+              messagesRef.current = next;
+              return next;
             });
             setCurrentTranscript("");
             setCurrentRole(null);
             if (role === "user") setSpeakingStatus("idle");
           }
-        }
-      });
+        });
 
-      vapi.on("error", (error: Error) => {
-        console.error("[vapi] Error:", error);
-        if (!isUnmountedRef.current) setConnectionStatus("error");
-        toast.error(`Call error: ${error.message}`);
-      });
+        vapi.on("error", (error: unknown) => {
+          console.error("[vapi] Error:", error);
 
-      await vapi.start(assistantId);
-    } catch (error) {
-      console.error("[session] Call start error:", error);
-      setConnectionStatus("error");
-      toast.error("Failed to start call");
-    }
-  }, [assistantId, microphoneAccess, callStarted, createHistory, interviewConfig]);
+          const err = error as {
+            error?: {
+              message?: { type?: string; msg?: string } | string;
+              type?: string;
+            };
+            message?: string;
+          };
 
-  const endCall = useCallback(async () => {
-    if (!callStarted) return;
-    try {
-      if (vapiRef.current) await vapiRef.current.stop();
-    } catch (err) {
-      console.error("[session] Error stopping call:", err);
-    } finally {
-      if (!isUnmountedRef.current) {
-        setCallStarted(false);
-        setConnectionStatus("disconnected");
-        setSpeakingStatus("idle");
+          const type: string =
+            (typeof err?.error?.message === "object"
+              ? err?.error?.message?.type
+              : undefined) ??
+            err?.error?.type ??
+            err?.message ??
+            "";
 
-        if (!sessionStartTime || !interviewConfig) return;
+          const isEjection =
+            type.toLowerCase().includes("eject") ||
+            type.toLowerCase().includes("ended");
 
-        const actualDuration =
-          (new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60;
+          if (isEjection) {
+            if (!isUnmountedRef.current) endCall();
+            return;
+          }
 
-        if (actualDuration < interviewConfig.estimated_time) {
-          toast.info("Interview ended early — redirecting...");
-          await updateHistory();
-          setTimeout(() => router.replace("/mock-interviews"), 1200);
-          return;
-        }
+          if (!isUnmountedRef.current) setConnectionStatus("error");
 
-        toast.info("Interview completed — generating report...");
-        setIsGeneratingReport(true);
-        await updateHistory();
-        await generateReport();
+          const userMsg: string =
+            (typeof err?.error?.message === "object"
+              ? err?.error?.message?.msg
+              : err?.error?.message) ??
+            err?.message ??
+            "Unknown call error";
+
+          toast.error(`Call error: ${userMsg}`);
+        });
+
+        await vapi.start(aid);
+      } catch (error) {
+        console.error("[session] Call start error:", error);
+        setConnectionStatus("error");
+        toast.error("Failed to start call");
       }
-    }
-  }, [callStarted, sessionStartTime, interviewConfig, updateHistory, generateReport, router]);
+    },
+    [createHistory, endCall],
+  );
 
+  // ─── Bootstrap (runs after language is selected + auth is ready) ────────
+  const bootstrap = useCallback(
+    async (language: SupportedLanguage, config: MockInterviews) => {
+      const candidateName =
+        session?.user?.name ?? session?.user?.email ?? "Candidate";
+      if (
+        !id ||
+        status !== "authenticated" ||
+        !session?.user ||
+        isBootstrappedRef.current
+      )
+        return;
+      isBootstrappedRef.current = true;
+      setLoading(true);
+      console.log(`[bootstrap] Starting bootstrap for interview ${id} with language ${language}`);
+
+      const micOk = await checkMic();
+      console.log(`[bootstrap] Microphone check result: ${micOk}`);
+      if (!isUnmountedRef.current) return;
+
+      console.log("[bootstrap] Microphone access status:", micOk);
+
+      if (!micOk) {
+        setLoading(false);
+        isBootstrappedRef.current = false;
+        return;
+      }
+      console.log("[bootstrap] Microphone access granted");
+
+      if (config.markAsCompleted) {
+        toast.info("This interview has already been completed.");
+        setLoading(false);
+        router.replace("/mock-interviews");
+        return;
+      }
+
+      setConnectionStatus("connecting");
+
+      try {
+        const assistantRes = await axios.post(`/api/assistant/`, {
+          ...config,
+          candidateName,
+          language,
+        });
+
+        if (!assistantRes.data?.data?.id)
+          throw new Error("Invalid assistant response — missing ID");
+
+        const aid = assistantRes.data.data.id as string;
+        console.log("[bootstrap] Assistant created with ID before startCallWithId:", aid);
+
+        if (isUnmountedRef.current) {
+          setAssistantId(aid);
+          setLoading(false);
+          startCallWithId(aid, config);
+          console.log("[bootstrap] Assistant created with ID:", aid);
+        }
+      } catch (err) {
+        console.error("[bootstrap] Assistant creation failed:", err);
+        toast.error(
+          err instanceof Error ? err.message : "Failed to initialize assistant",
+        );
+        if (!isUnmountedRef.current) {
+          setConnectionStatus("error");
+          setLoading(false);
+        }
+        isBootstrappedRef.current = false;
+      }
+    },
+    [id, status, session, startCallWithId, router, checkMic, isUnmountedRef],
+  );
+
+  // ─── Trigger bootstrap once language is picked and auth is settled ───────
+  useEffect(() => {
+    if (
+      !selectedLanguage ||
+      !interviewConfig || // ← wait for config to actually be fetched
+      !id ||
+      status !== "authenticated" ||
+      !session?.user?.name ||
+      isBootstrappedRef.current
+    )
+      return;
+
+    bootstrap(selectedLanguage, interviewConfig);
+  }, [
+    selectedLanguage,
+    interviewConfig,
+    id,
+    status,
+    session?.user?.name,
+    bootstrap,
+  ]);
+
+  // ─── Manual toggles ──────────────────────────────────────────────────────
   const toggleMute = useCallback(() => {
     if (vapiRef.current) {
       setIsMuted((prev) => {
-        const newMuted = !prev;
-        vapiRef.current?.setMuted(newMuted);
-        return newMuted;
+        const next = !prev;
+        vapiRef.current?.setMuted(next);
+        return next;
       });
     }
   }, []);
 
-  // ─── Effects ───────────────────────────────────────────────────────────────
+  const handleLanguageSelect = useCallback((lang: SupportedLanguage) => {
+    setSelectedLanguage(lang);
+  }, []);
 
-  // Kick off mic + config fetch in parallel on mount
-  useEffect(() => {
-    if (!id) return;
-    requestMicrophonePermission();
-    fetchInterviewConfig();
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Once config is ready, create the assistant (guarded by ref)
-  useEffect(() => {
-    if (interviewConfig && session?.user?.name && !assistantId) {
-      getAssistantId();
-    }
-  }, [interviewConfig, session, assistantId, getAssistantId]);
-
-  // Auto-start call once both assistantId and mic are ready
-  useEffect(() => {
-    if (assistantId && microphoneAccess && !callStarted && !loading) {
-      const timer = setTimeout(() => startCall(), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [assistantId, microphoneAccess, callStarted, loading, startCall]);
-
-  // Cleanup on unmount
+  // ─── Cleanup ─────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       isUnmountedRef.current = true;
-      if (vapiRef.current) {
-        try {
-          vapiRef.current.stop();
-          vapiRef.current.removeAllListeners();
-        } catch (err) {
-          console.error("[session] Cleanup error:", err);
-        }
+      try {
+        vapiRef.current?.stop();
+        vapiRef.current?.removeAllListeners();
+      } catch (err) {
+        console.error("[session] Cleanup error:", err);
       }
     };
   }, []);
-  if (loading && !interviewConfig) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="text-primary mx-auto h-12 w-12 animate-spin" />
-          <p className="mt-4 text-muted-foreground">Loading interview...</p>
-        </div>
-      </div>
-    );
-  }
- 
+
+  // ─── Guards ───────────────────────────────────────────────────────────────
   if (!id) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
-            <h1 className="text-2xl font-bold text-destructive">No Interview ID</h1>
-            <p className="mt-2 text-muted-foreground">Please provide a valid interview ID</p>
-            <Button className="mt-4" onClick={() => router.push("/mock-interviews")}>
+            <h1 className="text-destructive text-2xl font-bold">
+              No Interview ID
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Please provide a valid interview ID
+            </p>
+            <Button
+              className="mt-4"
+              onClick={() => router.push("/mock-interviews")}
+            >
               Go to Interviews
             </Button>
           </CardContent>
@@ -416,55 +674,45 @@ const SessionPage = () => {
       </div>
     );
   }
- 
-  if (isGeneratingReport) {
+
+  if (!selectedLanguage) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="text-primary mx-auto h-16 w-16 animate-spin" />
-          <h2 className="mt-6 text-2xl font-bold">Analyzing your interview...</h2>
-          <p className="mt-2 text-muted-foreground">
-            Please wait while we generate your feedback report
-          </p>
-        </div>
+      <LanguagePicker
+        topic={interviewConfig?.topic ?? ""}
+        onSelect={handleLanguageSelect}
+      />
+    );
+  }
+
+  if (loading && !interviewConfig) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center gap-3">
+        <Loader2 className="text-primary h-10 w-10 animate-spin" />
+        <p className="text-muted-foreground text-sm">
+          Setting up your interview...
+        </p>
       </div>
     );
   }
- 
+
+  if (isGeneratingReport) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center">
+        <Loader2 className="text-primary mx-auto h-16 w-16 animate-spin" />
+        <h2 className="mt-6 text-2xl font-bold">Analyzing your interview...</h2>
+        <p className="text-muted-foreground mt-2">
+          Please wait while we generate your feedback report
+        </p>
+      </div>
+    );
+  }
+
   const isAiSpeaking = speakingStatus === "ai-speaking";
   const isUserSpeaking = speakingStatus === "user-speaking";
- 
+
   return (
     <main className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden px-4 py-4 md:px-6 md:py-5">
-      <style>{`
-        @keyframes ring-pulse {
-          0%, 100% { transform: scale(1); opacity: 0.6; }
-          50% { transform: scale(1.18); opacity: 0; }
-        }
-        @keyframes ring-pulse-2 {
-          0%, 100% { transform: scale(1); opacity: 0.4; }
-          50% { transform: scale(1.32); opacity: 0; }
-        }
-        @keyframes wave-bar {
-          0%, 100% { transform: scaleY(0.4); }
-          50% { transform: scaleY(1); }
-        }
-        .speaking-ring-1 {
-          animation: ring-pulse 1.2s ease-out infinite;
-        }
-        .speaking-ring-2 {
-          animation: ring-pulse-2 1.2s ease-out infinite 0.2s;
-        }
-        .wave-bar {
-          animation: wave-bar 0.6s ease-in-out infinite;
-        }
-        .wave-bar:nth-child(1) { animation-delay: 0s; }
-        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
-        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
-        .wave-bar:nth-child(4) { animation-delay: 0.1s; }
-        .wave-bar:nth-child(5) { animation-delay: 0s; }
-      `}</style>
- 
+      {/* ── Header ── */}
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-primary truncate text-xl font-bold md:text-2xl">
@@ -475,7 +723,10 @@ const SessionPage = () => {
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge
-              className={cn("uppercase text-xs", getDifficultyColor(interviewConfig?.difficulty || ""))}
+              className={cn(
+                "text-xs uppercase",
+                getDifficultyColor(interviewConfig?.difficulty || ""),
+              )}
             >
               {interviewConfig?.difficulty || "Unknown"}
             </Badge>
@@ -484,34 +735,44 @@ const SessionPage = () => {
                 {interviewConfig.focus.join(", ")}
               </Badge>
             ) : null}
+            <Badge variant="secondary" className="gap-1 text-xs">
+              {LANGUAGE_OPTIONS.find((l) => l.id === selectedLanguage)?.flag}{" "}
+              {
+                LANGUAGE_OPTIONS.find((l) => l.id === selectedLanguage)
+                  ?.nativeLabel
+              }
+            </Badge>
           </div>
         </div>
- 
+
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm">
             <Clock className="h-3.5 w-3.5" />
             {formatTime(elapsedTime)}
           </Badge>
+
           <Badge
             variant="outline"
             className={cn(
               "gap-1.5 px-3 py-1.5 text-sm",
-              connectionStatus === "connected" && "border-green-200 bg-green-50 text-green-700",
-              connectionStatus === "connecting" && "border-yellow-200 bg-yellow-50 text-yellow-700",
-              connectionStatus === "error" && "border-red-200 bg-red-50 text-red-700",
+              connectionStatus === "connected" &&
+                "border-green-200 bg-green-50 text-green-700",
+              connectionStatus === "connecting" &&
+                "border-yellow-200 bg-yellow-50 text-yellow-700",
+              connectionStatus === "error" &&
+                "border-red-200 bg-red-50 text-red-700",
             )}
           >
             {connectionStatus === "connected" ? (
               <Wifi className="h-3.5 w-3.5" />
             ) : connectionStatus === "connecting" ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : connectionStatus === "error" ? (
-              <WifiOff className="h-3.5 w-3.5" />
             ) : (
-              <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
+              <WifiOff className="h-3.5 w-3.5" />
             )}
             <span className="capitalize">{connectionStatus}</span>
           </Badge>
+
           <Button
             variant="outline"
             size="sm"
@@ -519,12 +780,27 @@ const SessionPage = () => {
             disabled={!callStarted}
             className="gap-1.5"
           >
-            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            <span className="hidden sm:inline">{isMuted ? "Unmute" : "Mute"}</span>
+            {isMuted ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">
+              {isMuted ? "Unmute" : "Mute"}
+            </span>
           </Button>
+
           <Button
             size="sm"
-            onClick={callStarted ? endCall : startCall}
+            onClick={
+              callStarted
+                ? endCall
+                : () =>
+                    assistantId &&
+                    interviewConfig &&
+                    startCallWithId(assistantId, interviewConfig)
+            }
+            disabled={!assistantId || (!callStarted && !microphoneAccess)}
             className={cn(
               "gap-1.5 font-semibold",
               callStarted
@@ -546,12 +822,15 @@ const SessionPage = () => {
           </Button>
         </div>
       </div>
- 
+
+      {/* ── Body ── */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+        {/* ── Avatar cards ── */}
         <div className="flex shrink-0 flex-row gap-3 lg:w-72 lg:flex-col xl:w-80">
+          {/* AI card */}
           <div
             className={cn(
-              "relative flex flex-1 flex-col items-center justify-center rounded-xl border bg-card p-4 transition-all duration-300",
+              "bg-card relative flex flex-1 flex-col items-center justify-center rounded-xl border p-4 transition-all duration-300",
               isAiSpeaking ? "border-primary/40 shadow-md" : "border-border",
             )}
           >
@@ -578,21 +857,24 @@ const SessionPage = () => {
               >
                 <Bot
                   className={cn(
-                    "h-7 w-7 md:h-9 md:w-9 transition-colors duration-300",
+                    "h-7 w-7 transition-colors duration-300 md:h-9 md:w-9",
                     isAiSpeaking ? "text-primary" : "text-muted-foreground",
                   )}
                 />
               </div>
             </div>
- 
-            <p className="text-sm font-semibold text-foreground">AI Interviewer</p>
+            <p className="text-foreground text-sm font-semibold">
+              AI Interviewer
+            </p>
             <p className="text-muted-foreground mt-0.5 text-xs">
               {isAiSpeaking ? "Speaking..." : "Listening"}
             </p>
- 
-            {isAiSpeaking && (
-              <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
-                {[...Array(5)].map((_, i) => (
+            <div
+              className="mt-3 flex items-end gap-0.5"
+              style={{ height: "20px" }}
+            >
+              {[...Array(5)].map((_, i) =>
+                isAiSpeaking ? (
                   <span
                     key={i}
                     className="wave-bar inline-block w-1 rounded-full"
@@ -602,12 +884,7 @@ const SessionPage = () => {
                       transformOrigin: "bottom",
                     }}
                   />
-                ))}
-              </div>
-            )}
-            {!isAiSpeaking && (
-              <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
-                {[...Array(5)].map((_, i) => (
+                ) : (
                   <span
                     key={i}
                     className="inline-block w-1 rounded-full"
@@ -617,14 +894,15 @@ const SessionPage = () => {
                       opacity: 0.3,
                     }}
                   />
-                ))}
-              </div>
-            )}
+                ),
+              )}
+            </div>
           </div>
- 
+
+          {/* User card */}
           <div
             className={cn(
-              "relative flex flex-1 flex-col items-center justify-center rounded-xl border bg-card p-4 transition-all duration-300",
+              "bg-card relative flex flex-1 flex-col items-center justify-center rounded-xl border p-4 transition-all duration-300",
               isUserSpeaking ? "border-blue-400/40 shadow-md" : "border-border",
             )}
           >
@@ -644,27 +922,31 @@ const SessionPage = () => {
               <div
                 className={cn(
                   "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 transition-all duration-300 md:h-20 md:w-20",
-                  isUserSpeaking ? "border-blue-400 bg-blue-50" : "border-border bg-secondary",
+                  isUserSpeaking
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-border bg-secondary",
                 )}
               >
                 {session?.user?.image ? (
-                  <img
+                  <Image
                     src={session.user.image}
                     alt={session.user.name || "You"}
                     className="h-full w-full object-cover"
+                    
                   />
                 ) : (
                   <User
                     className={cn(
-                      "h-7 w-7 md:h-9 md:w-9 transition-colors duration-300",
-                      isUserSpeaking ? "text-blue-500" : "text-muted-foreground",
+                      "h-7 w-7 transition-colors duration-300 md:h-9 md:w-9",
+                      isUserSpeaking
+                        ? "text-blue-500"
+                        : "text-muted-foreground",
                     )}
                   />
                 )}
               </div>
             </div>
- 
-            <p className="text-sm font-semibold text-foreground">
+            <p className="text-foreground text-sm font-semibold">
               {session?.user?.name?.split(" ")[0] ?? "You"}
             </p>
             <p className="text-muted-foreground mt-0.5 text-xs">
@@ -676,10 +958,12 @@ const SessionPage = () => {
                     ? "Listening"
                     : "Not in call"}
             </p>
- 
-            {isUserSpeaking && (
-              <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
-                {[...Array(5)].map((_, i) => (
+            <div
+              className="mt-3 flex items-end gap-0.5"
+              style={{ height: "20px" }}
+            >
+              {[...Array(5)].map((_, i) =>
+                isUserSpeaking ? (
                   <span
                     key={i}
                     className="wave-bar inline-block w-1 rounded-full"
@@ -689,12 +973,7 @@ const SessionPage = () => {
                       transformOrigin: "bottom",
                     }}
                   />
-                ))}
-              </div>
-            )}
-            {!isUserSpeaking && (
-              <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
-                {[...Array(5)].map((_, i) => (
+                ) : (
                   <span
                     key={i}
                     className="inline-block w-1 rounded-full"
@@ -704,13 +983,14 @@ const SessionPage = () => {
                       opacity: 0.3,
                     }}
                   />
-                ))}
-              </div>
-            )}
+                ),
+              )}
+            </div>
           </div>
         </div>
- 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border bg-card shadow-sm">
+
+        {/* ── Transcript panel ── */}
+        <div className="bg-card flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border shadow-sm">
           <div className="flex items-center gap-2 border-b px-4 py-3">
             <MessageSquare className="text-primary h-4 w-4 shrink-0" />
             <h2 className="text-sm font-semibold">Conversation</h2>
@@ -720,15 +1000,17 @@ const SessionPage = () => {
               </Badge>
             )}
           </div>
- 
+
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             {messages.length === 0 && !currentTranscript ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 py-12">
-                <div className="rounded-full bg-secondary p-4">
+                <div className="bg-secondary rounded-full p-4">
                   <MessageSquare className="text-muted-foreground h-6 w-6" />
                 </div>
                 <p className="text-muted-foreground max-w-xs text-center text-sm">
-                  Start the interview to see the conversation transcript here.
+                  {loading
+                    ? "Setting up your interview session..."
+                    : "Start the interview to see the conversation transcript here."}
                 </p>
               </div>
             ) : (
@@ -751,7 +1033,7 @@ const SessionPage = () => {
                     >
                       {msg.role === "user" ? (
                         session?.user?.image ? (
-                          <img
+                          <Image
                             src={session.user.image}
                             alt="You"
                             className="h-full w-full rounded-full object-cover"
@@ -768,33 +1050,56 @@ const SessionPage = () => {
                         "max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
                         msg.role === "user"
                           ? "rounded-br-sm bg-blue-500 text-white"
-                          : "rounded-bl-sm border border-border bg-secondary text-secondary-foreground",
+                          : "border-border bg-secondary text-secondary-foreground rounded-bl-sm border",
                       )}
                     >
                       {msg.transcript}
                     </div>
                   </div>
                 ))}
- 
-                {currentTranscript && (
-                  <div className="flex flex-row-reverse items-end gap-2.5">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50">
-                      {session?.user?.image ? (
-                        <Image
-                          src={session.user.image}
-                          alt="You"
-                          fill
-                          className="h-full w-full rounded-full object-cover"
-                        />
+
+                {currentTranscript && currentRole && (
+                  <div
+                    className={cn(
+                      "flex items-end gap-2.5",
+                      currentRole === "user" ? "flex-row-reverse" : "flex-row",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border",
+                        currentRole === "user"
+                          ? "border-blue-200 bg-blue-50"
+                          : "border-primary/20 bg-primary/10",
+                      )}
+                    >
+                      {currentRole === "user" ? (
+                        session?.user?.image ? (
+                          <Image
+                            src={session.user.image}
+                            alt="You"
+                            className="h-full w-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="h-3.5 w-3.5 text-blue-500" />
+                        )
                       ) : (
-                        <User className="h-3.5 w-3.5 text-blue-500" />
+                        <Bot className="text-primary h-3.5 w-3.5" />
                       )}
                     </div>
-                    <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-blue-400/70 px-3.5 py-2.5 text-sm leading-relaxed text-white italic">
+                    <div
+                      className={cn(
+                        "max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed italic opacity-70",
+                        currentRole === "user"
+                          ? "rounded-br-sm bg-blue-400/70 text-white"
+                          : "border-border bg-secondary text-secondary-foreground rounded-bl-sm border",
+                      )}
+                    >
                       {currentTranscript}
                     </div>
                   </div>
                 )}
+
                 <div ref={transcriptEndRef} />
               </div>
             )}
@@ -804,5 +1109,5 @@ const SessionPage = () => {
     </main>
   );
 };
- 
+
 export default SessionPage;

@@ -1,23 +1,36 @@
-import React from "react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import ResumeAnalysisClient from "./resume-analysis-client";
 
-const ResumeAnalysis = () => {
-  return (
-    <section>
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl/8">
-            Resume Analysis
-          </h1>
-          <p className="text-muted-foreground text-sm md:text-lg">
-            Get actionable feedback on your resume and see how you can improve it.
-          </p>
-        </div>
-      </div>
-      <div className="mt-4 flex items-center justify-center">
-        <p>Feature will be available soon</p>
-      </div>
-    </section>
-  );
-};
+export default async function ResumeAnalysisPage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) redirect("/sign-in");
 
-export default ResumeAnalysis;
+  const user = await db.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+
+  if (!user) redirect("/sign-in");
+
+  // Fetch all resumes newest-first
+  const resumes = await db.resume.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      fileUrl: true,
+      parsedJson: true,
+      createdAt: true,
+    },
+  });
+
+  const serialized = resumes.map((r) => ({
+    ...r,
+    createdAt: r.createdAt.toISOString(),
+  }));
+
+  return <ResumeAnalysisClient resumes={serialized} />;
+}

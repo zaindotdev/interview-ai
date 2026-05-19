@@ -3,14 +3,12 @@ import type React from "react";
 import Link from "next/link";
 
 import { useCallback, useEffect, useState } from "react";
-import { Mail, User, Calendar, Award, Target, LogOut } from "lucide-react";
+import { Mail, User, Calendar, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +17,7 @@ import axios, { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { User as UserProfile } from "@/generated/prisma";
+import { User as UserProfile } from "@/lib/types";
 
 const ProfilePage: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);

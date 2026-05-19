@@ -5,7 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/prisma";
 import bcrypt from "bcrypt";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/lib/types";
 import jwt from "jsonwebtoken";
 
 export const authOptions: NextAuthOptions = {
@@ -95,7 +95,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user, trigger, account }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         const dbUser = await db.user.findUnique({
           where: { email: user.email! },
@@ -144,14 +144,18 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token) {
         session.user.role = token.role as Role;
-        (session.user as any).hasOnboarded = token.hasOnboarded ?? false;
-        (session.user as any).emailVerified = token.emailVerified === true;
-        (session.user as any).userId = token.userId;
+        const hasOnboarded =
+          typeof token.hasOnboarded === "boolean"
+            ? token.hasOnboarded
+            : false;
+        session.user.hasOnboarded = hasOnboarded;
+        session.user.emailVerified = token.emailVerified === true;
+        session.user.userId = token.userId;
       }
       return session;
     },
 
-    async signIn({ account, profile }) {
+    async signIn({ account: account, profile }) {
       try {
         if (account?.provider === "google" || account?.provider === "github") {
           const existingUser = await db.user.findFirst({

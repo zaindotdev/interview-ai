@@ -58,11 +58,11 @@ export async function POST(req: NextRequest) {
         currency: session.currency,
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error retrieving checkout session:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to retrieve checkout session" },
-      { status: 500 }
-    );
+    const message = error instanceof Error
+      ? error.message
+      : "Failed to retrieve checkout session";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

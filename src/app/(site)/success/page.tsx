@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 import axios from 'axios';
@@ -15,15 +15,7 @@ function SuccessPageContent() {
   const router = useRouter();
   const sessionId = searchParams.get('session_id');
 
-  useEffect(() => {
-    if (sessionId) {
-      fetchSessionStatus();
-    } else {
-      router.replace('/dashboard');
-    }
-  }, [sessionId]);
-
-  async function fetchSessionStatus() {
+  const fetchSessionStatus = useCallback(async () => {
     try {
       const response = await axios.post('/api/stripe/checkout-session', {
         sessionId,
@@ -43,7 +35,15 @@ function SuccessPageContent() {
       console.error('Error fetching session status:', error);
       setStatus('failed');
     }
-  }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (sessionId) {
+      fetchSessionStatus();
+    } else {
+      router.replace('/dashboard');
+    }
+  }, [sessionId, router, fetchSessionStatus]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">

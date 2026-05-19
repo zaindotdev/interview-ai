@@ -1,9 +1,6 @@
 {
   "root": true,
-  "extends": [
-    "next/core-web-vitals",
-    "plugin:@typescript-eslint/recommended"
-  ],
+  "extends": ["next/core-web-vitals", "plugin:@typescript-eslint/recommended"],
   "plugins": ["@typescript-eslint", "unused-imports"],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
@@ -21,6 +18,7 @@
       }
     ],
     "unused-imports/no-unused-imports": "error",
+    "@typescript-eslint/no-explicit-any": "off",
     "unused-imports/no-unused-vars": [
       "warn",
       {

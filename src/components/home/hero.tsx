@@ -444,7 +444,7 @@ const Home = () => {
           className="text-muted-foreground mt-4 max-w-sm text-left font-sans text-base leading-relaxed"
         >
           Personalized practice, real-time feedback, and expert guidance. Built
-          for humans who get nervous, not robots who don't.
+          for humans who get nervous, not robots who don&apos;t.
         </motion.p>
 
         <div className="mt-6 flex gap-3">

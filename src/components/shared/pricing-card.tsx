@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Badge } from "../ui/badge";
 
@@ -39,7 +39,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   productId,
 }) => {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
 
   const handleSubscribe = async () => {

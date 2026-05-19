@@ -5,11 +5,14 @@ import { ErrorResponse, HttpResponse } from "@/utils/response";
 import { db } from "@/lib/prisma";
 import { generateAIResponse, parseAIResponse } from "@/utils/ai";
 import { z } from "zod";
-import { PaymentStatus } from "@/generated/prisma";
+import { PaymentStatus } from "@/generated/prisma/client";
+import { getRedis } from "@/lib/redis";
 
 // Constants
 const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 hours
 const AI_TEMPERATURE = 0.3;
+
+const redis = await getRedis();
 
 // Tier-based limits
 const REPORT_LIMITS = {
@@ -65,8 +68,8 @@ interface ChartConfig {
   }>;
   chartOptions: {
     title: string;
-    scales?: Record<string, any>;
-    plugins?: Record<string, any>;
+    scales?: Record<string, unknown>;
+    plugins?: Record<string, unknown>;
   };
 }
 
@@ -329,7 +332,7 @@ function sanitizeReportForTier(
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession({ req, ...authOptions });
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json(new ErrorResponse("Unauthorized"), {
         status: 401,
@@ -370,7 +373,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const isSubscribed = user?.subscription?.payment?.status === PaymentStatus.PAID;
+    const isSubscribed =
+      user?.subscription?.payment?.status === PaymentStatus.PAID;
 
     // Get tier-specific limits
     const limits = isSubscribed ? REPORT_LIMITS.PREMIUM : REPORT_LIMITS.FREE;
@@ -403,7 +407,7 @@ export async function POST(req: NextRequest) {
     if (existingReport) {
       return NextResponse.json(
         new HttpResponse("success", "Report already exists", {
-          report: existingReport,
+          reportId: existingReport.id,
           tier: isSubscribed ? "premium" : "free",
         }),
         { status: 200 },
@@ -511,6 +515,7 @@ export async function GET(req: NextRequest) {
 
     const searchParams = req.nextUrl.searchParams;
     const reportId = searchParams.get("id");
+    console.log("Fetching report with ID:", reportId);
 
     if (!reportId) {
       return NextResponse.json(new ErrorResponse("Report ID is required"), {
@@ -518,10 +523,18 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const cacheKey = `report:${reportId}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) return NextResponse.json(JSON.parse(cached));
+    console.log("Cache miss for report:", reportId);
+
     // Fetch user with subscription status
     const user = await db.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, subscription: { select: { payment: { select: { status: true } } } } },
+      select: {
+        id: true,
+        subscription: { select: { payment: { select: { status: true } } } },
+      },
     });
 
     if (!user) {
@@ -530,7 +543,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const isSubscribed = user.subscription?.payment?.status === PaymentStatus.PAID;
+    const isSubscribed =
+      user.subscription?.payment?.status === PaymentStatus.PAID;
 
     // Fetch report and verify ownership
     const report = await db.mockInterviewsReport.findFirst({
@@ -572,13 +586,21 @@ export async function GET(req: NextRequest) {
       delete sanitizedReport.report.redFlags;
     }
 
-    return NextResponse.json(
-      new HttpResponse("success", "Report fetched successfully", {
+    const responseData = new HttpResponse(
+      "success",
+      "Report fetched successfully",
+      {
         report: sanitizedReport,
         tier: isSubscribed ? "premium" : "free",
-      }),
-      { status: 200 },
+      },
     );
+
+    // Cache the final formatted response, not the raw DB row
+    await redis.set(cacheKey, JSON.stringify(responseData), {
+      expiration: { type: "EX", value: 24 * 60 * 60 },
+    });
+
+    return NextResponse.json(responseData, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch report:", error);
     return NextResponse.json(new ErrorResponse("Failed to retrieve report"), {

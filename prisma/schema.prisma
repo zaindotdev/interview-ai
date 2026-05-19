@@ -1,12 +1,11 @@
-datasource db {
-  provider = "postgresql"
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
-generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
-  previewFeatures = ["postgresqlExtensions"]
-  compilerBuild = "fast"
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
 }
 
 enum Role {
@@ -168,9 +167,10 @@ model Assistant {
 
 model Resume {
   id         String @id @default(uuid())
-  userId     String
+  userId     String @unique
   fileUrl    String
   parsedJson Json
+  isLatest   Boolean @default(true)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

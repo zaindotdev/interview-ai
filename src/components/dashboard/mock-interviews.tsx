@@ -20,8 +20,8 @@ import {
   Target,
   TrendingDown,
   BookOpen,
-  ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
 
 interface MockInterviewsProps {
   weaknessess?: string[];
@@ -71,14 +71,14 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({
         </CardHeader>
         <CardContent>
           {weaknessess && weaknessess.length > 0 ? (
-            <ScrollArea className="h-[400px]">
+            <ScrollArea className="h-100">
               <div className="space-y-3">
                 {weaknessess.map((weakness, idx) => (
                   <div
                     key={`weakness-${idx}`}
                     className="flex items-start space-x-3 rounded-lg border border-orange-200 bg-orange-50 p-3"
                   >
-                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-600" />
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
                     <p className="text-sm font-medium text-orange-900">
                       {weakness}
                     </p>
@@ -87,7 +87,7 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex h-[300px] items-center justify-center">
+            <div className="flex h-75 items-center justify-center">
               <div className="space-y-3 text-center">
                 <div className="bg-muted mx-auto w-fit rounded-full p-3">
                   <Target className="text-muted-foreground h-6 w-6" />
@@ -130,7 +130,7 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({
         </CardHeader>
         <CardContent>
           {practiceInterview && practiceInterview.length > 0 ? (
-            <ScrollArea className="h-[400px]">
+            <ScrollArea className="h-100">
               <div className="space-y-4 w-full">
                 {practiceInterview.map((interview, idx) => (
                   <div key={interview.topic + idx}>
@@ -202,7 +202,7 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex h-[400px] items-center justify-center">
+            <div className="flex h-100 items-center justify-center">
               <div className="space-y-4 text-center">
                 <div className="bg-muted mx-auto w-fit rounded-full p-4">
                   <BookOpen className="text-muted-foreground h-8 w-8" />
@@ -216,7 +216,7 @@ const MockInterviews: React.FC<MockInterviewsProps> = ({
                   </p>
                 </div>
                 <Button variant="outline" asChild>
-                  <a href="#resume-analysis">Upload Resume</a>
+                  <Link href="#resume-analysis">Upload Resume</Link>
                 </Button>
               </div>
             </div>
