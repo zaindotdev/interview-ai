@@ -1,12 +1,13 @@
 "use client";
-import React, { useState, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+
+import React, { useState, useCallback } from "react";
+import { motion } from "motion/react";
 import { Card, CardTitle, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import DragAndDropInput from "@/components/shared/drag-and-drop-input";
-import { Loader2, CheckCircle, FileText } from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -21,80 +22,92 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/context/app-provider";
 import { useSession } from "next-auth/react";
+import { cn } from "@/lib/utils";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPE = "application/pdf";
-const TOTAL_STEPS = 2;
-
-interface StepState {
-  current: number;
-  total: number;
-}
 
 type FormData = z.infer<typeof analyzeResumeSchema>;
 
+// ── Step indicator ────────────────────────────────────────────────────────────
+const StepIndicator: React.FC<{
+  stepNum: number;
+  currentStep: number;
+  onClick: (n: number) => void;
+  hasFile: boolean;
+}> = ({ stepNum, currentStep, onClick, hasFile }) => {
+  const isActive = currentStep === stepNum;
+  const isCompleted = currentStep > stepNum;
+  const isClickable = stepNum === 1 || (stepNum === 2 && hasFile);
 
+  return (
+    <button
+      type="button"
+      onClick={() => isClickable && onClick(stepNum)}
+      disabled={!isClickable}
+      aria-label={`Step ${stepNum}${isCompleted ? " (completed)" : isActive ? " (current)" : ""}`}
+      className={cn(
+        // Diamond shape via rotate-45
+        "relative flex h-12 w-12 rotate-45 items-center justify-center border-4 transition-all duration-300",
+        isClickable ? "cursor-pointer" : "cursor-not-allowed opacity-40",
+        isCompleted
+          ? "border-primary bg-primary shadow-md" // ✅ on-theme, no green
+          : isActive
+            ? "border-primary/30 bg-primary ring-primary/20 shadow-lg ring-4"
+            : "border-border bg-muted", // ✅ on-theme inactive
+      )}
+    >
+      {isCompleted ? (
+        <CheckCircle className="text-primary-foreground h-5 w-5 -rotate-45" />
+      ) : (
+        <span
+          className={cn(
+            "-rotate-45 text-lg font-bold",
+            isActive ? "text-primary-foreground" : "text-muted-foreground",
+          )}
+        >
+          {stepNum}
+        </span>
+      )}
+    </button>
+  );
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
 const Onboarding: React.FC = () => {
-  const [steps, setSteps] = useState<StepState>({
-    current: 1,
-    total: TOTAL_STEPS,
-  });
+  const [currentStep, setCurrentStep] = useState(1);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const router = useRouter();
-  const { analyzeResume, loading, error, clearError } = useAppContext();
+  const { analyzeResume, loading } = useAppContext();
+  const { update } = useSession();
 
   const form = useForm<FormData>({
     resolver: zodResolver(analyzeResumeSchema),
-    defaultValues: {
-      jobDescription: "",
-    },
+    defaultValues: { jobDescription: "" },
   });
 
-  const { update } = useSession();
-
-  useEffect(() => {
-    if (error) {
-      if(error.includes("500")){
-        toast.error("Server error occurred. Please try again later.");
-        clearError();
-        return;
-      }
-      toast.error(error);
-      clearError();
+  const handleFileSelect = useCallback((file: File | null) => {
+    if (!file) {
+      // X button in DragAndDropInput
+      setSelectedFile(null);
+      setCurrentStep(1);
+      toast.info("File removed");
+      return;
     }
-  }, [error]);
-
-  const validateFile = useCallback((file: File): string | null => {
     if (file.size > MAX_FILE_SIZE) {
-      return "File size must be less than 5MB";
+      toast.error("File size must be less than 5MB");
+      return;
     }
-
     if (file.type !== ALLOWED_FILE_TYPE) {
-      return "Only PDF files are allowed";
+      toast.error("Only PDF files are allowed");
+      return;
     }
 
-    return null;
+    setSelectedFile(file);
+    // ✅ Auto-advance to step 2, no toast (DragAndDropInput already shows the file)
+    setCurrentStep(2);
   }, []);
-
-  const handleFileSelect = useCallback(
-    (file: File) => {
-      console.info("Processing file upload...");
-
-      const validationError = validateFile(file);
-      if (validationError) {
-        toast.error(validationError);
-        return;
-      }
-
-      setSelectedFile(file);
-      setSteps((prev) => ({ ...prev, current: prev.current + 1 }));
-
-      toast.success(`File "${file.name}" uploaded successfully!`);
-      console.info("File uploaded successfully:", file.name);
-    },
-    [validateFile],
-  );
 
   const onSubmit = useCallback(
     async (data: FormData) => {
@@ -102,29 +115,25 @@ const Onboarding: React.FC = () => {
         toast.error("Please upload a resume first");
         return;
       }
-
       try {
         const formData = new FormData();
         formData.append("resume", selectedFile);
         formData.append("jobDescription", data.jobDescription);
-        await analyzeResume(formData);
-        await update();
-
-        form.reset();
-        if (error) {
-          toast.error("Resume analysis unsuccessful. Please try again.");
+        const { success, message } = await analyzeResume(formData);
+        if (!success) {
+          toast.error(message || "Resume analysis failed. Please try again.");
           return;
         }
-        
-        if (!loading) {
-          toast.success("Resume analysis successful!");
-          router.push("/dashboard");
-        }
-
-        console.info("Resume analysis successful!");
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to analyze resume. Please try again.");
+        await update();
+        form.reset();
+        router.push("/dashboard");
+      } catch (error) {
+        console.log("Error analyzing resume:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        );
       }
     },
     [selectedFile, analyzeResume, form, router, update],
@@ -133,137 +142,75 @@ const Onboarding: React.FC = () => {
   const handleStepClick = useCallback(
     (stepNum: number) => {
       if (stepNum === 1 || (stepNum === 2 && selectedFile)) {
-        setSteps((prev) => ({ ...prev, current: stepNum }));
+        setCurrentStep(stepNum);
       }
     },
     [selectedFile],
   );
 
-  const handleRemoveFile = useCallback(() => {
-    setSelectedFile(null);
-    setSteps((prev) => ({ ...prev, current: 1 }));
-    toast.info("File removed");
-  }, []);
-
-
-  const StepIndicator: React.FC<{ stepNum: number }> = ({ stepNum }) => {
-    const isActive = steps.current === stepNum;
-    const isCompleted = steps.current > stepNum;
-    const isClickable = stepNum === 1 || (stepNum === 2 && selectedFile);
-
-    return (
-      <div
-        className={`flex h-12 w-12 rotate-45 items-center justify-center border-4 border-white transition-all duration-300 ${
-          isClickable ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-        } ${
-          isActive
-            ? "bg-primary ring-primary shadow-lg ring-4"
-            : isCompleted
-              ? "bg-green-500 shadow-md"
-              : "hover:bg-primary/60 bg-primary"
-        }`}
-        onClick={() => handleStepClick(stepNum)}
-        role="button"
-        tabIndex={isClickable ? 0 : -1}
-        aria-label={`Step ${stepNum}${isCompleted ? " (completed)" : isActive ? " (current)" : ""}`}
-      >
-        {isCompleted ? (
-          <CheckCircle className="h-6 w-6 -rotate-45 text-white" />
-        ) : (
-          <span
-            className={`-rotate-45 text-lg font-bold ${
-              isActive ? "text-white" : "text-gray-600"
-            }`}
-          >
-            {stepNum}
-          </span>
-        )}
-      </div>
-    );
-  };
-
   return (
-    <section className="container mx-auto min-h-screen p-4 bg-background">
+    <section className="bg-background container mx-auto min-h-screen p-4">
       <div className="flex min-h-screen w-full items-center justify-center">
-        <Card className="w-full max-w-xl px-4 py-8 shadow-none border-none bg-background">
+        <Card className="bg-background w-full max-w-xl border-none px-4 py-8 shadow-none">
           <CardHeader>
-            <CardTitle className="mx-auto">
+            <CardTitle className="mx-auto w-full">
               <h1 className="text-primary text-center text-2xl font-bold md:text-3xl/8">
                 Ace your next interview
               </h1>
-              <p className="mt-2 mb-6 max-w-sm text-center text-sm font-medium text-gray-600 md:text-base">
+              <p className="text-muted-foreground mt-2 mb-8 text-center text-sm font-medium md:text-base">
                 Get ready to nail your next interview with our AI powered
                 interview practice tool
               </p>
 
-              <div className="relative mb-6">
-                <div className="absolute top-6 right-6 left-6 z-0 h-0.5 bg-neutral-300" />
-
-                <motion.div
-                  className="bg-primary absolute top-6 left-6 z-10 h-0.5"
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: steps.current === 1 ? "0%" : "100%",
-                  }}
-                  transition={{ duration: 0.5 }}
+              {/* ── Step progress ─────────────────────────────────────────── */}
+              {/* ✅ Flex-based connector: line sits between the diamonds,     */}
+              {/*    never overlapping them regardless of diamond size.         */}
+              <div className="mb-8 flex items-center justify-center gap-0">
+                <StepIndicator
+                  stepNum={1}
+                  currentStep={currentStep}
+                  onClick={handleStepClick}
+                  hasFile={!!selectedFile}
                 />
-                <div className="relative z-20 flex items-center justify-between">
-                  {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(
-                    (stepNum) => (
-                      <StepIndicator key={stepNum} stepNum={stepNum} />
-                    ),
-                  )}
+
+                {/* Connector line */}
+                <div className="bg-border relative h-0.5 w-40 overflow-hidden">
+                  <motion.div
+                    className="bg-primary absolute inset-y-0 left-0"
+                    initial={{ width: "0%" }}
+                    animate={{ width: currentStep > 1 ? "100%" : "0%" }}
+                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                  />
                 </div>
+
+                <StepIndicator
+                  stepNum={2}
+                  currentStep={currentStep}
+                  onClick={handleStepClick}
+                  hasFile={!!selectedFile}
+                />
               </div>
             </CardTitle>
           </CardHeader>
 
           <CardContent>
-            {steps.current === 1 && (
-              <div>
+            {/* ── Step 1: Upload ── */}
+            {currentStep === 1 && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+              >
                 <h2 className="mb-4 text-center text-xl font-bold md:text-2xl">
                   Upload your resume
                 </h2>
+                {/* ✅ DragAndDropInput handles file display internally — no duplicate card */}
                 <DragAndDropInput handleFileSelect={handleFileSelect} />
-
-                {selectedFile && (
-                  <motion.div
-                    className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4 text-center"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <div className="mb-2 flex items-center justify-center gap-2">
-                      <FileText className="h-4 w-4 text-green-600" />
-                      <p className="text-sm font-medium text-green-800">
-                        {selectedFile.name}
-                      </p>
-                    </div>
-                    <p className="mb-3 text-xs text-green-600">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                    <div className="flex justify-center gap-2">
-                      <Button
-                        onClick={() =>
-                          setSteps((prev) => ({ ...prev, current: 2 }))
-                        }
-                        size="sm"
-                      >
-                        Continue
-                      </Button>
-                      <Button
-                        onClick={handleRemoveFile}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-              </div>
+              </motion.div>
             )}
 
-            {steps.current === 2 && (
+            {/* ── Step 2: Job Description ── */}
+            {currentStep === 2 && (
               <motion.div
                 className="text-center"
                 initial={{ opacity: 0, x: 20 }}
@@ -283,10 +230,10 @@ const Onboarding: React.FC = () => {
                       control={form.control}
                       name="jobDescription"
                       render={({ field }) => (
-                        <FormItem className="w-full">
+                        <FormItem className="w-full text-left">
                           <FormControl className="w-full">
                             <Textarea
-                              className="h-[150px] w-full resize-y"
+                              className="border-border bg-input focus:border-primary/50 min-h-40 w-full resize-y rounded-xl"
                               placeholder="Paste the job description here..."
                               disabled={loading}
                               {...field}
@@ -297,32 +244,25 @@ const Onboarding: React.FC = () => {
                       )}
                     />
 
-                    {error && (
-                      <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                        <p className="text-sm text-red-700">{error}</p>
-                      </div>
-                    )}
-
-                    <div className="flex justify-center gap-4">
+                    <div className="flex justify-center gap-3">
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() =>
-                          setSteps((prev) => ({ ...prev, current: 1 }))
-                        }
+                        onClick={() => setCurrentStep(1)}
                         disabled={loading}
+                        className="border-border hover:border-primary/30 hover:bg-secondary rounded-xl"
                       >
                         Back
                       </Button>
                       <Button
                         type="submit"
                         disabled={loading || !form.formState.isValid}
-                        className="min-w-[120px]"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-36 rounded-xl"
                       >
                         {loading ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Analyzing...
+                            Analyzing…
                           </>
                         ) : (
                           "Analyze Resume"

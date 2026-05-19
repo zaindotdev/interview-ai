@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import Logo from "@/components/shared/logo";
 import axios, { AxiosError } from "axios";
-import type { User } from "@/generated/prisma";
+import type { User } from "@/lib/types";
 import { useRouter, usePathname } from "next/navigation";
 import {
   getNavigationSections,
@@ -24,12 +24,10 @@ import {
 
 export const AppSidebar: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
   const pathname = usePathname();
 
   const fetchUser = useCallback(async () => {
-    setLoading(true);
     try {
       const { data: response } = await axios.get("/api/user/get", {
         withCredentials: true,
@@ -51,8 +49,6 @@ export const AppSidebar: React.FC = () => {
         });
       }
       setUser(null);
-    } finally {
-      setLoading(false);
     }
   }, []);
 

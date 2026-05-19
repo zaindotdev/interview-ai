@@ -1,13 +1,13 @@
-export class HttpResponse{
-    public success:string;
-    public message:string;
-    public data:any
+export class HttpResponse<T = unknown> {
+  public success: string;
+  public message: string;
+  public data: T;
 
-    constructor(success:string, message:string,data:any){
-        this.success = success;
-        this.message = message;
-        this.data = data;
-    }
+  constructor(success: string, message: string, data: T) {
+    this.success = success;
+    this.message = message;
+    this.data = data;
+  }
 }
 
 export class ErrorResponse extends Error {

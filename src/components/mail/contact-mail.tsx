@@ -12,6 +12,7 @@ import {
   Body,
   Preview,
 } from "@react-email/components";
+import Link from "next/link";
 
 interface ContactEmailProps {
   name: string;
@@ -64,7 +65,9 @@ export const ContactEmail: React.FC<ContactEmailProps> = ({
               <Column style={infoCell}>
                 <Text style={infoLabel}>Email Address</Text>
                 <Text style={{ ...infoValue, color: "#b84a00" }}>
-                  <a href={`mailto:${email}`} style={emailLink}>{email}</a>
+                  <Link href={`mailto:${email}`} style={emailLink}>
+                    {email}
+                  </Link>
                 </Text>
               </Column>
             </Row>
@@ -92,7 +95,7 @@ export const ContactEmail: React.FC<ContactEmailProps> = ({
           {/* Footer */}
           <Section style={footer}>
             <Text style={footerText}>
-              Interview AI · <a href="https://interview-ai.live" style={footerLink}>interview-ai.live</a>
+              Interview AI · <Link href="https://interview-ai.live" style={footerLink}>interview-ai.live</Link>
             </Text>
             <Text style={footerText}>
               This message was submitted via the contact form.

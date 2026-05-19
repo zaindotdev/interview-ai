@@ -8,6 +8,7 @@ import {
   Row,
   Column,
 } from "@react-email/components";
+import Link from "next/link";
 
 interface SubscriptionCompleteEmailProps {
   name: string;
@@ -131,7 +132,7 @@ export const SubscriptionCompleteEmail: React.FC<SubscriptionCompleteEmailProps>
         Hi <b>{name}</b>,
       </Text>
       <Text style={textStyle}>
-        Your subscription is now active. Here's a summary of your purchase.
+        Your subscription is now active. Here&apos;s a summary of your purchase.
         <span style={badgeStyle}>✓ Paid</span>
       </Text>
 
@@ -190,9 +191,9 @@ export const SubscriptionCompleteEmail: React.FC<SubscriptionCompleteEmailProps>
       {/* Footer */}
       <Text style={secondaryTextStyle}>
         If you have any questions about your subscription, please contact us at{" "}
-        <a href="mailto:support@interviewai.com" style={{ color: "#ff6600" }}>
+        <Link href="mailto:support@interviewai.com" style={{ color: "#ff6600" }}>
           support@interviewai.com
-        </a>
+        </Link>
         .
       </Text>
       <Text style={secondaryTextStyle}>

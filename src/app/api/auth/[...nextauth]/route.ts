@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/lib/types";
 import {authOptions} from "@/lib/auth";
 
 declare module "next-auth" {
@@ -10,6 +10,9 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       role?: Role;
+      hasOnboarded?: boolean;
+      emailVerified?: boolean;
+      [key: string]: unknown;
     };
   }
   interface User {

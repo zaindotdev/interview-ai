@@ -1,4 +1,3 @@
-import { MockInterviews } from "@/lib/types";
 import axios, { AxiosError } from "axios";
 import React, {
   createContext,
@@ -11,7 +10,7 @@ import React, {
 
 interface ResumeData {
   id: string;
-  analysisResults?: string | any;
+  analysisResults?: string;
   recommendations?: string[];
   score?: number;
 }
@@ -30,6 +29,13 @@ interface MockInterview {
   estimated_time: number;
   difficulty: "easy" | "medium" | "hard";
   candidateId: string;
+  markAsCompleted: boolean;
+}
+
+interface ResumeAnalysisResult {
+  success: boolean;
+  message: string;
+  data: ResumeData | null;
 }
 
 interface AppContextState {
@@ -42,7 +48,7 @@ interface AppContextState {
 interface AppContextActions {
   fetchResumeData: () => Promise<void>;
   fetchMockInterviews: () => Promise<void>;
-  analyzeResume: (formData: FormData) => Promise<void>;
+  analyzeResume: (formData: FormData) => Promise<ResumeAnalysisResult>;
   clearError: () => void;
   resetState: () => void;
 }
@@ -135,7 +141,7 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, [updateState]);
 
   const analyzeResume = useCallback(
-    async (formData: FormData): Promise<void> => {
+    async (formData: FormData): Promise<ResumeAnalysisResult> => {
       updateState({ loading: true, error: null });
 
       try {
@@ -157,12 +163,23 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           resumeData: response.data.data,
           loading: false,
         });
+
+        return {
+          success: true,
+          message: response.data.message || "Resume analyzed successfully",
+          data: response.data.data,
+        };
       } catch (error) {
         console.error("Error in analyzeResume", error);
         updateState({
           error: handleApiError(error),
           loading: false,
         });
+        return {
+          success: false,
+          message: handleApiError(error),
+          data: null,
+        };
       }
     },
     [updateState],

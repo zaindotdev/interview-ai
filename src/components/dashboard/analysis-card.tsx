@@ -16,10 +16,9 @@ import Link from "next/link"
 
 interface AnalysisCardProps {
   handleResumeScore: React.Dispatch<React.SetStateAction<ResumeScore | null>>
-  fetchMockInterviewss?: () => Promise<void>
 }
 
-const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchMockInterviewss }) => {
+const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore }) => {
   const [selectedJob, setSelectedJob] = useState<string>("")
   const [resumeScore, setResumeScore] = useState<ResumeScore | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
@@ -179,7 +178,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchMoc
   return (
     <div className="grid gap-6 md:grid-cols-2">
       {/* Resume Analysis Card */}
-      <Card className="relative overflow-hidden">
+      <Card className="relative overflow-hidden resize-y">
         <CardHeader className="pb-4">
           <div className="flex items-center space-x-2">
             <div className="rounded-full bg-primary/10 p-2">
@@ -193,7 +192,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchMoc
         </CardHeader>
         <CardContent className="space-y-6">
           {loading ? (
-            <div className="flex min-h-[300px] flex-col items-center justify-center space-y-4">
+            <div className="flex min-h-75 flex-col items-center justify-center space-y-4">
               <div className="w-full max-w-sm space-y-3">
                 <Progress value={percentageProgress} className="h-2" />
                 <div className="text-center">
@@ -213,7 +212,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchMoc
           ) : resumeScore ? (
             <div className="space-y-6">
               {/* Score Overview */}
-              <div className="rounded-lg border bg-gradient-to-r from-primary/5 to-primary/10 p-4">
+              <div className="rounded-lg border bg-linear-to-r from-primary/5 to-primary/10 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-2">
                     <TrendingUp className="h-5 w-5 text-primary" />
@@ -244,7 +243,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchMoc
                 <div className="max-h-48 space-y-2 overflow-y-auto">
                   {resumeScore.strengths?.map((strength, index) => (
                     <div key={index} className="flex items-start space-x-2 rounded-lg bg-green-50 p-3">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                       <p className="text-sm">{strength}</p>
                     </div>
                   ))}
@@ -272,7 +271,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchMoc
 
               {/* Upload Area */}
               <div className="relative">
-                <div className="flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/25 bg-primary/5 transition-colors hover:border-primary/50 hover:bg-primary/10">
+                <div className="flex min-h-50 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/25 bg-primary/5 transition-colors hover:border-primary/50 hover:bg-primary/10">
                   <div className="text-center space-y-3">
                     <div className="rounded-full bg-primary/10 p-3 mx-auto w-fit">
                       <UploadCloud className="h-8 w-8 text-primary" />
@@ -311,7 +310,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ handleResumeScore, fetchMoc
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex min-h-[300px] items-center justify-center">
+          <div className="flex min-h-75 items-center justify-center">
             <div className="text-center space-y-4">
               <div className="rounded-full bg-muted p-4 mx-auto w-fit">
                 <AlertCircle className="h-8 w-8 text-muted-foreground" />

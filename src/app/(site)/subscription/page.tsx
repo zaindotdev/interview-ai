@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, Suspense } from 'react'
+import React, { useEffect, useState, Suspense, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Loader2, AlertCircle } from 'lucide-react'
@@ -22,41 +22,7 @@ function SubscriptionPageContent() {
   const [status, setStatus] = useState<'loading' | 'redirecting' | 'error' | 'canceled' | 'show-plans'>('loading')
   const [errorMessage, setErrorMessage] = useState('')
 
-  useEffect(() => {
-    // Handle canceled checkout
-    if (canceled === 'true') {
-      setStatus('canceled')
-      return
-    }
-
-    // Wait for auth status to be determined
-    if (authStatus === 'loading') return
-
-    // If no plan specified, show the plans page
-    if (!plan) {
-      setStatus('show-plans')
-      return
-    }
-
-    // If free plan, redirect to dashboard
-    if (plan === 'FREE') {
-      router.replace('/dashboard')
-      return
-    }
-
-    // If not authenticated, redirect to sign-in with plan info
-    if (authStatus === 'unauthenticated') {
-      router.replace(`/sign-in?plan=${plan.toLowerCase()}`)
-      return
-    }
-
-    // User is authenticated - handle subscription flow
-    if (authStatus === 'authenticated' && session) {
-      handleSubscriptionRedirect()
-    }
-  }, [authStatus, session, plan, canceled])
-
-  const handleSubscriptionRedirect = async () => {
+  const handleSubscriptionRedirect = useCallback(async () => {
     // Validate plan exists
     if (!plan) {
       setStatus('show-plans')
@@ -107,7 +73,41 @@ function SubscriptionPageContent() {
         description: error instanceof Error ? error.message : 'Please try again later'
       })
     }
-  }
+  }, [plan])
+
+  useEffect(() => {
+    // Handle canceled checkout
+    if (canceled === 'true') {
+      setStatus('canceled')
+      return
+    }
+
+    // Wait for auth status to be determined
+    if (authStatus === 'loading') return
+
+    // If no plan specified, show the plans page
+    if (!plan) {
+      setStatus('show-plans')
+      return
+    }
+
+    // If free plan, redirect to dashboard
+    if (plan === 'FREE') {
+      router.replace('/dashboard')
+      return
+    }
+
+    // If not authenticated, redirect to sign-in with plan info
+    if (authStatus === 'unauthenticated') {
+      router.replace(`/sign-in?plan=${plan.toLowerCase()}`)
+      return
+    }
+
+    // User is authenticated - handle subscription flow
+    if (authStatus === 'authenticated' && session) {
+      handleSubscriptionRedirect()
+    }
+  }, [authStatus, session, plan, canceled, router, handleSubscriptionRedirect])
 
   const handleRetry = () => {
     setStatus('loading')

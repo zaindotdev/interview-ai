@@ -45,7 +45,7 @@ const Footer = () => {
         }
     });
 
-    const onSubmit = (data: NewsletterFormData) => {
+    const onSubmit = (_data: NewsletterFormData) => {
         toast.success("You have been subscribed to our newsletter!");
     }
 

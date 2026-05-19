@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock, Calendar, Target, BarChart3, ExternalLink } from "lucide-react"
+import { Clock, Calendar, Target, ExternalLink } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface MockInterview {
@@ -25,7 +25,7 @@ interface InterviewHistoryItem {
   feedbackReportId: string | null
   createdAt: string
   mockInterview: MockInterview
-  mockInterviewReport: any | null
+  mockInterviewReport: Record<string, unknown> | null
 }
 
 const InterviewHistory = () => {

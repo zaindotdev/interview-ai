@@ -4,15 +4,12 @@ import AnalysisCard from "@/components/dashboard/analysis-card";
 import MockInterview from "@/components/dashboard/mock-interviews";
 import StatsOverview from "@/components/dashboard/stats-overview";
 import { ResumeScore } from "@/lib/types";
-import type { MockInterviews } from "@/lib/types";
 import { useAppContext } from "@/context/app-provider";
 
 const Dashboard = () => {
   const [resumeScore, setResumeScore] = useState<ResumeScore | null>(null);
-  const [practiceInterview] = useState<
-    MockInterviews[] | null
-  >(null);
-  const {mockInterviews,fetchMockInterviews, fetchResumeData, loading } = useAppContext();
+  const { mockInterviews, fetchMockInterviews, fetchResumeData, loading } =
+    useAppContext();
 
   useEffect(() => {
     fetchResumeData();
@@ -55,7 +52,6 @@ const Dashboard = () => {
 
       <AnalysisCard
         handleResumeScore={setResumeScore}
-        fetchMockInterviewss={fetchResumeData}
       />
 
       <MockInterview

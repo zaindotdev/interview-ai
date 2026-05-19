@@ -3,7 +3,6 @@ export interface HowItWorks {
   title: string;
   description: string;
 }
-
 export interface KeyFeaturesData {
   index: string;
   title: string;
@@ -83,6 +82,7 @@ export interface MockInterviews {
   estimated_time: number;
   difficulty: "easy" | "medium" | "hard";
   candidateId: string;
+  markAsCompleted?: boolean;
 }
 
 // server-side
@@ -156,3 +156,19 @@ export interface Areas {
   "Technical Depth": number;
   "Completion Rate": number;
 }
+
+
+export interface User{
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: string | null;
+  image: string | null;
+  hasOnboarded?: boolean;
+  subscriptionStatus?: "active" | "canceled" | "past_due" | "unpaid" | "trialing";
+  username: string;
+  role: string;
+  createdAt: string;
+}
+
+export type Role = "ADMIN" | "CANDIDATE" | "RECRUITER"

@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { stripe } from "@/utils/stripe";
 import { db } from "@/lib/prisma";
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -46,11 +46,11 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ url: portalSession.url });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating portal session:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to create portal session" },
-      { status: 500 }
-    );
+    const message = error instanceof Error
+      ? error.message
+      : "Failed to create portal session";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
