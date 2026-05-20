@@ -199,25 +199,32 @@ const SessionPage = () => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [selectedLanguage, setSelectedLanguage] =
     useState<SupportedLanguage | null>(null);
+
   const vapiRef = useRef<Vapi | null>(null);
-  const isUnmountedRef = useRef(false);
+  const isMountedRef = useRef(true);           // ✅ true = component is mounted
   const isBootstrappedRef = useRef(false);
   const messagesRef = useRef<Message[]>([]);
   const sessionStartTimeRef = useRef<Date | null>(null);
   const interviewConfigRef = useRef<MockInterviews | null>(null);
-
   const isEndingCallRef = useRef(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { sessionStartTimeRef.current = sessionStartTime; }, [sessionStartTime]);
+  useEffect(() => { interviewConfigRef.current = interviewConfig; }, [interviewConfig]);
+
+  // ─── Cleanup ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-  useEffect(() => {
-    sessionStartTimeRef.current = sessionStartTime;
-  }, [sessionStartTime]);
-  useEffect(() => {
-    interviewConfigRef.current = interviewConfig;
-  }, [interviewConfig]);
+    return () => {
+      isMountedRef.current = false; // ✅ false = component is unmounted
+      try {
+        vapiRef.current?.stop();
+        vapiRef.current?.removeAllListeners();
+      } catch (err) {
+        console.error("[session] Cleanup error:", err);
+      }
+    };
+  }, []);
 
   // ─── Timer ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -246,7 +253,6 @@ const SessionPage = () => {
       const interview = response?.data ?? null;
       if (!interview) throw new Error("Invalid interview response");
       setInterviewConfig(interview);
-      console.log(interview);
       return interview;
     } catch (error) {
       console.error("Error fetching the interview config", error);
@@ -267,14 +273,10 @@ const SessionPage = () => {
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty?.toLowerCase()) {
-      case "easy":
-        return "bg-green-100 text-green-700 border-green-200";
-      case "medium":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case "hard":
-        return "bg-red-100 text-red-700 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+      case "easy":   return "bg-green-100 text-green-700 border-green-200";
+      case "medium": return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "hard":   return "bg-red-100 text-red-700 border-red-200";
+      default:       return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
 
@@ -328,7 +330,7 @@ const SessionPage = () => {
       console.error("[session] Error stopping call:", err);
     }
 
-    if (!isUnmountedRef.current) return;
+    if (!isMountedRef.current) return; // ✅ bail if unmounted
 
     setCallStarted(false);
     setConnectionStatus("disconnected");
@@ -378,8 +380,7 @@ const SessionPage = () => {
     }
   }, [id, router, updateHistory]);
 
-  // ─── Check microphone access ─────────────────────────────────────────────────────────
-
+  // ─── Check microphone access ──────────────────────────────────────────────
   const checkMic = useCallback(async (): Promise<boolean> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -390,10 +391,10 @@ const SessionPage = () => {
         },
       });
       stream.getTracks().forEach((t) => t.stop());
-      if (isUnmountedRef.current) setMicrophoneAccess(true);
+      if (isMountedRef.current) setMicrophoneAccess(true); // ✅
       return true;
     } catch {
-      if (isUnmountedRef.current) setMicrophoneAccess(false);
+      if (isMountedRef.current) setMicrophoneAccess(false); // ✅
       toast.error("Microphone access is required for the interview");
       return false;
     }
@@ -420,7 +421,7 @@ const SessionPage = () => {
         vapi.removeAllListeners();
 
         vapi.on("call-start", async () => {
-          if (!isUnmountedRef.current) return;
+          if (!isMountedRef.current) return; // ✅ bail if unmounted
           setCallStarted(true);
           setConnectionStatus("connected");
           await createHistory(startTime);
@@ -428,7 +429,7 @@ const SessionPage = () => {
           if (config.estimated_time) {
             setTimeout(
               () => {
-                if (!isUnmountedRef.current) endCall();
+                if (isMountedRef.current) endCall(); // ✅ only end if still mounted
               },
               config.estimated_time * 60 * 1000,
             );
@@ -436,7 +437,7 @@ const SessionPage = () => {
         });
 
         vapi.on("call-end", () => {
-          if (!isUnmountedRef.current) return;
+          if (!isMountedRef.current) return; // ✅
           setCallStarted(false);
           setConnectionStatus("disconnected");
           setSpeakingStatus("idle");
@@ -445,15 +446,15 @@ const SessionPage = () => {
         });
 
         vapi.on("speech-start", () => {
-          if (isUnmountedRef.current) setSpeakingStatus("ai-speaking");
+          if (isMountedRef.current) setSpeakingStatus("ai-speaking"); // ✅
         });
 
         vapi.on("speech-end", () => {
-          if (isUnmountedRef.current) setSpeakingStatus("idle");
+          if (isMountedRef.current) setSpeakingStatus("idle"); // ✅
         });
 
         vapi.on("message", (message: Message) => {
-          if (!isUnmountedRef.current) return;
+          if (!isMountedRef.current) return; // ✅
           if (message.type !== "transcript") return;
 
           const { role, transcriptType, transcript } = message;
@@ -503,11 +504,11 @@ const SessionPage = () => {
             type.toLowerCase().includes("ended");
 
           if (isEjection) {
-            if (!isUnmountedRef.current) endCall();
+            if (isMountedRef.current) endCall(); // ✅
             return;
           }
 
-          if (!isUnmountedRef.current) setConnectionStatus("error");
+          if (isMountedRef.current) setConnectionStatus("error"); // ✅
 
           const userMsg: string =
             (typeof err?.error?.message === "object"
@@ -529,7 +530,7 @@ const SessionPage = () => {
     [createHistory, endCall],
   );
 
-  // ─── Bootstrap (runs after language is selected + auth is ready) ────────
+  // ─── Bootstrap ───────────────────────────────────────────────────────────
   const bootstrap = useCallback(
     async (language: SupportedLanguage, config: MockInterviews) => {
       const candidateName =
@@ -543,20 +544,15 @@ const SessionPage = () => {
         return;
       isBootstrappedRef.current = true;
       setLoading(true);
-      console.log(`[bootstrap] Starting bootstrap for interview ${id} with language ${language}`);
 
       const micOk = await checkMic();
-      console.log(`[bootstrap] Microphone check result: ${micOk}`);
-      if (!isUnmountedRef.current) return;
-
-      console.log("[bootstrap] Microphone access status:", micOk);
+      if (!isMountedRef.current) return; // ✅
 
       if (!micOk) {
         setLoading(false);
         isBootstrappedRef.current = false;
         return;
       }
-      console.log("[bootstrap] Microphone access granted");
 
       if (config.markAsCompleted) {
         toast.info("This interview has already been completed.");
@@ -578,34 +574,33 @@ const SessionPage = () => {
           throw new Error("Invalid assistant response — missing ID");
 
         const aid = assistantRes.data.data.id as string;
-        console.log("[bootstrap] Assistant created with ID before startCallWithId:", aid);
 
-        if (isUnmountedRef.current) {
+        if (isMountedRef.current) { // ✅
           setAssistantId(aid);
           setLoading(false);
           startCallWithId(aid, config);
-          console.log("[bootstrap] Assistant created with ID:", aid);
         }
       } catch (err) {
         console.error("[bootstrap] Assistant creation failed:", err);
         toast.error(
           err instanceof Error ? err.message : "Failed to initialize assistant",
         );
-        if (!isUnmountedRef.current) {
+        if (isMountedRef.current) { // ✅
           setConnectionStatus("error");
           setLoading(false);
         }
         isBootstrappedRef.current = false;
       }
     },
-    [id, status, session, startCallWithId, router, checkMic, isUnmountedRef],
+    // ✅ isMountedRef removed — it's a ref, never changes, not a dep
+    [id, status, session, startCallWithId, router, checkMic],
   );
 
-  // ─── Trigger bootstrap once language is picked and auth is settled ───────
+  // ─── Trigger bootstrap ───────────────────────────────────────────────────
   useEffect(() => {
     if (
       !selectedLanguage ||
-      !interviewConfig || // ← wait for config to actually be fetched
+      !interviewConfig ||
       !id ||
       status !== "authenticated" ||
       !session?.user?.name ||
@@ -636,19 +631,6 @@ const SessionPage = () => {
 
   const handleLanguageSelect = useCallback((lang: SupportedLanguage) => {
     setSelectedLanguage(lang);
-  }, []);
-
-  // ─── Cleanup ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      isUnmountedRef.current = true;
-      try {
-        vapiRef.current?.stop();
-        vapiRef.current?.removeAllListeners();
-      } catch (err) {
-        console.error("[session] Cleanup error:", err);
-      }
-    };
   }, []);
 
   // ─── Guards ───────────────────────────────────────────────────────────────
@@ -737,10 +719,7 @@ const SessionPage = () => {
             ) : null}
             <Badge variant="secondary" className="gap-1 text-xs">
               {LANGUAGE_OPTIONS.find((l) => l.id === selectedLanguage)?.flag}{" "}
-              {
-                LANGUAGE_OPTIONS.find((l) => l.id === selectedLanguage)
-                  ?.nativeLabel
-              }
+              {LANGUAGE_OPTIONS.find((l) => l.id === selectedLanguage)?.nativeLabel}
             </Badge>
           </div>
         </div>
@@ -869,10 +848,7 @@ const SessionPage = () => {
             <p className="text-muted-foreground mt-0.5 text-xs">
               {isAiSpeaking ? "Speaking..." : "Listening"}
             </p>
-            <div
-              className="mt-3 flex items-end gap-0.5"
-              style={{ height: "20px" }}
-            >
+            <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
               {[...Array(5)].map((_, i) =>
                 isAiSpeaking ? (
                   <span
@@ -931,16 +907,15 @@ const SessionPage = () => {
                   <Image
                     src={session.user.image}
                     alt={session.user.name || "You"}
+                    width={80}
+                    height={80}
                     className="h-full w-full object-cover"
-                    
                   />
                 ) : (
                   <User
                     className={cn(
                       "h-7 w-7 transition-colors duration-300 md:h-9 md:w-9",
-                      isUserSpeaking
-                        ? "text-blue-500"
-                        : "text-muted-foreground",
+                      isUserSpeaking ? "text-blue-500" : "text-muted-foreground",
                     )}
                   />
                 )}
@@ -958,10 +933,7 @@ const SessionPage = () => {
                     ? "Listening"
                     : "Not in call"}
             </p>
-            <div
-              className="mt-3 flex items-end gap-0.5"
-              style={{ height: "20px" }}
-            >
+            <div className="mt-3 flex items-end gap-0.5" style={{ height: "20px" }}>
               {[...Array(5)].map((_, i) =>
                 isUserSpeaking ? (
                   <span
@@ -1036,6 +1008,8 @@ const SessionPage = () => {
                           <Image
                             src={session.user.image}
                             alt="You"
+                            width={28}
+                            height={28}
                             className="h-full w-full rounded-full object-cover"
                           />
                         ) : (
@@ -1078,6 +1052,8 @@ const SessionPage = () => {
                           <Image
                             src={session.user.image}
                             alt="You"
+                            width={28}
+                            height={28}
                             className="h-full w-full rounded-full object-cover"
                           />
                         ) : (
