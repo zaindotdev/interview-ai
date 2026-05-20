@@ -8,11 +8,9 @@ import { db } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { getRedis } from "@/lib/redis";
 
-type CreateAssistantDto =
-  Parameters<typeof vapiClient.assistants.create>[0];
+type CreateAssistantDto = Parameters<typeof vapiClient.assistants.create>[0];
 
-type UpdateAssistantDto =
-  Parameters<typeof vapiClient.assistants.update>[1];
+type UpdateAssistantDto = Parameters<typeof vapiClient.assistants.update>[1];
 
 // ─── Language configuration ────────────────────────────────────────────────
 
@@ -57,13 +55,12 @@ const LANGUAGE_CONFIG: Record<
   urdu: {
     label: "اردو",
     transcriber: {
-      provider: "deepgram",
-      model: "nova-3",
-      language: "multi",
+      provider: "azure", // ✅ Azure supports ur-PK
+      language: "ur-IN",
     },
     voice: {
       provider: "azure",
-      voiceId: "ur-PK-UzmaNeural",
+      voiceId: "ur-PK-SalmaNeural",
     },
     systemInstruction: `Conduct this entire interview in Urdu (اردو). 
 - All your questions, responses, and acknowledgements MUST be written in Urdu script (not Roman Urdu).
@@ -80,9 +77,8 @@ const LANGUAGE_CONFIG: Record<
   hindi: {
     label: "हिंदी",
     transcriber: {
-      provider: "deepgram",
-      model: "nova-3",
-      language: "hi",
+      provider: "azure",
+      language: "hi-IN",
     },
     voice: {
       provider: "azure",
@@ -166,16 +162,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (!["english", "urdu", "hindi"].includes(language)) {
-      validationErrors.push(
-        "Language must be one of: english, urdu, hindi",
-      );
+      validationErrors.push("Language must be one of: english, urdu, hindi");
     }
 
     if (validationErrors.length > 0) {
       return NextResponse.json(
-        new ErrorResponse(
-          `Validation failed: ${validationErrors.join(", ")}`,
-        ),
+        new ErrorResponse(`Validation failed: ${validationErrors.join(", ")}`),
         { status: 400 },
       );
     }
@@ -207,8 +199,7 @@ export async function POST(req: NextRequest) {
 
     // ── Language config ─────────────────────────────────────────────────────
 
-    const langConfig =
-      LANGUAGE_CONFIG[language as SupportedLanguage];
+    const langConfig = LANGUAGE_CONFIG[language as SupportedLanguage];
 
     // ── System prompt ───────────────────────────────────────────────────────
 
@@ -273,12 +264,7 @@ After every candidate response, you MUST silently classify it into one of three 
 ## Session Opening
 
 Begin with exactly this:
-"${langConfig.greeting(
-      candidateName,
-      topic,
-      focus,
-      difficulty,
-    )}"
+"${langConfig.greeting(candidateName, topic, focus, difficulty)}"
 `;
 
     // ── Assistant configuration ─────────────────────────────────────────────
@@ -311,12 +297,7 @@ Begin with exactly this:
 
       observabilityPlan: {
         provider: "langfuse",
-        tags: [
-          "interview",
-          "technical",
-          "assessment",
-          language,
-        ],
+        tags: ["interview", "technical", "assessment", language],
         metadata: {
           candidateName,
           topic,
@@ -331,8 +312,7 @@ Begin with exactly this:
       maxDurationSeconds: estimated_time,
     };
 
-    const assistantUpdate: UpdateAssistantDto =
-      assistantConfiguration;
+    const assistantUpdate: UpdateAssistantDto = assistantConfiguration;
 
     const assistantConfigForDb =
       assistantConfiguration as Prisma.InputJsonValue;
@@ -344,11 +324,10 @@ Begin with exactly this:
 
     if (cachedAssistantId) {
       try {
-        const updatedVapiAssistant =
-          await vapiClient.assistants.update(
-            cachedAssistantId,
-            assistantUpdate,
-          );
+        const updatedVapiAssistant = await vapiClient.assistants.update(
+          cachedAssistantId,
+          assistantUpdate,
+        );
 
         return NextResponse.json(
           new HttpResponse(
@@ -363,9 +342,7 @@ Begin with exactly this:
           { status: 200 },
         );
       } catch {
-        console.warn(
-          "[assistant] Cached VAPI assistant is stale",
-        );
+        console.warn("[assistant] Cached VAPI assistant is stale");
 
         await redis.del(cacheKey);
       }
@@ -379,15 +356,12 @@ Begin with exactly this:
 
     if (existingAssistant?.vapiAssistantId) {
       try {
-        await vapiClient.assistants.get(
-          existingAssistant.vapiAssistantId,
-        );
+        await vapiClient.assistants.get(existingAssistant.vapiAssistantId);
 
-        const updatedVapiAssistant =
-          await vapiClient.assistants.update(
-            existingAssistant.vapiAssistantId,
-            assistantUpdate,
-          );
+        const updatedVapiAssistant = await vapiClient.assistants.update(
+          existingAssistant.vapiAssistantId,
+          assistantUpdate,
+        );
 
         await db.assistant.update({
           where: { id: existingAssistant.id },
@@ -402,13 +376,9 @@ Begin with exactly this:
         });
 
         // Cache for 12 hours
-        await redis.set(
-          cacheKey,
-          updatedVapiAssistant.id,
-          {
-            EX: 60 * 60 * 12,
-          },
-        );
+        await redis.set(cacheKey, updatedVapiAssistant.id, {
+          EX: 60 * 60 * 12,
+        });
 
         return NextResponse.json(
           new HttpResponse(
@@ -437,10 +407,9 @@ Begin with exactly this:
     }
 
     // 3. Create fresh assistant
-    const newVapiAssistant =
-      await vapiClient.assistants.create(
-        assistantConfiguration,
-      );
+    const newVapiAssistant = await vapiClient.assistants.create(
+      assistantConfiguration,
+    );
 
     if (!newVapiAssistant?.id) {
       return NextResponse.json(
@@ -466,13 +435,9 @@ Begin with exactly this:
     });
 
     // Cache for 12 hours
-    await redis.set(
-      cacheKey,
-      newVapiAssistant.id,
-      {
-        EX: 60 * 60 * 12,
-      },
-    );
+    await redis.set(cacheKey, newVapiAssistant.id, {
+      EX: 60 * 60 * 12,
+    });
 
     return NextResponse.json(
       new HttpResponse(
@@ -492,17 +457,13 @@ Begin with exactly this:
 
     if (error instanceof VapiError) {
       return NextResponse.json(
-        new ErrorResponse(
-          `VAPI service error: ${error.message}`,
-        ),
+        new ErrorResponse(`VAPI service error: ${error.message}`),
         { status: 502 },
       );
     }
 
     return NextResponse.json(
-      new ErrorResponse(
-        "Internal server error. Please try again later.",
-      ),
+      new ErrorResponse("Internal server error. Please try again later."),
       { status: 500 },
     );
   }
