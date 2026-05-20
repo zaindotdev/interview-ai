@@ -12,7 +12,10 @@ import { getRedis } from "@/lib/redis";
 const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 hours
 const AI_TEMPERATURE = 0.3;
 
-const redis = await getRedis();
+const getRedisClient = async () => {
+  if (!process.env.REDIS_URL) return null;
+  return getRedis();
+};
 
 // Tier-based limits
 const REPORT_LIMITS = {
@@ -524,9 +527,12 @@ export async function GET(req: NextRequest) {
     }
 
     const cacheKey = `report:${reportId}`;
-    const cached = await redis.get(cacheKey);
-    if (cached) return NextResponse.json(JSON.parse(cached));
-    console.log("Cache miss for report:", reportId);
+    const redis = await getRedisClient();
+    if (redis) {
+      const cached = await redis.get(cacheKey);
+      if (cached) return NextResponse.json(JSON.parse(cached));
+      console.log("Cache miss for report:", reportId);
+    }
 
     // Fetch user with subscription status
     const user = await db.user.findUnique({
@@ -596,9 +602,11 @@ export async function GET(req: NextRequest) {
     );
 
     // Cache the final formatted response, not the raw DB row
-    await redis.set(cacheKey, JSON.stringify(responseData), {
-      expiration: { type: "EX", value: 24 * 60 * 60 },
-    });
+    if (redis) {
+      await redis.set(cacheKey, JSON.stringify(responseData), {
+        expiration: { type: "EX", value: 24 * 60 * 60 },
+      });
+    }
 
     return NextResponse.json(responseData, { status: 200 });
   } catch (error) {
