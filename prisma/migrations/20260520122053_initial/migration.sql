@@ -117,6 +117,7 @@ CREATE TABLE "Resume" (
     "userId" TEXT NOT NULL,
     "fileUrl" TEXT NOT NULL,
     "parsedJson" JSONB NOT NULL,
+    "isLatest" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Resume_pkey" PRIMARY KEY ("id")
@@ -267,6 +268,9 @@ CREATE INDEX "assistant_user_id_idx" ON "Assistant"("userId");
 
 -- CreateIndex
 CREATE INDEX "assistant_vapi_id_idx" ON "Assistant"("vapiAssistantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Resume_userId_key" ON "Resume"("userId");
 
 -- CreateIndex
 CREATE INDEX "resume_user_id_idx" ON "Resume"("userId");

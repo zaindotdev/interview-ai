@@ -60,7 +60,7 @@ const LANGUAGE_CONFIG: Record<
     },
     voice: {
       provider: "azure",
-      voiceId: "ur-PK-SalmaNeural",
+      voiceId: "ur-PK-UzmaNeural",
     },
     systemInstruction: `Conduct this entire interview in Urdu (اردو). 
 - All your questions, responses, and acknowledgements MUST be written in Urdu script (not Roman Urdu).
