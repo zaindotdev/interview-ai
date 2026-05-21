@@ -93,7 +93,7 @@ model Payment {
 
 model MockInterviews {
   id              String   @id @default(uuid())
-  topic           String   @unique
+  topic           String  
   description     String
   focus           String[]
   estimated_time  Int

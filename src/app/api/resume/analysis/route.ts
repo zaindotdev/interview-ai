@@ -203,7 +203,6 @@ RESUME: """${resumeText}"""
 JOB DESCRIPTION: """${jobDescription}"""
 `;
 };
-
 const saveAnalysisData = async (
   userId: string,
   fileUrl: string,
@@ -222,14 +221,9 @@ const saveAnalysisData = async (
         where: { candidateId: userId },
       });
 
-      // ✅ Deduplicate by topic — AI sometimes returns sessions with the same topic
-      const uniqueInterviews = Array.from(
-        new Map(mockInterviews.map((i) => [i.topic, i])).values(),
-      );
-
+      // ✅ skipDuplicates removed — no unique constraint on topic anymore
       await tx.mockInterviews.createMany({
-        data: uniqueInterviews,
-        skipDuplicates: true,
+        data: mockInterviews,
       });
 
       await tx.user.update({
