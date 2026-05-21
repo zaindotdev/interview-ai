@@ -27,6 +27,28 @@ import { cn } from "@/lib/utils";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPE = "application/pdf";
 
+// ── Error message map ─────────────────────────────────────────────────────────
+const API_ERROR_MESSAGES: Record<string, string> = {
+  "bad XRef":
+    "Your PDF appears to be corrupted. Please re-export it and try again.",
+  "No text could":
+    "We couldn't read any text from your PDF. Make sure it's not a scanned image.",
+  "Only PDF":
+    "Only PDF files are supported. Please convert your resume to PDF.",
+  "File size": "Your file is too large. Please compress it to under 10MB.",
+  "Job description too short":
+    "Your job description is too short. Please add more detail.",
+  Unauthorized: "Your session expired. Please sign in again.",
+  "User not found": "Account not found. Please contact support.",
+};
+
+const getFriendlyError = (message: string): string => {
+  const match = Object.keys(API_ERROR_MESSAGES).find((key) =>
+    message.includes(key),
+  );
+  return match ? API_ERROR_MESSAGES[match] : message;
+};
+
 type FormData = z.infer<typeof analyzeResumeSchema>;
 
 // ── Step indicator ────────────────────────────────────────────────────────────
@@ -119,21 +141,35 @@ const Onboarding: React.FC = () => {
         const formData = new FormData();
         formData.append("resume", selectedFile);
         formData.append("jobDescription", data.jobDescription);
+
         const { success, message } = await analyzeResume(formData);
+
         if (!success) {
-          toast.error(message || "Resume analysis failed. Please try again.");
+          toast.error(
+            getFriendlyError(
+              message || "Resume analysis failed. Please try again.",
+            ),
+            {
+              duration: 6000, // give user time to read it
+              description:
+                "If the problem persists, try a different PDF export.",
+            },
+          );
           return;
         }
+
         await update();
         form.reset();
         router.push("/dashboard");
       } catch (error) {
-        console.log("Error analyzing resume:", error);
-        toast.error(
+        const raw =
           error instanceof Error
             ? error.message
-            : "An unexpected error occurred",
-        );
+            : "An unexpected error occurred";
+        toast.error(getFriendlyError(raw), {
+          duration: 6000,
+          description: "If the problem persists, try a different PDF export.",
+        });
       }
     },
     [selectedFile, analyzeResume, form, router, update],

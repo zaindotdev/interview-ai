@@ -392,7 +392,7 @@ function NewAnalysisForm({ onSuccess }: { onSuccess: () => void }) {
       const payload = new FormData();
       payload.append("resume", selectedFile);
       payload.append("jobDescription", data.jobDescription);
-      await axios.post<{ data: NewAnalysisResponse }>("/api/resume/analyze", payload, {
+      await axios.post<{ data: NewAnalysisResponse }>("/api/resume/analysis", payload, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       toast.success("Resume analyzed successfully!");

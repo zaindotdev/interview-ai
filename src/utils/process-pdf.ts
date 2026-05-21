@@ -1,10 +1,9 @@
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
-const MAX_RESUME_TEXT_LENGTH = 10000; // Limit the resume text length to avoid excessive input size
+const MAX_RESUME_TEXT_LENGTH = 10000;
 
-export const processPDF = async (resume: File): Promise<string> => {
+export const processPDF = async (buffer: Buffer): Promise<string> => {
   try {
-    const buffer = Buffer.from(await resume.arrayBuffer());
     const parsed = await pdfParse(buffer);
 
     if (!parsed.text || parsed.text.trim().length === 0) {

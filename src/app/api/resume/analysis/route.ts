@@ -292,8 +292,8 @@ export async function POST(req: NextRequest) {
     const isSubscribed = user.subscription?.payment?.status === "PAID";
 
     const limits = isSubscribed ? LIMITS.PREMIUM : LIMITS.FREE;
-    const resumeText = await processPDF(resume);
     const buffer = Buffer.from(await resume.arrayBuffer());
+    const resumeText = await processPDF(buffer);
 
     const analysisPrompt = createAnalysisPrompt(resumeText, jobDescription, isSubscribed);
     const mockInterviewPrompt = createMockInterviewPrompt(
