@@ -243,9 +243,6 @@ CREATE INDEX "payment_status_idx" ON "Payment"("status");
 CREATE INDEX "payment_method_idx" ON "Payment"("method");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "MockInterviews_topic_key" ON "MockInterviews"("topic");
-
--- CreateIndex
 CREATE INDEX "mock_interviews_candidate_id_idx" ON "MockInterviews"("candidateId");
 
 -- CreateIndex
