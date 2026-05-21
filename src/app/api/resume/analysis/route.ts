@@ -35,15 +35,12 @@ const validateInput = (resume: File | null, jobDescription: string | null) => {
   if (!resume || !jobDescription) {
     throw new Error("Missing resume or job description");
   }
-
   if (!resume.type?.includes("pdf")) {
     throw new Error("Only PDF files are supported");
   }
-
   if (resume.size > MAX_FILE_SIZE) {
     throw new Error("File size too large. Maximum 10MB allowed");
   }
-
   if (jobDescription.length < MIN_JOB_DESC_LENGTH) {
     throw new Error("Job description too short. Please provide more details");
   }
@@ -178,7 +175,12 @@ const createMockInterviewPrompt = (
   return `You are an experienced technical interview coach. ${instructions}
 
 CRITICAL REQUIREMENTS:
-${!isSubscribed ? `- Generate EXACTLY ${limits.mockInterviews} sessions (no more, no less) for free tier users\n- Focus on BASIC/FUNDAMENTAL topics only\n- Use "easy" or "medium" difficulty only\n- Keep time estimates shorter (600-900 seconds)` : `- Generate ${limits.mockInterviews} sessions\n- Include mix of easy, medium, and hard difficulty\n- Cover diverse technical and behavioral topics`}
+${
+  !isSubscribed
+    ? `- Generate EXACTLY ${limits.mockInterviews} sessions (no more, no less) for free tier users\n- Focus on BASIC/FUNDAMENTAL topics only\n- Use "easy" or "medium" difficulty only\n- Keep time estimates shorter (600-900 seconds)`
+    : `- Generate ${limits.mockInterviews} sessions\n- Include mix of easy, medium, and hard difficulty\n- Cover diverse technical and behavioral topics`
+}
+- IMPORTANT: Every session MUST have a completely UNIQUE topic name. No two sessions can share the same topic.
 
 Each mock interview session must follow this interface:
 {
@@ -202,7 +204,6 @@ JOB DESCRIPTION: """${jobDescription}"""
 `;
 };
 
-
 const saveAnalysisData = async (
   userId: string,
   fileUrl: string,
@@ -214,14 +215,22 @@ const saveAnalysisData = async (
       await tx.resume.upsert({
         where: { userId },
         update: { fileUrl, parsedJson: analysis as any },
-        create: { userId, fileUrl, parsedJson: analysis as any},
+        create: { userId, fileUrl, parsedJson: analysis as any },
       });
 
       await tx.mockInterviews.deleteMany({
         where: { candidateId: userId },
       });
 
-      await tx.mockInterviews.createMany({ data: mockInterviews });
+      // ✅ Deduplicate by topic — AI sometimes returns sessions with the same topic
+      const uniqueInterviews = Array.from(
+        new Map(mockInterviews.map((i) => [i.topic, i])).values(),
+      );
+
+      await tx.mockInterviews.createMany({
+        data: uniqueInterviews,
+        skipDuplicates: true,
+      });
 
       await tx.user.update({
         where: { id: userId },
@@ -234,6 +243,7 @@ const saveAnalysisData = async (
     );
   }
 };
+
 const validateMockInterviews = (
   mockInterviews: MockInterviews[],
   isSubscribed: boolean,
@@ -268,7 +278,6 @@ export async function POST(req: NextRequest) {
     const jobDescription = formData.get("jobDescription") as string;
     validateInput(resume, jobDescription);
 
-    // ✅ Fetch user first, null-check before anything else
     const user = await db.user.findUnique({
       where: { email: session.user.email },
       select: {
@@ -277,7 +286,7 @@ export async function POST(req: NextRequest) {
           select: {
             id: true,
             payment: {
-              select: { status: true }, // ✅ Only PAID subscriptions count as active
+              select: { status: true },
             },
           },
         },
@@ -288,10 +297,10 @@ export async function POST(req: NextRequest) {
       return errorResponse("User not found", 404);
     }
 
-    // ✅ A subscription is only active if the linked payment is PAID
     const isSubscribed = user.subscription?.payment?.status === "PAID";
-
     const limits = isSubscribed ? LIMITS.PREMIUM : LIMITS.FREE;
+
+    // ✅ Read buffer ONCE — reused for both PDF parsing and storage upload
     const buffer = Buffer.from(await resume.arrayBuffer());
     const resumeText = await processPDF(buffer);
 
