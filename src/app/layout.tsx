@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
 import Providers from "./_app";
 import { Toaster } from "sonner";
+import { Analytics } from '@vercel/analytics/next';
 import "./globals.css";
 import "remixicon/fonts/remixicon.css";
 
@@ -40,6 +41,7 @@ export default function RootLayout({
       {children}
       <Toaster position="top-right"/>
     </Providers>
+    <Analytics />
     </body>
     </html>
   );

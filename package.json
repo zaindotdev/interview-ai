@@ -44,6 +44,7 @@
     "@types/ws": "^8.18.1",
     "@vapi-ai/server-sdk": "^0.10.0",
     "@vapi-ai/web": "^2.3.8",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^1.2.0",
     "ai": "^6.0.183",
     "axios": "^1.10.0",
